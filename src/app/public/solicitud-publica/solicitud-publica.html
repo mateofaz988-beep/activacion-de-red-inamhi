@@ -1,0 +1,340 @@
+<section class="solicitud-page">
+  <header class="institutional-header">
+    <div class="header-content">
+      <a routerLink="/" class="back-link">
+        ← Volver al inicio
+      </a>
+
+      <div class="brand">
+        <div class="logo-box">
+          IN
+        </div>
+
+        <div>
+          <h1>Formulario de Solicitud</h1>
+          <p>Sistema de Gestión de Solicitudes de Liberación Web - INAMHI</p>
+        </div>
+      </div>
+
+      <div class="status-pill">
+        Registro público
+      </div>
+    </div>
+  </header>
+
+  <main class="page-content">
+    <section class="summary-card">
+      <div>
+        <span class="eyebrow">Acceso Superior a Internet</span>
+        <h2>Solicitud de Liberación Web Institucional</h2>
+        <p>
+          Complete la información requerida para generar su solicitud. Los datos serán
+          validados antes de enviarse al flujo institucional de revisión y aprobación.
+        </p>
+      </div>
+
+      <div class="process-box">
+        <span>Flujo</span>
+        <strong>Solicitud → Firma → Jefe inmediato → Máxima autoridad → TICS</strong>
+      </div>
+    </section>
+
+    <section class="success-card" *ngIf="enviado">
+      <div class="success-icon">✓</div>
+      <h3>Solicitud registrada correctamente</h3>
+      <p>Guarde este código para consultar el estado de su solicitud:</p>
+
+      <strong>{{ codigoGenerado }}</strong>
+
+      <div class="success-actions">
+        <a routerLink="/public/seguimiento">Consultar estado</a>
+        <button type="button" (click)="enviado = false">Registrar otra solicitud</button>
+      </div>
+    </section>
+
+    <form class="form-card" [formGroup]="formulario" (ngSubmit)="enviarSolicitud()" *ngIf="!enviado">
+      <div class="form-header">
+        <div>
+          <h3>Datos de la solicitud</h3>
+          <p>Los campos marcados con * son obligatorios.</p>
+        </div>
+
+        <div class="form-code">
+          Código generado automáticamente
+        </div>
+      </div>
+
+      <div class="section-title">
+        <span>1</span>
+        <div>
+          <h4>Información del solicitante</h4>
+          <p>Datos institucionales del funcionario o usuario solicitante.</p>
+        </div>
+      </div>
+
+      <div class="grid two">
+        <label>
+          Nombres completos *
+          <input
+            type="text"
+            formControlName="nombres_completos"
+            placeholder="Ejemplo: Juan Carlos Pérez López"
+            maxlength="200"
+            (input)="limpiarTextoSimple('nombres_completos')"
+          />
+          <small *ngIf="campoInvalido('nombres_completos')">
+            {{ obtenerMensajeCampo('nombres_completos') }}
+          </small>
+        </label>
+
+        <label>
+          Cédula *
+          <input
+            type="text"
+            formControlName="cedula"
+            placeholder="Ingrese 10 números"
+            maxlength="10"
+            inputmode="numeric"
+            (keydown)="soloNumeros($event)"
+            (input)="limpiarSoloNumeros('cedula', 10)"
+          />
+          <small *ngIf="campoInvalido('cedula')">
+            {{ obtenerMensajeCampo('cedula') }}
+          </small>
+        </label>
+
+        <label>
+          Correo institucional *
+          <input
+            type="email"
+            formControlName="correo_institucional"
+            placeholder="usuario@inamhi.gob.ec"
+            maxlength="150"
+          />
+          <small *ngIf="campoInvalido('correo_institucional')">
+            {{ obtenerMensajeCampo('correo_institucional') }}
+          </small>
+        </label>
+
+        <label>
+          Teléfono *
+          <input
+            type="text"
+            formControlName="telefono_ext"
+            placeholder="Ejemplo: 0991234567"
+            maxlength="10"
+            inputmode="numeric"
+            (keydown)="soloNumeros($event)"
+            (input)="limpiarSoloNumeros('telefono_ext', 10)"
+          />
+          <small *ngIf="campoInvalido('telefono_ext')">
+            {{ obtenerMensajeCampo('telefono_ext') }}
+          </small>
+        </label>
+
+        <label>
+          Dependencia *
+          <input
+            type="text"
+            formControlName="dependencia"
+            placeholder="Ejemplo: Dirección Administrativa Financiera"
+            maxlength="150"
+            (input)="limpiarTextoSimple('dependencia')"
+          />
+          <small *ngIf="campoInvalido('dependencia')">
+            {{ obtenerMensajeCampo('dependencia') }}
+          </small>
+        </label>
+
+        <label>
+          Área / Unidad *
+          <input
+            type="text"
+            formControlName="area_unidad"
+            placeholder="Ejemplo: Unidad de Tecnologías de la Información"
+            maxlength="150"
+            (input)="limpiarTextoSimple('area_unidad')"
+          />
+          <small *ngIf="campoInvalido('area_unidad')">
+            {{ obtenerMensajeCampo('area_unidad') }}
+          </small>
+        </label>
+
+        <label>
+          Cargo *
+          <input
+            type="text"
+            formControlName="cargo"
+            placeholder="Ejemplo: Analista Institucional"
+            maxlength="150"
+            (input)="limpiarTextoSimple('cargo')"
+          />
+          <small *ngIf="campoInvalido('cargo')">
+            {{ obtenerMensajeCampo('cargo') }}
+          </small>
+        </label>
+
+        <label>
+          Fecha de solicitud *
+          <input type="date" formControlName="fecha_solicitud" />
+          <small *ngIf="campoInvalido('fecha_solicitud')">
+            {{ obtenerMensajeCampo('fecha_solicitud') }}
+          </small>
+        </label>
+      </div>
+
+      <div class="section-title">
+        <span>2</span>
+        <div>
+          <h4>Información de la solicitud</h4>
+          <p>Detalle técnico, vigencia y justificación del acceso requerido.</p>
+        </div>
+      </div>
+
+      <div class="grid two">
+        <label>
+          Tipo de usuario *
+          <select formControlName="tipo_usuario">
+            <option value="funcionario_inamhi">Funcionario INAMHI</option>
+            <option value="externo">Externo</option>
+          </select>
+        </label>
+
+        <label>
+          Tiempo de vigencia del acceso *
+          <input
+            type="text"
+            formControlName="tiempo_vigencia_acceso"
+            placeholder="Ejemplo: 6 meses"
+            maxlength="100"
+            (input)="limpiarTextoSimple('tiempo_vigencia_acceso')"
+          />
+          <small *ngIf="campoInvalido('tiempo_vigencia_acceso')">
+            {{ obtenerMensajeCampo('tiempo_vigencia_acceso') }}
+          </small>
+        </label>
+
+        <label *ngIf="formulario.get('tipo_usuario')?.value === 'externo'">
+          Nombre del usuario externo *
+          <input
+            type="text"
+            formControlName="nombre_usuario_externo"
+            placeholder="Nombre completo del usuario externo"
+            maxlength="200"
+            (input)="limpiarTextoSimple('nombre_usuario_externo')"
+          />
+          <small *ngIf="campoInvalido('nombre_usuario_externo')">
+            {{ obtenerMensajeCampo('nombre_usuario_externo') }}
+          </small>
+        </label>
+
+        <label>
+          Dirección IP
+          <input
+            type="text"
+            formControlName="direccion_ip"
+            placeholder="Ejemplo: 192.168.1.100"
+            maxlength="15"
+          />
+          <small *ngIf="campoInvalido('direccion_ip')">
+            {{ obtenerMensajeCampo('direccion_ip') }}
+          </small>
+        </label>
+      </div>
+
+      <label class="full">
+        Justificación de la necesidad institucional *
+        <textarea
+          formControlName="justificacion_necesidad_institucional"
+          rows="5"
+          maxlength="2000"
+          placeholder="Explique de forma clara la necesidad institucional del acceso solicitado..."
+        ></textarea>
+
+        <div class="counter">
+          {{ formulario.get('justificacion_necesidad_institucional')?.value?.length || 0 }}/2000
+        </div>
+
+        <small *ngIf="campoInvalido('justificacion_necesidad_institucional')">
+          {{ obtenerMensajeCampo('justificacion_necesidad_institucional') }}
+        </small>
+      </label>
+
+      <div class="section-title pages-title">
+        <span>3</span>
+
+        <div>
+          <h4>Páginas web importantes</h4>
+          <p>Ingrese mínimo 1 y máximo 8 páginas web. Deben iniciar con http:// o https://.</p>
+        </div>
+
+        <button
+          type="button"
+          class="add-btn"
+          (click)="agregarPaginaWeb()"
+          [disabled]="paginasWeb.length >= 8"
+        >
+          + Agregar página
+        </button>
+      </div>
+
+      <div formArrayName="paginas_web" class="pages-list">
+        <div
+          class="page-item"
+          *ngFor="let pagina of paginasWeb.controls; let i = index"
+          [formGroupName]="i"
+        >
+          <div class="page-number">{{ i + 1 }}</div>
+
+          <label>
+            URL *
+            <input
+              type="url"
+              formControlName="url_pagina"
+              placeholder="https://www.gob.ec"
+              maxlength="255"
+            />
+            <small *ngIf="paginaInvalida(i, 'url_pagina')">
+              {{ obtenerMensajePagina(i, 'url_pagina') }}
+            </small>
+          </label>
+
+          <label>
+            Descripción
+            <input
+              type="text"
+              formControlName="descripcion"
+              placeholder="Descripción opcional"
+              maxlength="255"
+            />
+            <small *ngIf="paginaInvalida(i, 'descripcion')">
+              {{ obtenerMensajePagina(i, 'descripcion') }}
+            </small>
+          </label>
+
+          <button
+            type="button"
+            class="remove-btn"
+            (click)="eliminarPaginaWeb(i)"
+            [disabled]="paginasWeb.length <= 1"
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>
+
+      <div class="error-general" *ngIf="errorGeneral">
+        {{ errorGeneral }}
+      </div>
+
+      <div class="actions">
+        <a routerLink="/" class="cancel-btn">Cancelar</a>
+
+        <button type="submit" class="submit-btn" [disabled]="cargando">
+          <span *ngIf="!cargando">Enviar solicitud</span>
+          <span *ngIf="cargando">Registrando solicitud...</span>
+        </button>
+      </div>
+    </form>
+  </main>
+</section>

@@ -1,0 +1,237 @@
+<section class="detail-page">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo-box">IN</div>
+      <div>
+        <h2>INAMHI</h2>
+        <span>Liberación Web</span>
+      </div>
+    </div>
+
+    <nav class="menu">
+      <a routerLink="/admin/dashboard">Dashboard</a>
+      <a class="active">Detalle solicitud</a>
+      <a>Reportes</a>
+      <a>Auditoría</a>
+    </nav>
+
+    <button class="logout" type="button" (click)="logout()">
+      Cerrar sesión
+    </button>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div>
+        <a routerLink="/admin/dashboard" class="back-link">← Volver al dashboard</a>
+        <h1>Detalle de Solicitud</h1>
+        <p>Información completa de la solicitud registrada.</p>
+      </div>
+
+      <button type="button" class="refresh-btn" (click)="cargarDetalle()" [disabled]="cargando || procesando">
+        Actualizar
+      </button>
+    </header>
+
+    <div class="loading" *ngIf="cargando">
+      Cargando detalle de solicitud...
+    </div>
+
+    <div class="error-box" *ngIf="error">
+      {{ error }}
+    </div>
+
+    <div class="ok-box" *ngIf="mensajeOk">
+      {{ mensajeOk }}
+    </div>
+
+    <ng-container *ngIf="!cargando && solicitud">
+      <section class="hero-card">
+        <div>
+          <span class="label">Código de solicitud</span>
+          <h2>{{ solicitud.codigo_solicitud }}</h2>
+          <p>{{ solicitud.nombres_completos }} · {{ solicitud.correo_institucional }}</p>
+        </div>
+
+        <div class="status-group">
+          <span class="status" [ngClass]="getEstadoClase(solicitud.estado)">
+            {{ getEstadoTexto(solicitud.estado) }}
+          </span>
+
+          <span class="stage">
+            {{ getEtapaTexto(solicitud.etapa_actual) }}
+          </span>
+        </div>
+      </section>
+
+      <section class="actions-card">
+        <div>
+          <h3>Acciones de flujo</h3>
+          <p>
+            Las acciones disponibles dependen del estado actual de la solicitud y del rol autenticado.
+          </p>
+        </div>
+
+        <div class="actions">
+          <button
+            type="button"
+            class="approve-btn"
+            (click)="confirmarAprobacion()"
+            [disabled]="procesando || !puedeAprobar()"
+          >
+            <span *ngIf="!procesando">{{ getTextoBotonAprobar() }}</span>
+            <span *ngIf="procesando">Procesando...</span>
+          </button>
+
+          <button
+            type="button"
+            class="reject-btn"
+            (click)="abrirModalRechazo()"
+            [disabled]="procesando || !puedeRechazar()"
+          >
+            Rechazar solicitud
+          </button>
+        </div>
+      </section>
+
+      <section class="detail-grid">
+        <article class="card">
+          <h3>Información del solicitante</h3>
+
+          <div class="info-grid">
+            <div>
+              <span>Nombres completos</span>
+              <strong>{{ solicitud.nombres_completos }}</strong>
+            </div>
+
+            <div>
+              <span>Cédula</span>
+              <strong>{{ solicitud.cedula }}</strong>
+            </div>
+
+            <div>
+              <span>Correo institucional</span>
+              <strong>{{ solicitud.correo_institucional }}</strong>
+            </div>
+
+            <div>
+              <span>Teléfono</span>
+              <strong>{{ solicitud.telefono_ext }}</strong>
+            </div>
+
+            <div>
+              <span>Dependencia</span>
+              <strong>{{ solicitud.dependencia }}</strong>
+            </div>
+
+            <div>
+              <span>Área / Unidad</span>
+              <strong>{{ solicitud.area_unidad }}</strong>
+            </div>
+
+            <div>
+              <span>Cargo</span>
+              <strong>{{ solicitud.cargo }}</strong>
+            </div>
+
+            <div>
+              <span>Fecha de solicitud</span>
+              <strong>{{ solicitud.fecha_solicitud }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h3>Información de acceso</h3>
+
+          <div class="info-grid">
+            <div>
+              <span>Tipo de usuario</span>
+              <strong>{{ solicitud.tipo_usuario }}</strong>
+            </div>
+
+            <div>
+              <span>Usuario externo</span>
+              <strong>{{ solicitud.nombre_usuario_externo || 'No aplica' }}</strong>
+            </div>
+
+            <div>
+              <span>Dirección IP</span>
+              <strong>{{ solicitud.direccion_ip || 'No registrada' }}</strong>
+            </div>
+
+            <div>
+              <span>Tiempo de vigencia</span>
+              <strong>{{ solicitud.tiempo_vigencia_acceso }}</strong>
+            </div>
+
+            <div>
+              <span>Creado el</span>
+              <strong>{{ solicitud.created_at }}</strong>
+            </div>
+
+            <div>
+              <span>Actualizado el</span>
+              <strong>{{ solicitud.updated_at }}</strong>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="card">
+        <h3>Páginas web solicitadas</h3>
+
+        <div class="web-list">
+          <div class="web-item" *ngFor="let pagina of paginasWeb">
+            <span>{{ pagina.numero }}</span>
+            <div>
+              <strong>{{ pagina.url_pagina }}</strong>
+              <p>{{ pagina.descripcion || 'Sin descripción' }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Justificación institucional</h3>
+        <p class="justification">
+          {{ solicitud.justificacion_necesidad_institucional }}
+        </p>
+      </section>
+    </ng-container>
+  </main>
+
+  <div class="modal-backdrop" *ngIf="mostrarModalRechazo">
+    <section class="modal-card">
+      <h2>Rechazar solicitud</h2>
+      <p>
+        Ingrese el motivo de rechazo. Este texto quedará registrado en la auditoría del sistema.
+      </p>
+
+      <label>
+        Motivo del rechazo *
+        <textarea
+          [(ngModel)]="motivoRechazo"
+          rows="5"
+          maxlength="1000"
+          placeholder="Explique claramente el motivo del rechazo..."
+        ></textarea>
+      </label>
+
+      <div class="counter">
+        {{ motivoRechazo.length }}/1000
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="cancel-modal" (click)="cerrarModalRechazo()" [disabled]="procesando">
+          Cancelar
+        </button>
+
+        <button type="button" class="confirm-reject" (click)="rechazar()" [disabled]="procesando">
+          <span *ngIf="!procesando">Confirmar rechazo</span>
+          <span *ngIf="procesando">Procesando...</span>
+        </button>
+      </div>
+    </section>
+  </div>
+</section>

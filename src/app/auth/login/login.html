@@ -1,0 +1,88 @@
+<section class="login-page">
+  <div class="background-glow glow-one"></div>
+  <div class="background-glow glow-two"></div>
+
+  <main class="login-wrapper">
+    <section class="info-panel">
+      <a routerLink="/" class="back-link">← Volver al inicio</a>
+
+      <div class="brand">
+        <div class="logo-box">IN</div>
+        <div>
+          <h1>INAMHI</h1>
+          <p>Instituto Nacional de Meteorología e Hidrología</p>
+        </div>
+      </div>
+
+      <div class="info-content">
+        <span class="badge">Acceso administrativo</span>
+
+        <h2>Sistema de Liberación Web</h2>
+
+        <p>
+          Ingreso exclusivo para funcionarios autorizados que participan en el
+          flujo de revisión, aprobación, validación TICS y ejecución técnica de
+          solicitudes institucionales.
+        </p>
+
+        <div class="roles-box">
+          <span>Administrador</span>
+          <span>Jefe inmediato</span>
+          <span>Máxima autoridad</span>
+          <span>Analista TICS</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="login-card">
+      <div class="card-header">
+        <span class="status-dot"></span>
+        <span>Portal seguro</span>
+      </div>
+
+      <h3>Iniciar sesión</h3>
+      <p class="subtitle">Ingrese sus credenciales institucionales.</p>
+
+      <form (ngSubmit)="ingresar()" #loginForm="ngForm">
+        <label>
+          Usuario
+          <input
+            type="text"
+            name="usuario"
+            [(ngModel)]="usuario"
+            placeholder="Ejemplo: admin"
+            autocomplete="username"
+          />
+        </label>
+
+        <label>
+          Contraseña
+          <input
+            type="password"
+            name="password"
+            [(ngModel)]="password"
+            placeholder="Ingrese su contraseña"
+            autocomplete="current-password"
+          />
+        </label>
+
+        <div class="error-box" *ngIf="error">
+          {{ error }}
+        </div>
+
+        <button type="submit" [disabled]="cargando">
+          <span *ngIf="!cargando">Ingresar al sistema</span>
+          <span *ngIf="cargando">Validando acceso...</span>
+        </button>
+      </form>
+
+      <div class="test-users">
+        <strong>Usuarios de prueba:</strong>
+        <span>admin / admin123</span>
+        <span>jefe / jefe123</span>
+        <span>autoridad / autoridad123</span>
+        <span>tics / tics123</span>
+      </div>
+    </section>
+  </main>
+</section>

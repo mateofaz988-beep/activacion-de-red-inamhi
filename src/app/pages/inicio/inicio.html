@@ -1,0 +1,84 @@
+<section class="inicio-page">
+  <div class="background-glow glow-one"></div>
+  <div class="background-glow glow-two"></div>
+
+  <header class="top-header">
+    <div class="brand">
+      <div class="logo-box">
+        <span>IN</span>
+      </div>
+
+      <div>
+        <h1>INAMHI</h1>
+        <p>Instituto Nacional de Meteorología e Hidrología</p>
+      </div>
+    </div>
+
+    <a routerLink="/auth/login" class="admin-link">
+      Acceso administrativo
+    </a>
+  </header>
+
+  <main class="hero">
+    <section class="hero-content">
+      <span class="badge">Sistema institucional</span>
+
+      <h2>
+        Gestión de Solicitudes de
+        <strong>Liberación Web</strong>
+      </h2>
+
+      <p>
+        Plataforma digital para registrar, aprobar, validar y dar seguimiento
+        a solicitudes de acceso superior a Internet institucional del INAMHI.
+      </p>
+
+      <div class="hero-actions">
+        <a routerLink="/public/solicitud" class="btn-primary">
+          Registrar solicitud
+        </a>
+
+        <a routerLink="/public/seguimiento" class="btn-secondary">
+          Consultar estado
+        </a>
+      </div>
+    </section>
+
+    <section class="access-panel">
+      <div class="panel-header">
+        <span class="dot"></span>
+        <span>Seleccione una opción</span>
+      </div>
+
+      <div class="option-card public-card" routerLink="/public/solicitud">
+        <div class="icon">01</div>
+        <div>
+          <h3>Acceso Público</h3>
+          <p>
+            Permite llenar la solicitud de liberación web sin iniciar sesión.
+          </p>
+        </div>
+      </div>
+
+      <div class="option-card admin-card" routerLink="/auth/login">
+        <div class="icon">02</div>
+        <div>
+          <h3>Acceso Administrativo</h3>
+          <p>
+            Ingreso para administrador, jefe inmediato, máxima autoridad y TICS.
+          </p>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <strong>Flujo institucional:</strong>
+        solicitud, firma, aprobación jerárquica, validación TICS y cierre.
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Sistema de Gestión de Solicitudes de Liberación Web</span>
+    <span>INAMHI © 2026</span>
+  </footer>
+</section>

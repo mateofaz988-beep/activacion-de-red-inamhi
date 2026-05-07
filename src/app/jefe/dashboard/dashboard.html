@@ -1,0 +1,124 @@
+<section class="role-layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo-box">IN</div>
+      <div>
+        <h2>INAMHI</h2>
+        <span>Jefe inmediato</span>
+      </div>
+    </div>
+
+    <nav class="menu">
+      <a class="active">Solicitudes asignadas</a>
+      <a>Historial</a>
+      <a>Reportes</a>
+    </nav>
+
+    <button class="logout" type="button" (click)="logout()">
+      Cerrar sesión
+    </button>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div>
+        <span class="eyebrow">Panel del jefe inmediato</span>
+        <h1>Solicitudes pendientes de revisión</h1>
+        <p>Revise, apruebe o rechace las solicitudes asignadas a su etapa.</p>
+      </div>
+
+      <div class="user-card">
+        <strong>{{ usuario?.nombres }} {{ usuario?.apellidos }}</strong>
+        <span>{{ usuario?.rol }}</span>
+      </div>
+    </header>
+
+    <section class="summary-card">
+      <div>
+        <span>Total asignadas</span>
+        <strong>{{ solicitudes.length }}</strong>
+        <p>Solicitudes pendientes para jefe inmediato</p>
+      </div>
+
+      <button type="button" (click)="cargarSolicitudes()">
+        Actualizar
+      </button>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Bandeja del jefe inmediato</h2>
+          <p>Solo se muestran solicitudes en estado pendiente de jefe inmediato.</p>
+        </div>
+      </div>
+
+      <div class="filters">
+        <input
+          type="text"
+          [(ngModel)]="busqueda"
+          placeholder="Buscar por código, nombre, cédula, correo o dependencia..."
+          (keyup.enter)="buscar()"
+        />
+
+        <button type="button" (click)="buscar()">Buscar</button>
+        <button type="button" class="clear-btn" (click)="limpiar()">Limpiar</button>
+      </div>
+
+      <div class="error-box" *ngIf="error">
+        {{ error }}
+      </div>
+
+      <div class="loading" *ngIf="cargando">
+        Cargando solicitudes asignadas...
+      </div>
+
+      <div class="table-wrapper" *ngIf="!cargando">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Solicitante</th>
+              <th>Cédula</th>
+              <th>Correo</th>
+              <th>Área / Unidad</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let solicitud of solicitudes">
+              <td>
+                <strong class="code">{{ solicitud.codigo_solicitud }}</strong>
+              </td>
+
+              <td>{{ solicitud.nombres_completos }}</td>
+              <td>{{ solicitud.cedula }}</td>
+              <td>{{ solicitud.correo_institucional }}</td>
+              <td>{{ solicitud.area_unidad }}</td>
+
+              <td>
+                <span class="status">
+                  {{ getEstadoTexto(solicitud.estado) }}
+                </span>
+              </td>
+
+              <td>
+                <a class="detail-btn" [routerLink]="['/admin/solicitudes', solicitud.id]">
+                  Revisar
+                </a>
+              </td>
+            </tr>
+
+            <tr *ngIf="solicitudes.length === 0">
+              <td colspan="7" class="empty">
+                No tiene solicitudes pendientes asignadas.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</section>

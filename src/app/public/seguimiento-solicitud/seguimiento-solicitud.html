@@ -1,0 +1,150 @@
+<section class="seguimiento-page">
+  <header class="topbar">
+    <a routerLink="/" class="back-link">← Volver al inicio</a>
+
+    <div>
+      <h1>Seguimiento de Solicitud</h1>
+      <p>Consulte el estado de su solicitud de liberación web.</p>
+    </div>
+  </header>
+
+  <main class="content">
+    <section class="search-card">
+      <div class="search-info">
+        <span class="badge">Consulta pública</span>
+        <h2>Ingrese su código de solicitud</h2>
+        <p>
+          El código fue generado al registrar el formulario público.
+          Ejemplo: <strong>INAMHI-WEB-2026-0001</strong>
+        </p>
+      </div>
+
+      <form class="search-form" (ngSubmit)="consultar()">
+        <label>
+          Código de solicitud
+          <input
+            type="text"
+            name="codigo"
+            [(ngModel)]="codigo"
+            placeholder="INAMHI-WEB-2026-0001"
+            maxlength="30"
+            (input)="limpiarCodigo()"
+          />
+        </label>
+
+        <button type="submit" [disabled]="cargando">
+          <span *ngIf="!cargando">Consultar estado</span>
+          <span *ngIf="cargando">Consultando...</span>
+        </button>
+      </form>
+
+      <div class="error-box" *ngIf="error">
+        {{ error }}
+      </div>
+    </section>
+
+    <section class="result-card" *ngIf="resultado">
+      <div class="result-header">
+        <div>
+          <span class="label">Código de solicitud</span>
+          <h3>{{ resultado.solicitud.codigo_solicitud }}</h3>
+        </div>
+
+        <span class="status" [ngClass]="getEstadoClase(resultado.solicitud.estado)">
+          {{ getEstadoTexto(resultado.solicitud.estado) }}
+        </span>
+      </div>
+
+      <div class="progress-box">
+        <div class="step active">
+          <span>1</span>
+          <p>Registro</p>
+        </div>
+
+        <div class="line"></div>
+
+        <div class="step" [class.active]="resultado.solicitud.etapa_actual !== 'registro_publico'">
+          <span>2</span>
+          <p>Firma</p>
+        </div>
+
+        <div class="line"></div>
+
+        <div class="step" [class.active]="['jefe_inmediato', 'maxima_autoridad', 'tics', 'ejecucion_tics', 'finalizado'].includes(resultado.solicitud.etapa_actual)">
+          <span>3</span>
+          <p>Aprobación</p>
+        </div>
+
+        <div class="line"></div>
+
+        <div class="step" [class.active]="['tics', 'ejecucion_tics', 'finalizado'].includes(resultado.solicitud.etapa_actual)">
+          <span>4</span>
+          <p>TICS</p>
+        </div>
+
+        <div class="line"></div>
+
+        <div class="step" [class.active]="resultado.solicitud.etapa_actual === 'finalizado'">
+          <span>5</span>
+          <p>Finalizado</p>
+        </div>
+      </div>
+
+      <div class="details-grid">
+        <div>
+          <span>Solicitante</span>
+          <strong>{{ resultado.solicitud.nombres_completos }}</strong>
+        </div>
+
+        <div>
+          <span>Cédula</span>
+          <strong>{{ resultado.solicitud.cedula }}</strong>
+        </div>
+
+        <div>
+          <span>Correo institucional</span>
+          <strong>{{ resultado.solicitud.correo_institucional }}</strong>
+        </div>
+
+        <div>
+          <span>Dependencia</span>
+          <strong>{{ resultado.solicitud.dependencia }}</strong>
+        </div>
+
+        <div>
+          <span>Área / Unidad</span>
+          <strong>{{ resultado.solicitud.area_unidad }}</strong>
+        </div>
+
+        <div>
+          <span>Cargo</span>
+          <strong>{{ resultado.solicitud.cargo }}</strong>
+        </div>
+
+        <div>
+          <span>Etapa actual</span>
+          <strong>{{ getEtapaTexto(resultado.solicitud.etapa_actual) }}</strong>
+        </div>
+
+        <div>
+          <span>Vigencia solicitada</span>
+          <strong>{{ resultado.solicitud.tiempo_vigencia_acceso }}</strong>
+        </div>
+      </div>
+
+      <div class="websites">
+        <h4>Páginas web solicitadas</h4>
+
+        <div class="website-item" *ngFor="let pagina of resultado.paginas_web">
+          <span>{{ pagina.url_pagina }}</span>
+          <p>{{ pagina.descripcion || 'Sin descripción' }}</p>
+        </div>
+      </div>
+
+      <div class="justification">
+        <h4>Justificación institucional</h4>
+        <p>{{ resultado.solicitud.justificacion_necesidad_institucional }}</p>
+      </div>
+    </section>
+  </main>
+</section>
