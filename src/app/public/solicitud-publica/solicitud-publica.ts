@@ -34,7 +34,10 @@ export class SolicitudPublica {
   private readonly patronTextoInstitucional = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s.,#()/-]+$/;
   private readonly patronCedula = /^\d{10}$/;
   private readonly patronTelefono = /^\d{10}$/;
-  private readonly patronCorreoInamhi = /^[a-zA-Z0-9._%+-]+@inamhi\.gob\.ec$/;
+
+  // Correo general: permite gmail, outlook, hotmail, yahoo, institucionales, empresas, etc.
+  private readonly patronCorreoGeneral = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
   private readonly patronUrl = /^https?:\/\/[^\s/$.?#].[^\s]*$/;
   private readonly patronIp =
     /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
@@ -66,7 +69,7 @@ export class SolicitudPublica {
         [
           Validators.required,
           Validators.email,
-          Validators.pattern(this.patronCorreoInamhi)
+          Validators.pattern(this.patronCorreoGeneral)
         ]
       ],
       telefono_ext: [
@@ -539,7 +542,7 @@ export class SolicitudPublica {
       }
 
       if (nombre === 'correo_institucional') {
-        return 'El correo debe terminar exactamente en @inamhi.gob.ec.';
+        return 'Ingrese un correo válido. Ejemplo: usuario@gmail.com, usuario@outlook.com o usuario@inamhi.gob.ec.';
       }
 
       if (nombre === 'nombres_completos' || nombre === 'nombre_usuario_externo') {

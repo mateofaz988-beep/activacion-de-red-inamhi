@@ -28,7 +28,12 @@
         <p>Información completa de la solicitud registrada.</p>
       </div>
 
-      <button type="button" class="refresh-btn" (click)="cargarDetalle()" [disabled]="cargando || procesando">
+      <button
+        type="button"
+        class="refresh-btn"
+        (click)="cargarDetalle()"
+        [disabled]="cargando || procesando"
+      >
         Actualizar
       </button>
     </header>
@@ -68,16 +73,26 @@
         <div>
           <h3>Acciones de flujo</h3>
           <p>
-            Las acciones disponibles dependen del estado actual de la solicitud y del rol autenticado.
+            Descargue el PDF A4 para revisión, firma manual o respaldo documental.
+            Las aprobaciones dependen del estado actual, el rol autenticado y el documento firmado cargado.
           </p>
         </div>
 
         <div class="actions">
           <button
             type="button"
+            class="pdf-btn"
+            (click)="descargarPdf()"
+            [disabled]="procesando"
+          >
+            Descargar PDF A4
+          </button>
+
+          <button
+            type="button"
             class="approve-btn"
             (click)="confirmarAprobacion()"
-            [disabled]="procesando || !puedeAprobar()"
+            [disabled]="procesando || !puedeAprobar() || !documentoFirmadoCargado"
           >
             <span *ngIf="!procesando">{{ getTextoBotonAprobar() }}</span>
             <span *ngIf="procesando">Procesando...</span>
@@ -91,6 +106,117 @@
           >
             Rechazar solicitud
           </button>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           GESTIÓN DE DOCUMENTOS Y FIRMAS
+      ====================================================== -->
+
+      <section class="documents-card">
+        <div class="documents-header">
+          <div>
+            <span class="label">Documentación</span>
+            <h3>Gestión de documentos y firmas</h3>
+            <p>
+              Descargue el PDF generado, fírmelo manualmente o electrónicamente,
+              y vuelva a subirlo al sistema para continuar con la aprobación.
+            </p>
+          </div>
+
+          <span
+            class="document-status"
+            [class.ok]="documentoFirmadoCargado"
+            [class.pending]="!documentoFirmadoCargado"
+          >
+            {{ documentoFirmadoCargado ? 'Documento firmado cargado' : 'Documento firmado pendiente' }}
+          </span>
+        </div>
+
+        <div class="documents-flow">
+          <article class="flow-step">
+            <div class="step-number">1</div>
+            <h4>Descargar PDF</h4>
+            <p>
+              Descargue el documento A4 generado por el sistema para revisión,
+              respaldo, impresión o firma.
+            </p>
+
+            <button
+              type="button"
+              class="btn-doc-secondary"
+              (click)="descargarPdf()"
+              [disabled]="procesando"
+            >
+              Descargar PDF A4
+            </button>
+          </article>
+
+          <article class="flow-step">
+            <div class="step-number">2</div>
+            <h4>Firmar documento</h4>
+            <p>
+              Puede imprimir el PDF y firmarlo manualmente, o firmarlo electrónicamente
+              con una herramienta externa autorizada.
+            </p>
+
+            <div class="hint-box">
+              Luego escanee o guarde el PDF firmado para volver a cargarlo al sistema.
+            </div>
+          </article>
+
+          <article class="flow-step">
+            <div class="step-number">3</div>
+            <h4>Subir PDF firmado</h4>
+            <p>
+              Cargue nuevamente el PDF firmado. Este archivo permitirá continuar
+              con la aprobación de la solicitud.
+            </p>
+
+            <div class="upload-buttons">
+              <input
+                type="file"
+                accept="application/pdf"
+                #inputFirmaManual
+                hidden
+                (change)="seleccionarFirmaManual($event)"
+              />
+
+              <button
+                type="button"
+                class="btn-upload manual"
+                (click)="inputFirmaManual.click()"
+                [disabled]="procesando"
+              >
+                Subir PDF firmado manualmente
+              </button>
+
+              <input
+                type="file"
+                accept="application/pdf"
+                #inputFirmaElectronica
+                hidden
+                (change)="seleccionarFirmaElectronica($event)"
+              />
+
+              <button
+                type="button"
+                class="btn-upload electronic"
+                (click)="inputFirmaElectronica.click()"
+                [disabled]="procesando"
+              >
+                Subir PDF firmado electrónicamente
+              </button>
+            </div>
+          </article>
+        </div>
+
+        <div class="document-warning" *ngIf="!documentoFirmadoCargado">
+          Para aprobar la solicitud primero debe subir un PDF firmado manualmente o electrónicamente.
+        </div>
+
+        <div class="document-success" *ngIf="documentoFirmadoCargado">
+          El documento firmado fue registrado correctamente. Ya puede continuar con la aprobación.
         </div>
       </section>
 
@@ -223,11 +349,21 @@
       </div>
 
       <div class="modal-actions">
-        <button type="button" class="cancel-modal" (click)="cerrarModalRechazo()" [disabled]="procesando">
+        <button
+          type="button"
+          class="cancel-modal"
+          (click)="cerrarModalRechazo()"
+          [disabled]="procesando"
+        >
           Cancelar
         </button>
 
-        <button type="button" class="confirm-reject" (click)="rechazar()" [disabled]="procesando">
+        <button
+          type="button"
+          class="confirm-reject"
+          (click)="rechazar()"
+          [disabled]="procesando"
+        >
           <span *ngIf="!procesando">Confirmar rechazo</span>
           <span *ngIf="procesando">Procesando...</span>
         </button>

@@ -68,7 +68,7 @@
         <span>1</span>
         <div>
           <h4>Información del solicitante</h4>
-          <p>Datos institucionales del funcionario o usuario solicitante.</p>
+          <p>Datos del funcionario, usuario externo o solicitante responsable.</p>
         </div>
       </div>
 
@@ -104,12 +104,14 @@
         </label>
 
         <label>
-          Correo institucional *
+          Correo electrónico *
           <input
             type="email"
             formControlName="correo_institucional"
-            placeholder="usuario@inamhi.gob.ec"
+            placeholder="Ejemplo: usuario@gmail.com, usuario@outlook.com o usuario@inamhi.gob.ec"
             maxlength="150"
+            autocomplete="email"
+            (input)="limpiarCorreoInstitucional()"
           />
           <small *ngIf="campoInvalido('correo_institucional')">
             {{ obtenerMensajeCampo('correo_institucional') }}
@@ -235,6 +237,7 @@
             formControlName="direccion_ip"
             placeholder="Ejemplo: 192.168.1.100"
             maxlength="15"
+            (input)="limpiarIp()"
           />
           <small *ngIf="campoInvalido('direccion_ip')">
             {{ obtenerMensajeCampo('direccion_ip') }}
@@ -249,6 +252,7 @@
           rows="5"
           maxlength="2000"
           placeholder="Explique de forma clara la necesidad institucional del acceso solicitado..."
+          (input)="limpiarTextoSimple('justificacion_necesidad_institucional')"
         ></textarea>
 
         <div class="counter">
@@ -293,6 +297,7 @@
               formControlName="url_pagina"
               placeholder="https://www.gob.ec"
               maxlength="255"
+              (input)="limpiarUrlPagina(i)"
             />
             <small *ngIf="paginaInvalida(i, 'url_pagina')">
               {{ obtenerMensajePagina(i, 'url_pagina') }}
@@ -306,6 +311,7 @@
               formControlName="descripcion"
               placeholder="Descripción opcional"
               maxlength="255"
+              (input)="limpiarTextoSimple('descripcion')"
             />
             <small *ngIf="paginaInvalida(i, 'descripcion')">
               {{ obtenerMensajePagina(i, 'descripcion') }}

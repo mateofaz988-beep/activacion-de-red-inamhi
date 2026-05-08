@@ -1,5 +1,18 @@
 from io import BytesIO
-from flask import send_file
+
+
+import os
+import re
+import ipaddress
+import datetime
+from functools import wraps
+from urllib.parse import urlparse
+
+from flask import Flask, jsonify, request, send_file
+from werkzeug.utils import secure_filename
+from flask_cors import CORS
+from dotenv import load_dotenv
+
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -10,25 +23,14 @@ from reportlab.platypus import (
     Spacer,
     Table,
     TableStyle,
-    PageBreak
+    Image
 )
-import os
-import re
-import ipaddress
-import datetime
-from functools import wraps
-from urllib.parse import urlparse
-
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-from dotenv import load_dotenv
 
 import mysql.connector
 from mysql.connector import Error
 
 import jwt
 import bcrypt
-
 
 # =====================================================
 # cargar variables de entorno
@@ -42,6 +44,9 @@ load_dotenv()
 # =====================================================
 
 app = Flask(__name__)
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOGO_INAMHI_PATH = os.path.join(BASE_DIR, "static", "img", "logo_inamhi.png")
 
 CORS(app, resources={
     r"/api/*": {
@@ -146,10 +151,10 @@ def validar_solo_letras_espacios(texto):
     return re.match(patron, texto) is not None
 
 
-def validar_correo_inamhi(correo):
+def validar_correo_general(correo):
     correo = limpiar_texto(correo).lower()
 
-    patron_correo = r"^[a-zA-Z0-9._%+-]+@inamhi\.gob\.ec$"
+    patron_correo = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
 
     return re.match(patron_correo, correo) is not None
 
@@ -338,11 +343,11 @@ def validar_solicitud_publica(data):
     elif not validar_cedula_formato(cedula):
         errores["cedula"] = "la cédula debe contener exactamente 10 números."
 
-    # correo institucional
+  # correo electrónico
     if not correo_institucional:
-        errores["correo_institucional"] = "el correo institucional es obligatorio."
-    elif not validar_correo_inamhi(correo_institucional):
-        errores["correo_institucional"] = "el correo debe pertenecer al dominio @inamhi.gob.ec."
+         errores["correo_institucional"] = "el correo electrónico es obligatorio."
+    elif not validar_correo_general(correo_institucional):
+        errores["correo_institucional"] = "ingrese un correo válido. ejemplo: usuario@gmail.com, usuario@outlook.com o usuario@inamhi.gob.ec."
 
     # teléfono
     if not telefono_ext:
@@ -1554,11 +1559,11 @@ def texto_seguro(valor):
     if valor is None:
         return ""
 
-    return str(valor)
-
-
-def crear_parrafo(texto, estilo):
-    return Paragraph(texto_seguro(texto).replace("\n", "<br/>"), estilo)
+    texto = str(valor)
+    texto = texto.replace("&", "&amp;")
+    texto = texto.replace("<", "&lt;")
+    texto = texto.replace(">", "&gt;")
+    return texto
 
 
 def estado_legible_pdf(estado):
@@ -1592,248 +1597,175 @@ def etapa_legible_pdf(etapa):
     return etapas.get(etapa, etapa)
 
 
-def agregar_tabla_datos(elementos, titulo, filas, estilos):
-    encabezado = [[Paragraph(f"<b>{titulo}</b>", estilos["section_title"])]]
+def agregar_titulo_seccion(elementos, titulo, estilos):
+    tabla = Table(
+        [[Paragraph(f"<b>{titulo}</b>", estilos["section_title"])]],
+        colWidths=[17.4 * cm],
+        rowHeights=[0.55 * cm]
+    )
 
-    tabla_titulo = Table(encabezado, colWidths=[17.5 * cm])
-    tabla_titulo.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#d9eaf7")),
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-    ]))
-
-    elementos.append(tabla_titulo)
-
-    data = []
-
-    for etiqueta, valor in filas:
-        data.append([
-            Paragraph(f"<b>{etiqueta}</b>", estilos["cell_label"]),
-            Paragraph(texto_seguro(valor), estilos["cell_text"])
-        ])
-
-    tabla = Table(data, colWidths=[5.2 * cm, 12.3 * cm])
     tabla.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("INNERGRID", (0, 0), (-1, -1), 0.7, colors.black),
-        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f1f5f9")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#dbeafe")),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#1e3a8a")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
 
     elementos.append(tabla)
-    elementos.append(Spacer(1, 10))
 
 
 def agregar_espacios_firmas(elementos, estilos):
+    agregar_titulo_seccion(
+        elementos,
+        "5. FIRMAS DE RESPONSABILIDAD Y APROBACIÓN",
+        estilos
+    )
+
     data = [
         [
-            Paragraph("<b>FIRMA DEL SOLICITANTE</b>", estilos["center"]),
-            Paragraph("<b>FIRMA JEFE INMEDIATO</b>", estilos["center"])
+            Paragraph("<b>SOLICITANTE</b>", estilos["center_bold"]),
+            Paragraph("<b>JEFE INMEDIATO</b>", estilos["center_bold"]),
+            Paragraph("<b>MÁXIMA AUTORIDAD</b>", estilos["center_bold"]),
+            Paragraph("<b>TICS</b>", estilos["center_bold"])
         ],
         [
-            Paragraph("<br/><br/><br/>_____________________________<br/>Nombre / Firma", estilos["center"]),
-            Paragraph("<br/><br/><br/>_____________________________<br/>Nombre / Firma", estilos["center"])
-        ],
-        [
-            Paragraph("<b>FIRMA MÁXIMA AUTORIDAD</b>", estilos["center"]),
-            Paragraph("<b>FIRMA / VALIDACIÓN TICS</b>", estilos["center"])
-        ],
-        [
-            Paragraph("<br/><br/><br/>_____________________________<br/>Nombre / Firma", estilos["center"]),
-            Paragraph("<br/><br/><br/>_____________________________<br/>Nombre / Firma", estilos["center"])
+            Paragraph("<br/><br/>_________________________<br/>Nombre / Firma", estilos["center"]),
+            Paragraph("<br/><br/>_________________________<br/>Nombre / Firma", estilos["center"]),
+            Paragraph("<br/><br/>_________________________<br/>Nombre / Firma", estilos["center"]),
+            Paragraph("<br/><br/>_________________________<br/>Nombre / Firma", estilos["center"])
         ]
     ]
 
-    tabla = Table(data, colWidths=[8.75 * cm, 8.75 * cm])
+    tabla = Table(
+        data,
+        colWidths=[4.35 * cm, 4.35 * cm, 4.35 * cm, 4.35 * cm],
+        rowHeights=[0.58 * cm, 1.75 * cm]
+    )
+
     tabla.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("INNERGRID", (0, 0), (-1, -1), 0.7, colors.black),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e5e7eb")),
-        ("BACKGROUND", (0, 2), (-1, 2), colors.HexColor("#e5e7eb")),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#111827")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#374151")),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#eff6ff")),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
     ]))
 
     elementos.append(tabla)
-    elementos.append(Spacer(1, 10))
+    elementos.append(Spacer(1, 0.22 * cm))
 
 
-def agregar_seccion_tics(elementos, estilos):
-    elementos.append(PageBreak())
-
+def agregar_seccion_tics_vertical_compacta(elementos, estilos):
     titulo = Table(
         [[
-            Paragraph("<b>2</b>", estilos["number_box"]),
-            Paragraph("<b>PARA USO EXCLUSIVO DE LA UNIDAD DE TICS</b><br/>(GESTIÓN DE SEGURIDAD DE TIC´S)", estilos["center"])
+            Paragraph("<b>6</b>", estilos["number_box"]),
+            Paragraph(
+                "<b>PARA USO EXCLUSIVO DE LA UNIDAD DE TICS</b><br/>"
+                "<font size='7'>GESTIÓN DE SEGURIDAD DE TIC'S</font>",
+                estilos["center_bold"]
+            )
         ]],
-        colWidths=[1.5 * cm, 16 * cm]
+        colWidths=[1.2 * cm, 16.2 * cm],
+        rowHeights=[0.85 * cm]
     )
 
     titulo.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1.2, colors.black),
-        ("INNERGRID", (0, 0), (-1, -1), 1, colors.black),
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#bfbfbf")),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#111827")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#374151")),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#d1d5db")),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
 
     elementos.append(titulo)
 
     autorizacion = Table(
-        [
-            [
-                Paragraph("<b>AUTORIZACIÓN:</b>", estilos["small"]),
-                Paragraph("Campo validado por TICS", estilos["small"]),
-                Paragraph("☐ Aprobar", estilos["small"]),
-                Paragraph("☐ Rechazar", estilos["small"])
-            ]
-        ],
-        colWidths=[3.2 * cm, 5.2 * cm, 4.5 * cm, 4.6 * cm]
+        [[
+            Paragraph("<b>AUTORIZACIÓN:</b>", estilos["mini_bold"]),
+            Paragraph("Campo validado por TICS", estilos["mini"]),
+            Paragraph("☐ Aprobar", estilos["mini"]),
+            Paragraph("☐ Rechazar", estilos["mini"])
+        ]],
+        colWidths=[3.2 * cm, 6.2 * cm, 4 * cm, 4 * cm],
+        rowHeights=[0.70 * cm]
     )
 
     autorizacion.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("INNERGRID", (0, 0), (-1, -1), 0.8, colors.black),
-        ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#e5e5e5")),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#111827")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#374151")),
+        ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#f3f4f6")),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 7),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
     ]))
 
     elementos.append(autorizacion)
 
     observacion = Table(
-        [
-            [Paragraph("<b>OBSERVACIÓN</b>", estilos["small"])],
-            [Paragraph("<br/><br/><br/><br/>", estilos["small"])]
-        ],
-        colWidths=[17.5 * cm]
+        [[
+            Paragraph("<b>OBSERVACIÓN:</b>", estilos["mini_bold"]),
+            Paragraph("", estilos["mini"])
+        ]],
+        colWidths=[3.2 * cm, 14.2 * cm],
+        rowHeights=[1.15 * cm]
     )
 
     observacion.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("LINEBELOW", (0, 0), (-1, 0), 1, colors.black),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e5e5e5")),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#111827")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#374151")),
+        ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#f3f4f6")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
     ]))
 
     elementos.append(observacion)
 
-    firma_coordinador = Table(
-        [
-            [Paragraph("<br/><br/><br/>Nombre: _________________________________", estilos["center"])],
-            [Paragraph("<b>COORDINADOR DE TICS</b>", estilos["center"])]
-        ],
-        colWidths=[17.5 * cm]
+    firmas_tics = Table(
+        [[
+            Paragraph("Nombre: _______________________<br/><b>Coordinador TICS</b>", estilos["center"]),
+            Paragraph("Fecha: _______________________<br/><b>Responsable ejecución</b>", estilos["center"]),
+            Paragraph("Nombre: _______________________<br/><b>Admin Firewall INAMHI</b>", estilos["center"])
+        ]],
+        colWidths=[5.8 * cm, 5.8 * cm, 5.8 * cm],
+        rowHeights=[1.45 * cm]
     )
 
-    firma_coordinador.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
+    firmas_tics.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#111827")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#374151")),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-    ]))
-
-    elementos.append(firma_coordinador)
-
-    responsable = Table(
-        [[Paragraph("<b>RESPONSABLE DE LA EJECUCIÓN</b>", estilos["center"])]],
-        colWidths=[17.5 * cm]
-    )
-
-    responsable.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#bfbfbf")),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("TOPPADDING", (0, 0), (-1, -1), 6),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
     ]))
 
-    elementos.append(responsable)
-
-    ejecucion = Table(
-        [
-            [
-                Paragraph("<b>FECHA DE EJECUCIÓN:</b>", estilos["small"]),
-                Paragraph("", estilos["small"])
-            ],
-            [
-                Paragraph("<b>OBSERVACIONES:</b>", estilos["small"]),
-                Paragraph("", estilos["small"])
-            ],
-            [
-                Paragraph("<br/>", estilos["small"]),
-                Paragraph("<br/>", estilos["small"])
-            ],
-            [
-                Paragraph("<br/>", estilos["small"]),
-                Paragraph("<br/>", estilos["small"])
-            ]
-        ],
-        colWidths=[4.8 * cm, 12.7 * cm]
-    )
-
-    ejecucion.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("INNERGRID", (0, 0), (-1, -1), 0.8, colors.black),
-        ("BACKGROUND", (0, 0), (0, 1), colors.HexColor("#e5e5e5")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-    ]))
-
-    elementos.append(ejecucion)
-
-    firma_admin = Table(
-        [
-            [Paragraph("<br/><br/>Nombre: _________________________________", estilos["center"])],
-            [Paragraph("<b>Administrador de Firewall INAMHI</b>", estilos["center"])]
-        ],
-        colWidths=[17.5 * cm]
-    )
-
-    firma_admin.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-    ]))
-
-    elementos.append(firma_admin)
+    elementos.append(firmas_tics)
 
     nota = Paragraph(
-        "<b>Nota:</b> Este formulario deberá ser entregado en la Unidad de TICS de manera física "
-        "o digital con las firmas correspondientes. Los solicitantes se hacen responsables de la "
-        "información a la que accedan y se comprometen a cumplir las políticas de seguridad de la "
-        "información establecidas en TICS-INAMHI.",
-        estilos["small"]
+        "<b>Nota:</b> Documento de uso institucional. Debe conservarse con las firmas y validaciones correspondientes.",
+        estilos["mini"]
     )
 
-    elementos.append(Spacer(1, 8))
+    elementos.append(Spacer(1, 0.12 * cm))
     elementos.append(nota)
 
 
-def generar_pdf_solicitud_a4(solicitud, paginas_web):
+def generar_pdf_solicitud_a4(solicitud, paginas_web, incluir_seccion_tics=False):
     buffer = BytesIO()
 
     documento = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=1.5 * cm,
-        leftMargin=1.5 * cm,
-        topMargin=1.2 * cm,
-        bottomMargin=1.2 * cm
+        rightMargin=0.85 * cm,
+        leftMargin=0.85 * cm,
+        topMargin=0.75 * cm,
+        bottomMargin=0.75 * cm
     )
 
     styles = getSampleStyleSheet()
@@ -1843,121 +1775,225 @@ def generar_pdf_solicitud_a4(solicitud, paginas_web):
             "title",
             parent=styles["Title"],
             fontName="Helvetica-Bold",
-            fontSize=14,
-            leading=18,
+            fontSize=12,
+            leading=14,
             alignment=1,
-            textColor=colors.black
+            textColor=colors.HexColor("#111827")
         ),
         "subtitle": ParagraphStyle(
             "subtitle",
             parent=styles["Normal"],
-            fontSize=9,
-            leading=12,
+            fontSize=7.5,
+            leading=9,
             alignment=1,
-            textColor=colors.HexColor("#334155")
+            textColor=colors.HexColor("#475569")
         ),
         "section_title": ParagraphStyle(
             "section_title",
             parent=styles["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=9,
-            leading=11,
-            alignment=1
+            fontSize=8,
+            leading=10,
+            alignment=1,
+            textColor=colors.HexColor("#0f172a")
         ),
         "cell_label": ParagraphStyle(
             "cell_label",
             parent=styles["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=8,
-            leading=10
+            fontSize=7,
+            leading=8.5,
+            textColor=colors.HexColor("#0f172a")
         ),
         "cell_text": ParagraphStyle(
             "cell_text",
             parent=styles["Normal"],
-            fontSize=8,
-            leading=10
+            fontSize=7,
+            leading=8.5,
+            textColor=colors.HexColor("#111827")
         ),
-        "small": ParagraphStyle(
-            "small",
+        "mini": ParagraphStyle(
+            "mini",
             parent=styles["Normal"],
-            fontSize=8,
-            leading=10
+            fontSize=6.4,
+            leading=7.4,
+            textColor=colors.HexColor("#111827")
+        ),
+        "mini_bold": ParagraphStyle(
+            "mini_bold",
+            parent=styles["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=6.4,
+            leading=7.4,
+            textColor=colors.HexColor("#111827")
         ),
         "center": ParagraphStyle(
             "center",
             parent=styles["Normal"],
-            fontSize=8,
-            leading=10,
-            alignment=1
+            fontSize=6.7,
+            leading=8,
+            alignment=1,
+            textColor=colors.HexColor("#111827")
+        ),
+        "center_bold": ParagraphStyle(
+            "center_bold",
+            parent=styles["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=6.8,
+            leading=8.2,
+            alignment=1,
+            textColor=colors.HexColor("#111827")
         ),
         "number_box": ParagraphStyle(
             "number_box",
             parent=styles["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=14,
-            leading=16,
+            fontSize=11,
+            leading=12,
             alignment=1
         )
     }
 
     elementos = []
 
+    # =====================================================
+    # encabezado con logo
+    # =====================================================
+
+    if os.path.exists(LOGO_INAMHI_PATH):
+        logo = Image(LOGO_INAMHI_PATH, width=1.8 * cm, height=1.8 * cm)
+    else:
+        logo = Paragraph("<b>INAMHI</b>", estilos["center_bold"])
+
     encabezado = Table(
-        [
-            [
-                Paragraph("<b>INAMHI</b>", estilos["title"]),
-                Paragraph("<b>SOLICITUD DE LIBERACIÓN WEB INSTITUCIONAL</b>", estilos["title"])
-            ],
-            [
-                Paragraph("Instituto Nacional de Meteorología e Hidrología", estilos["subtitle"]),
-                Paragraph(f"Código: <b>{solicitud['codigo_solicitud']}</b>", estilos["subtitle"])
-            ]
-        ],
-        colWidths=[5 * cm, 12.5 * cm]
+        [[
+            logo,
+            Paragraph("<b>SOLICITUD DE LIBERACIÓN WEB INSTITUCIONAL</b>", estilos["title"]),
+            Paragraph(
+                f"<b>Código:</b><br/>{texto_seguro(solicitud['codigo_solicitud'])}",
+                estilos["subtitle"]
+            )
+        ]],
+        colWidths=[2.6 * cm, 10.8 * cm, 4.0 * cm],
+        rowHeights=[1.9 * cm]
     )
 
     encabezado.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("INNERGRID", (0, 0), (-1, -1), 0.7, colors.black),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#d9eaf7")),
+        ("BOX", (0, 0), (-1, -1), 0.9, colors.HexColor("#111827")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#374151")),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#eaf2fb")),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 7),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
     ]))
 
     elementos.append(encabezado)
-    elementos.append(Spacer(1, 10))
+    elementos.append(Spacer(1, 0.22 * cm))
 
-    agregar_tabla_datos(
-        elementos,
-        "1. DATOS DEL SOLICITANTE",
+    # =====================================================
+    # 1. datos del solicitante
+    # =====================================================
+
+    agregar_titulo_seccion(elementos, "1. DATOS DEL SOLICITANTE", estilos)
+
+    datos_solicitante = [
         [
-            ("Código de solicitud", solicitud["codigo_solicitud"]),
-            ("Nombres completos", solicitud["nombres_completos"]),
-            ("Cédula", solicitud["cedula"]),
-            ("Correo institucional", solicitud["correo_institucional"]),
-            ("Teléfono", solicitud["telefono_ext"]),
-            ("Dependencia", solicitud["dependencia"]),
-            ("Área / Unidad", solicitud["area_unidad"]),
-            ("Cargo", solicitud["cargo"]),
-            ("Fecha de solicitud", serializar_fecha(solicitud["fecha_solicitud"])),
+            Paragraph("<b>Nombres</b>", estilos["cell_label"]),
+            Paragraph(texto_seguro(solicitud["nombres_completos"])[:90], estilos["cell_text"]),
+            Paragraph("<b>Cédula</b>", estilos["cell_label"]),
+            Paragraph(texto_seguro(solicitud["cedula"]), estilos["cell_text"]),
         ],
-        estilos
+        [
+            Paragraph("<b>Correo</b>", estilos["cell_label"]),
+            Paragraph(texto_seguro(solicitud["correo_institucional"])[:80], estilos["cell_text"]),
+            Paragraph("<b>Teléfono</b>", estilos["cell_label"]),
+            Paragraph(texto_seguro(solicitud["telefono_ext"]), estilos["cell_text"]),
+        ],
+        [
+            Paragraph("<b>Dependencia</b>", estilos["cell_label"]),
+            Paragraph(texto_seguro(solicitud["dependencia"])[:80], estilos["cell_text"]),
+            Paragraph("<b>Área</b>", estilos["cell_label"]),
+            Paragraph(texto_seguro(solicitud["area_unidad"])[:80], estilos["cell_text"]),
+        ],
+        [
+            Paragraph("<b>Cargo</b>", estilos["cell_label"]),
+            Paragraph(texto_seguro(solicitud["cargo"])[:80], estilos["cell_text"]),
+            Paragraph("<b>Fecha</b>", estilos["cell_label"]),
+            Paragraph(serializar_fecha(solicitud["fecha_solicitud"]), estilos["cell_text"]),
+        ],
+    ]
+
+    tabla_solicitante = Table(
+        datos_solicitante,
+        colWidths=[2.3 * cm, 6.4 * cm, 2.3 * cm, 6.4 * cm],
+        rowHeights=[0.50 * cm, 0.50 * cm, 0.50 * cm, 0.50 * cm]
     )
 
-    agregar_tabla_datos(
-        elementos,
-        "2. INFORMACIÓN DEL ACCESO SOLICITADO",
+    tabla_solicitante.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#111827")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#374151")),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f8fafc")),
+        ("BACKGROUND", (2, 0), (2, -1), colors.HexColor("#f8fafc")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+
+    elementos.append(tabla_solicitante)
+    elementos.append(Spacer(1, 0.18 * cm))
+
+    # =====================================================
+    # 2. información del acceso
+    # =====================================================
+
+    agregar_titulo_seccion(elementos, "2. INFORMACIÓN DEL ACCESO SOLICITADO", estilos)
+
+    datos_acceso = [
         [
-            ("Tipo de usuario", solicitud["tipo_usuario"]),
-            ("Usuario externo", solicitud["nombre_usuario_externo"] or "No aplica"),
-            ("Dirección IP", solicitud["direccion_ip"] or "No registrada"),
-            ("Tiempo de vigencia", solicitud["tiempo_vigencia_acceso"]),
-            ("Estado actual", estado_legible_pdf(solicitud["estado"])),
-            ("Etapa actual", etapa_legible_pdf(solicitud["etapa_actual"])),
+            Paragraph("<b>Tipo usuario</b>", estilos["cell_label"]),
+            Paragraph(texto_seguro(solicitud["tipo_usuario"]), estilos["cell_text"]),
+            Paragraph("<b>Usuario externo</b>", estilos["cell_label"]),
+            Paragraph(texto_seguro(solicitud["nombre_usuario_externo"] or "No aplica")[:70], estilos["cell_text"]),
         ],
-        estilos
+        [
+            Paragraph("<b>IP</b>", estilos["cell_label"]),
+            Paragraph(texto_seguro(solicitud["direccion_ip"] or "No registrada"), estilos["cell_text"]),
+            Paragraph("<b>Vigencia</b>", estilos["cell_label"]),
+            Paragraph(texto_seguro(solicitud["tiempo_vigencia_acceso"])[:70], estilos["cell_text"]),
+        ],
+        [
+            Paragraph("<b>Estado</b>", estilos["cell_label"]),
+            Paragraph(estado_legible_pdf(solicitud["estado"]), estilos["cell_text"]),
+            Paragraph("<b>Etapa</b>", estilos["cell_label"]),
+            Paragraph(etapa_legible_pdf(solicitud["etapa_actual"]), estilos["cell_text"]),
+        ],
+    ]
+
+    tabla_acceso = Table(
+        datos_acceso,
+        colWidths=[2.3 * cm, 6.4 * cm, 2.3 * cm, 6.4 * cm],
+        rowHeights=[0.50 * cm, 0.50 * cm, 0.50 * cm]
     )
+
+    tabla_acceso.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#111827")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#374151")),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f8fafc")),
+        ("BACKGROUND", (2, 0), (2, -1), colors.HexColor("#f8fafc")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+
+    elementos.append(tabla_acceso)
+    elementos.append(Spacer(1, 0.18 * cm))
+
+    # =====================================================
+    # 3. páginas web solicitadas
+    # =====================================================
+
+    agregar_titulo_seccion(elementos, "3. PÁGINAS WEB SOLICITADAS", estilos)
 
     data_paginas = [
         [
@@ -1967,12 +2003,14 @@ def generar_pdf_solicitud_a4(solicitud, paginas_web):
         ]
     ]
 
-    if paginas_web:
-        for pagina in paginas_web:
+    paginas_limitadas = paginas_web[:2]
+
+    if paginas_limitadas:
+        for pagina in paginas_limitadas:
             data_paginas.append([
                 Paragraph(str(pagina.get("numero", "")), estilos["cell_text"]),
-                Paragraph(texto_seguro(pagina.get("url_pagina")), estilos["cell_text"]),
-                Paragraph(texto_seguro(pagina.get("descripcion")), estilos["cell_text"])
+                Paragraph(texto_seguro(pagina.get("url_pagina"))[:70], estilos["cell_text"]),
+                Paragraph(texto_seguro(pagina.get("descripcion"))[:70], estilos["cell_text"])
             ])
     else:
         data_paginas.append([
@@ -1981,68 +2019,65 @@ def generar_pdf_solicitud_a4(solicitud, paginas_web):
             Paragraph("-", estilos["cell_text"])
         ])
 
-    titulo_paginas = Table(
-        [[Paragraph("<b>3. PÁGINAS WEB SOLICITADAS</b>", estilos["section_title"])]],
-        colWidths=[17.5 * cm]
+    tabla_paginas = Table(
+        data_paginas,
+        colWidths=[1.1 * cm, 8.1 * cm, 8.2 * cm],
+        rowHeights=[0.50 * cm] + [0.50 * cm for _ in range(len(data_paginas) - 1)]
     )
 
-    titulo_paginas.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#d9eaf7")),
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-    ]))
-
-    elementos.append(titulo_paginas)
-
-    tabla_paginas = Table(data_paginas, colWidths=[1.2 * cm, 8.5 * cm, 7.8 * cm])
     tabla_paginas.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("INNERGRID", (0, 0), (-1, -1), 0.7, colors.black),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f1f5f9")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#111827")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#374151")),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f8fafc")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
 
     elementos.append(tabla_paginas)
-    elementos.append(Spacer(1, 10))
+    elementos.append(Spacer(1, 0.18 * cm))
 
-    titulo_justificacion = Table(
-        [[Paragraph("<b>4. JUSTIFICACIÓN DE LA NECESIDAD INSTITUCIONAL</b>", estilos["section_title"])]],
-        colWidths=[17.5 * cm]
-    )
+    # =====================================================
+    # 4. justificación
+    # =====================================================
 
-    titulo_justificacion.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#d9eaf7")),
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-    ]))
+    agregar_titulo_seccion(elementos, "4. JUSTIFICACIÓN DE LA NECESIDAD INSTITUCIONAL", estilos)
 
-    elementos.append(titulo_justificacion)
+    justificacion = texto_seguro(solicitud["justificacion_necesidad_institucional"])
+
+    if len(justificacion) > 300:
+        justificacion = justificacion[:300] + "..."
 
     tabla_justificacion = Table(
-        [[crear_parrafo(solicitud["justificacion_necesidad_institucional"], estilos["cell_text"])]],
-        colWidths=[17.5 * cm]
+        [[Paragraph(justificacion, estilos["cell_text"])]],
+        colWidths=[17.4 * cm],
+        rowHeights=[1.25 * cm]
     )
 
     tabla_justificacion.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#111827")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 30),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("LEFTPADDING", (0, 0), (-1, -1), 7),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
     ]))
 
     elementos.append(tabla_justificacion)
-    elementos.append(Spacer(1, 12))
+    elementos.append(Spacer(1, 0.22 * cm))
+
+    # =====================================================
+    # 5. firmas generales
+    # =====================================================
 
     agregar_espacios_firmas(elementos, estilos)
-    agregar_seccion_tics(elementos, estilos)
+
+    # =====================================================
+    # 6. sección exclusiva TICS
+    # =====================================================
+
+    if incluir_seccion_tics:
+        agregar_seccion_tics_vertical_compacta(elementos, estilos)
 
     documento.build(elementos)
 
@@ -2063,7 +2098,14 @@ def descargar_pdf_solicitud(solicitud_id):
         }), 404
 
     try:
-        pdf_buffer = generar_pdf_solicitud_a4(solicitud, paginas_web)
+        rol_actual = request.usuario_actual["rol"]
+        incluir_seccion_tics = rol_actual == "analista_tics"
+
+        pdf_buffer = generar_pdf_solicitud_a4(
+            solicitud,
+            paginas_web,
+            incluir_seccion_tics=incluir_seccion_tics
+        )
 
         nombre_archivo = f"{solicitud['codigo_solicitud']}.pdf"
 
@@ -2080,7 +2122,11 @@ def descargar_pdf_solicitud(solicitud_id):
             "mensaje": "error al generar el PDF.",
             "error": str(error)
         }), 500
-    
+
+# =====================================================
+# detalle administrativo de solicitud
+# =====================================================
+
 @app.route("/api/admin/solicitudes/<int:solicitud_id>", methods=["GET"])
 @token_requerido
 @roles_permitidos("administrador", "analista_tics", "jefe_inmediato", "maxima_autoridad")
@@ -2168,156 +2214,136 @@ def obtener_solicitud_admin(solicitud_id):
             "mensaje": "error al obtener la solicitud.",
             "error": str(error)
         }), 500
-    
-    # =====================================================
+
+
+# =====================================================
 # flujo administrativo de aprobación / rechazo
 # =====================================================
 
-def obtener_solicitud_por_id_simple(solicitud_id):
-    conexion = get_db_connection()
-
-    if conexion is None:
-        return None
-
-    try:
-        cursor = conexion.cursor(dictionary=True)
-
-        sql = """
-            select
-                id,
-                codigo_solicitud,
-                estado,
-                etapa_actual,
-                bloqueada,
-                nombres_completos,
-                correo_institucional
-            from solicitudes
-            where id = %s
-            limit 1;
-        """
-
-        cursor.execute(sql, (solicitud_id,))
-        solicitud = cursor.fetchone()
-
-        cursor.close()
-        conexion.close()
-
-        return solicitud
-
-    except Error as error:
-        print("error al obtener solicitud simple:", error)
-        return None
-
-
-def usuario_puede_gestionar_estado(rol, estado):
-    permisos = {
-        "pendiente_firma_solicitante": ["administrador"],
-        "pendiente_jefe_inmediato": ["administrador", "jefe_inmediato"],
-        "pendiente_maxima_autoridad": ["administrador", "maxima_autoridad"],
-        "pendiente_tics": ["administrador", "analista_tics"],
-        "pendiente_ejecucion_tics": ["administrador", "analista_tics"]
-    }
-
-    return rol in permisos.get(estado, [])
-
-
-def obtener_siguiente_estado_aprobacion(estado_actual):
+def obtener_siguiente_estado_por_rol(estado_actual, rol_actual):
     flujo = {
         "pendiente_firma_solicitante": {
+            "rol": "administrador",
             "nuevo_estado": "pendiente_jefe_inmediato",
-            "nueva_etapa": "jefe_inmediato",
-            "accion": "firma_solicitante_validada"
+            "nueva_etapa": "jefe_inmediato"
         },
         "pendiente_jefe_inmediato": {
+            "rol": "jefe_inmediato",
             "nuevo_estado": "pendiente_maxima_autoridad",
-            "nueva_etapa": "maxima_autoridad",
-            "accion": "aprobacion_jefe_inmediato"
+            "nueva_etapa": "maxima_autoridad"
         },
         "pendiente_maxima_autoridad": {
+            "rol": "maxima_autoridad",
             "nuevo_estado": "pendiente_tics",
-            "nueva_etapa": "tics",
-            "accion": "aprobacion_maxima_autoridad"
+            "nueva_etapa": "tics"
         },
         "pendiente_tics": {
+            "rol": "analista_tics",
             "nuevo_estado": "pendiente_ejecucion_tics",
-            "nueva_etapa": "ejecucion_tics",
-            "accion": "aprobacion_tics"
+            "nueva_etapa": "ejecucion_tics"
         },
         "pendiente_ejecucion_tics": {
+            "rol": "analista_tics",
             "nuevo_estado": "finalizada",
-            "nueva_etapa": "finalizado",
-            "accion": "finalizacion_tics"
+            "nueva_etapa": "finalizado"
         }
     }
 
-    return flujo.get(estado_actual)
+    regla = flujo.get(estado_actual)
+
+    if regla is None:
+        return None
+
+    if regla["rol"] != rol_actual:
+        return None
+
+    return regla
 
 
-def obtener_estado_rechazo(estado_actual):
+def obtener_estado_rechazo_por_rol(estado_actual, rol_actual):
     rechazos = {
         "pendiente_jefe_inmediato": {
+            "rol": "jefe_inmediato",
             "nuevo_estado": "rechazada_jefe_inmediato",
-            "nueva_etapa": "jefe_inmediato",
-            "accion": "rechazo_jefe_inmediato"
+            "nueva_etapa": "jefe_inmediato"
         },
         "pendiente_maxima_autoridad": {
+            "rol": "maxima_autoridad",
             "nuevo_estado": "rechazada_maxima_autoridad",
-            "nueva_etapa": "maxima_autoridad",
-            "accion": "rechazo_maxima_autoridad"
+            "nueva_etapa": "maxima_autoridad"
         },
         "pendiente_tics": {
+            "rol": "analista_tics",
             "nuevo_estado": "rechazada_tics",
-            "nueva_etapa": "tics",
-            "accion": "rechazo_tics"
+            "nueva_etapa": "tics"
         }
     }
 
-    return rechazos.get(estado_actual)
+    regla = rechazos.get(estado_actual)
+
+    if regla is None:
+        return None
+
+    if regla["rol"] != rol_actual:
+        return None
+
+    return regla
+
+def archivo_pdf_valido(archivo):
+    if archivo is None:
+        return False
+
+    nombre_archivo = archivo.filename or ""
+
+    return nombre_archivo.lower().endswith(".pdf")
 
 
-@app.route("/api/admin/solicitudes/<int:solicitud_id>/aprobar", methods=["PUT"])
+# =====================================================
+# carga de documentos firmados
+# =====================================================
+
+@app.route("/api/admin/solicitudes/<int:solicitud_id>/documentos", methods=["POST"])
 @token_requerido
 @roles_permitidos("administrador", "jefe_inmediato", "maxima_autoridad", "analista_tics")
-def aprobar_solicitud(solicitud_id):
+def subir_documento_firmado(solicitud_id):
     usuario_actual = request.usuario_actual
     rol_actual = usuario_actual["rol"]
 
-    solicitud = obtener_solicitud_por_id_simple(solicitud_id)
-
-    if solicitud is None:
+    if not request.files:
         return jsonify({
             "estado": "error",
-            "mensaje": "solicitud no encontrada."
-        }), 404
-
-    if solicitud["bloqueada"]:
-        return jsonify({
-            "estado": "error",
-            "mensaje": "la solicitud se encuentra bloqueada y no puede ser modificada."
+            "mensaje": "debe seleccionar un archivo PDF."
         }), 400
 
-    estado_actual = solicitud["estado"]
+    archivo = next(iter(request.files.values()))
 
-    if estado_actual.startswith("rechazada") or estado_actual in ["finalizada", "anulada"]:
+    if archivo is None or not archivo.filename:
         return jsonify({
             "estado": "error",
-            "mensaje": "esta solicitud ya no puede avanzar porque se encuentra cerrada."
+            "mensaje": "debe seleccionar un archivo PDF válido."
         }), 400
 
-    if not usuario_puede_gestionar_estado(rol_actual, estado_actual):
+    if not archivo_pdf_valido(archivo):
         return jsonify({
             "estado": "error",
-            "mensaje": "su rol no tiene permiso para aprobar esta etapa.",
-            "rol_actual": rol_actual,
-            "estado_actual": estado_actual
-        }), 403
+            "mensaje": "solo se permiten archivos con extensión .pdf."
+        }), 400
 
-    siguiente = obtener_siguiente_estado_aprobacion(estado_actual)
+    tipo_documento = limpiar_texto(request.form.get("tipo_documento"))
+    observacion = normalizar_espacios(request.form.get("observacion"))
 
-    if siguiente is None:
+    tipos_validos = [
+        "pdf_firmado_manual",
+        "pdf_firmado_electronico",
+        "pdf_tics",
+        "pdf_final"
+    ]
+
+    if tipo_documento not in tipos_validos:
         return jsonify({
             "estado": "error",
-            "mensaje": "no existe una transición de aprobación válida para el estado actual."
+            "mensaje": "tipo de documento no válido.",
+            "tipos_validos": tipos_validos
         }), 400
 
     conexion = get_db_connection()
@@ -2329,40 +2355,298 @@ def aprobar_solicitud(solicitud_id):
         }), 500
 
     try:
-        cursor = conexion.cursor()
+        cursor = conexion.cursor(dictionary=True)
 
-        sql = """
-            update solicitudes
-            set
-                estado = %s,
-                etapa_actual = %s,
-                updated_at = now()
-            where id = %s;
-        """
+        cursor.execute("""
+            select
+                id,
+                codigo_solicitud,
+                estado,
+                etapa_actual,
+                bloqueada
+            from solicitudes
+            where id = %s
+            limit 1;
+        """, (solicitud_id,))
 
-        cursor.execute(sql, (
-            siguiente["nuevo_estado"],
-            siguiente["nueva_etapa"],
-            solicitud_id
+        solicitud = cursor.fetchone()
+
+        if solicitud is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "solicitud no encontrada."
+            }), 404
+
+        nombre_original = secure_filename(archivo.filename)
+        extension = os.path.splitext(nombre_original)[1].lower()
+
+        nombre_archivo = f"{solicitud['codigo_solicitud']}_{rol_actual}_{tipo_documento}{extension}"
+        ruta_archivo = os.path.join(FIRMADOS_FOLDER, nombre_archivo)
+
+        archivo.save(ruta_archivo)
+
+        cursor.execute("""
+            insert into solicitud_documentos (
+                solicitud_id,
+                etapa,
+                rol_firmante,
+                usuario_id,
+                tipo_documento,
+                nombre_archivo,
+                ruta_archivo,
+                mime_type,
+                firmado,
+                firma_validada,
+                observacion
+            ) values (
+                %s, %s, %s, %s, %s, %s, %s, %s, 1, 1, %s
+            );
+        """, (
+            solicitud_id,
+            solicitud["etapa_actual"],
+            rol_actual,
+            usuario_actual["id"],
+            tipo_documento,
+            nombre_archivo,
+            ruta_archivo,
+            "application/pdf",
+            observacion
         ))
 
+        documento_id = cursor.lastrowid
+
         conexion.commit()
+
         cursor.close()
         conexion.close()
 
         registrar_auditoria(
             usuario_id=usuario_actual["id"],
             solicitud_id=solicitud_id,
-            modulo="flujo_solicitudes",
-            accion=siguiente["accion"],
+            modulo="documentos",
+            accion="subir_documento_firmado",
+            descripcion=f"documento firmado subido por rol {rol_actual}",
+            datos_anteriores=None,
+            datos_nuevos={
+                "documento_id": documento_id,
+                "tipo_documento": tipo_documento,
+                "nombre_archivo": nombre_archivo,
+                "rol_firmante": rol_actual,
+                "etapa": solicitud["etapa_actual"]
+            }
+        )
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "documento firmado subido correctamente.",
+            "documento": {
+                "id": documento_id,
+                "solicitud_id": solicitud_id,
+                "tipo_documento": tipo_documento,
+                "nombre_archivo": nombre_archivo,
+                "rol_firmante": rol_actual,
+                "etapa": solicitud["etapa_actual"],
+                "firmado": True,
+                "firma_validada": True
+            }
+        }), 201
+
+    except Error as error:
+        try:
+            conexion.rollback()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al registrar el documento firmado.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        try:
+            conexion.rollback()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al subir el documento.",
+            "error": str(error)
+        }), 500
+
+# =====================================================
+# aprobación de solicitud
+# =====================================================
+
+@app.route("/api/admin/solicitudes/<int:solicitud_id>/aprobar", methods=["PUT"])
+@token_requerido
+@roles_permitidos("administrador", "jefe_inmediato", "maxima_autoridad", "analista_tics")
+def aprobar_solicitud(solicitud_id):
+    usuario_actual = request.usuario_actual
+    rol_actual = usuario_actual["rol"]
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        # =====================================================
+        # Obtener solicitud actual
+        # =====================================================
+
+        cursor.execute("""
+            select
+                id,
+                codigo_solicitud,
+                estado,
+                etapa_actual,
+                bloqueada
+            from solicitudes
+            where id = %s
+            limit 1;
+        """, (solicitud_id,))
+
+        solicitud = cursor.fetchone()
+
+        if solicitud is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "solicitud no encontrada."
+            }), 404
+
+        if solicitud["bloqueada"]:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "la solicitud se encuentra bloqueada y no puede ser procesada."
+            }), 409
+
+        estado_anterior = solicitud["estado"]
+        etapa_anterior = solicitud["etapa_actual"]
+
+        # =====================================================
+        # Validar rol y estado actual
+        # =====================================================
+
+        regla = obtener_siguiente_estado_por_rol(estado_anterior, rol_actual)
+
+        if regla is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "no tiene permisos para aprobar esta solicitud en su estado actual.",
+                "rol_actual": rol_actual,
+                "estado_actual": estado_anterior
+            }), 403
+
+        # =====================================================
+        # Validar documento firmado obligatorio
+        # =====================================================
+        # Regla:
+        # No se puede aprobar si no existe:
+        # - PDF firmado manualmente
+        # - PDF firmado electrónicamente
+        # - PDF TICS
+        # - PDF final
+        # - o registro con firmado/firma_validada = 1
+        # =====================================================
+
+        cursor.execute("""
+            select
+                id,
+                tipo_documento,
+                nombre_archivo,
+                ruta_archivo,
+                mime_type,
+                firmado,
+                firma_validada
+            from solicitud_documentos
+            where solicitud_id = %s
+              and mime_type = 'application/pdf'
+              and (
+                    firmado = 1
+                    or firma_validada = 1
+                    or tipo_documento in (
+                        'pdf_firmado_manual',
+                        'pdf_firmado_electronico',
+                        'pdf_tics',
+                        'pdf_final'
+                    )
+              )
+            order by id desc
+            limit 1;
+        """, (solicitud_id,))
+
+        documento_firmado = cursor.fetchone()
+
+        if documento_firmado is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "antes de aprobar debe existir un PDF firmado manualmente o una firma electrónica registrada.",
+                "requisito": "pdf_firmado_o_firma_electronica",
+                "rol_actual": rol_actual,
+                "estado_actual": estado_anterior
+            }), 409
+
+        nuevo_estado = regla["nuevo_estado"]
+        nueva_etapa = regla["nueva_etapa"]
+
+        # =====================================================
+        # Actualizar flujo de solicitud
+        # =====================================================
+
+        cursor.execute("""
+            update solicitudes
+            set
+                estado = %s,
+                etapa_actual = %s,
+                updated_at = now()
+            where id = %s;
+        """, (nuevo_estado, nueva_etapa, solicitud_id))
+
+        conexion.commit()
+
+        cursor.close()
+        conexion.close()
+
+        registrar_auditoria(
+            usuario_id=usuario_actual["id"],
+            solicitud_id=solicitud_id,
+            modulo="flujo_solicitud",
+            accion="aprobar_solicitud",
             descripcion=f"solicitud {solicitud['codigo_solicitud']} aprobada por rol {rol_actual}",
             datos_anteriores={
-                "estado": estado_actual,
-                "etapa_actual": solicitud["etapa_actual"]
+                "estado": estado_anterior,
+                "etapa_actual": etapa_anterior
             },
             datos_nuevos={
-                "estado": siguiente["nuevo_estado"],
-                "etapa_actual": siguiente["nueva_etapa"]
+                "estado": nuevo_estado,
+                "etapa_actual": nueva_etapa,
+                "documento_firmado_id": documento_firmado["id"],
+                "tipo_documento": documento_firmado["tipo_documento"],
+                "nombre_archivo": documento_firmado["nombre_archivo"]
             }
         )
 
@@ -2372,14 +2656,23 @@ def aprobar_solicitud(solicitud_id):
             "solicitud": {
                 "id": solicitud_id,
                 "codigo_solicitud": solicitud["codigo_solicitud"],
-                "estado_anterior": estado_actual,
-                "estado_actual": siguiente["nuevo_estado"],
-                "etapa_actual": siguiente["nueva_etapa"]
+                "estado_anterior": estado_anterior,
+                "estado_actual": nuevo_estado,
+                "etapa_actual": nueva_etapa,
+                "documento_firmado": {
+                    "id": documento_firmado["id"],
+                    "tipo_documento": documento_firmado["tipo_documento"],
+                    "nombre_archivo": documento_firmado["nombre_archivo"]
+                }
             }
         }), 200
 
     except Error as error:
-        conexion.rollback()
+        try:
+            conexion.rollback()
+            conexion.close()
+        except Exception:
+            pass
 
         return jsonify({
             "estado": "error",
@@ -2387,10 +2680,27 @@ def aprobar_solicitud(solicitud_id):
             "error": str(error)
         }), 500
 
+    except Exception as error:
+        try:
+            conexion.rollback()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al aprobar la solicitud.",
+            "error": str(error)
+        }), 500
+
+
+# =====================================================
+# rechazo de solicitud
+# =====================================================
 
 @app.route("/api/admin/solicitudes/<int:solicitud_id>/rechazar", methods=["PUT"])
 @token_requerido
-@roles_permitidos("administrador", "jefe_inmediato", "maxima_autoridad", "analista_tics")
+@roles_permitidos("jefe_inmediato", "maxima_autoridad", "analista_tics")
 def rechazar_solicitud(solicitud_id):
     usuario_actual = request.usuario_actual
     rol_actual = usuario_actual["rol"]
@@ -2416,50 +2726,6 @@ def rechazar_solicitud(solicitud_id):
             "mensaje": "el motivo del rechazo no puede superar 1000 caracteres."
         }), 400
 
-    solicitud = obtener_solicitud_por_id_simple(solicitud_id)
-
-    if solicitud is None:
-        return jsonify({
-            "estado": "error",
-            "mensaje": "solicitud no encontrada."
-        }), 404
-
-    if solicitud["bloqueada"]:
-        return jsonify({
-            "estado": "error",
-            "mensaje": "la solicitud se encuentra bloqueada y no puede ser modificada."
-        }), 400
-
-    estado_actual = solicitud["estado"]
-
-    if estado_actual in ["pendiente_firma_solicitante", "pendiente_ejecucion_tics"]:
-        return jsonify({
-            "estado": "error",
-            "mensaje": "esta etapa no permite rechazo directo desde este módulo."
-        }), 400
-
-    if estado_actual.startswith("rechazada") or estado_actual in ["finalizada", "anulada"]:
-        return jsonify({
-            "estado": "error",
-            "mensaje": "esta solicitud ya se encuentra cerrada."
-        }), 400
-
-    if not usuario_puede_gestionar_estado(rol_actual, estado_actual):
-        return jsonify({
-            "estado": "error",
-            "mensaje": "su rol no tiene permiso para rechazar esta etapa.",
-            "rol_actual": rol_actual,
-            "estado_actual": estado_actual
-        }), 403
-
-    rechazo = obtener_estado_rechazo(estado_actual)
-
-    if rechazo is None:
-        return jsonify({
-            "estado": "error",
-            "mensaje": "no existe una transición de rechazo válida para el estado actual."
-        }), 400
-
     conexion = get_db_connection()
 
     if conexion is None:
@@ -2469,45 +2735,94 @@ def rechazar_solicitud(solicitud_id):
         }), 500
 
     try:
-        cursor = conexion.cursor()
+        cursor = conexion.cursor(dictionary=True)
 
-        sql = """
+        # =====================================================
+        # Obtener solicitud actual
+        # =====================================================
+
+        cursor.execute("""
+            select
+                id,
+                codigo_solicitud,
+                estado,
+                etapa_actual,
+                bloqueada
+            from solicitudes
+            where id = %s
+            limit 1;
+        """, (solicitud_id,))
+
+        solicitud = cursor.fetchone()
+
+        if solicitud is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "solicitud no encontrada."
+            }), 404
+
+        if solicitud["bloqueada"]:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "la solicitud se encuentra bloqueada y no puede ser procesada."
+            }), 409
+
+        estado_anterior = solicitud["estado"]
+        etapa_anterior = solicitud["etapa_actual"]
+
+        # =====================================================
+        # Validar rol y estado actual
+        # =====================================================
+
+        regla = obtener_estado_rechazo_por_rol(estado_anterior, rol_actual)
+
+        if regla is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "no tiene permisos para rechazar esta solicitud en su estado actual.",
+                "rol_actual": rol_actual,
+                "estado_actual": estado_anterior
+            }), 403
+
+        nuevo_estado = regla["nuevo_estado"]
+        nueva_etapa = regla["nueva_etapa"]
+
+        cursor.execute("""
             update solicitudes
             set
                 estado = %s,
                 etapa_actual = %s,
-                motivo_rechazo = %s,
-                fecha_rechazo = now(),
-                rechazado_por_usuario_id = %s,
                 updated_at = now()
             where id = %s;
-        """
-
-        cursor.execute(sql, (
-            rechazo["nuevo_estado"],
-            rechazo["nueva_etapa"],
-            motivo,
-            usuario_actual["id"],
-            solicitud_id
-        ))
+        """, (nuevo_estado, nueva_etapa, solicitud_id))
 
         conexion.commit()
+
         cursor.close()
         conexion.close()
 
         registrar_auditoria(
             usuario_id=usuario_actual["id"],
             solicitud_id=solicitud_id,
-            modulo="flujo_solicitudes",
-            accion=rechazo["accion"],
+            modulo="flujo_solicitud",
+            accion="rechazar_solicitud",
             descripcion=f"solicitud {solicitud['codigo_solicitud']} rechazada por rol {rol_actual}",
             datos_anteriores={
-                "estado": estado_actual,
-                "etapa_actual": solicitud["etapa_actual"]
+                "estado": estado_anterior,
+                "etapa_actual": etapa_anterior
             },
             datos_nuevos={
-                "estado": rechazo["nuevo_estado"],
-                "etapa_actual": rechazo["nueva_etapa"],
+                "estado": nuevo_estado,
+                "etapa_actual": nueva_etapa,
                 "motivo": motivo
             }
         )
@@ -2518,40 +2833,73 @@ def rechazar_solicitud(solicitud_id):
             "solicitud": {
                 "id": solicitud_id,
                 "codigo_solicitud": solicitud["codigo_solicitud"],
-                "estado_anterior": estado_actual,
-                "estado_actual": rechazo["nuevo_estado"],
-                "etapa_actual": rechazo["nueva_etapa"],
+                "estado_anterior": estado_anterior,
+                "estado_actual": nuevo_estado,
+                "etapa_actual": nueva_etapa,
                 "motivo": motivo
             }
         }), 200
 
     except Error as error:
-        conexion.rollback()
+        try:
+            conexion.rollback()
+            conexion.close()
+        except Exception:
+            pass
 
         return jsonify({
             "estado": "error",
             "mensaje": "error al rechazar la solicitud.",
             "error": str(error)
         }), 500
+
+    except Exception as error:
+        try:
+            conexion.rollback()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al rechazar la solicitud.",
+            "error": str(error)
+        }), 500
+
+
 # =====================================================
 # manejo de errores
 # =====================================================
 
 @app.errorhandler(404)
-def ruta_no_encontrada(error):
+def error_404(error):
     return jsonify({
         "estado": "error",
-        "mensaje": "ruta no encontrada",
-        "detalle": str(error)
+        "mensaje": "ruta no encontrada."
     }), 404
 
 
-@app.errorhandler(500)
-def error_interno(error):
+@app.errorhandler(405)
+def error_405(error):
     return jsonify({
         "estado": "error",
-        "mensaje": "error interno del servidor",
-        "detalle": str(error)
+        "mensaje": "método no permitido para esta ruta."
+    }), 405
+
+
+@app.errorhandler(413)
+def error_413(error):
+    return jsonify({
+        "estado": "error",
+        "mensaje": "el archivo supera el tamaño máximo permitido de 10 MB."
+    }), 413
+
+
+@app.errorhandler(500)
+def error_500(error):
+    return jsonify({
+        "estado": "error",
+        "mensaje": "error interno del servidor."
     }), 500
 
 

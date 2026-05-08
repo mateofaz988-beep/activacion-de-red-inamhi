@@ -31,6 +31,11 @@ export interface SolicitudAdmin {
   created_at: string;
   updated_at: string;
   total_paginas: number;
+
+  // Campos para control documental
+  documento_actual_id?: number | null;
+  requiere_firma?: boolean | number;
+  firma_actual_validada?: boolean | number;
 }
 
 export interface SolicitudesAdminResponse {
@@ -44,6 +49,28 @@ export interface SolicitudDetalleResponse {
   estado: string;
   solicitud: SolicitudAdmin;
   paginas_web: PaginaWebAdmin[];
+
+  // Cuando luego actualicemos el backend para devolver documentos,
+  // estos campos ya estarán listos para usarse.
+  documentos?: DocumentoSolicitud[];
+  documento_firmado_cargado?: boolean;
+}
+
+export interface DocumentoSolicitud {
+  id: number;
+  solicitud_id: number;
+  etapa: string;
+  rol_firmante: string;
+  usuario_id: number | null;
+  tipo_documento: string;
+  nombre_archivo: string;
+  ruta_archivo: string;
+  mime_type: string;
+  firmado: boolean | number;
+  firma_validada: boolean | number;
+  observacion: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface FlujoSolicitudResponse {
@@ -56,6 +83,26 @@ export interface FlujoSolicitudResponse {
     estado_actual: string;
     etapa_actual: string;
     motivo?: string;
+    documento_firmado?: {
+      id: number;
+      tipo_documento: string;
+      nombre_archivo: string;
+    };
+  };
+}
+
+export interface SubirDocumentoResponse {
+  estado: string;
+  mensaje: string;
+  documento: {
+    id: number;
+    solicitud_id: number;
+    tipo_documento: string;
+    nombre_archivo: string;
+    rol_firmante: string;
+    etapa: string;
+    firmado: boolean;
+    firma_validada: boolean;
   };
 }
 
@@ -134,6 +181,37 @@ export class SolicitudesAdminService {
       {
         motivo
       },
+      {
+        headers: this.getHeaders()
+      }
+    );
+  }
+
+  descargarPdfSolicitud(id: number): Observable<Blob> {
+    return this.http.get(
+      `${this.API_URL}/${id}/pdf`,
+      {
+        headers: this.getHeaders(),
+        responseType: 'blob'
+      }
+    );
+  }
+
+  subirDocumentoFirmado(
+    solicitudId: number,
+    archivo: File,
+    tipoDocumento: string,
+    observacion: string = ''
+  ): Observable<SubirDocumentoResponse> {
+    const formData = new FormData();
+
+    formData.append('archivo', archivo);
+    formData.append('tipo_documento', tipoDocumento);
+    formData.append('observacion', observacion);
+
+    return this.http.post<SubirDocumentoResponse>(
+      `${this.API_URL}/${solicitudId}/documentos`,
+      formData,
       {
         headers: this.getHeaders()
       }

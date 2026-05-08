@@ -31,6 +31,8 @@ export class SolicitudDetalle implements OnInit {
   mensajeOk = '';
   motivoRechazo = '';
 
+  documentoFirmadoCargado = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -59,6 +61,41 @@ export class SolicitudDetalle implements OnInit {
         this.cargando = false;
         this.solicitud = response.solicitud;
         this.paginasWeb = response.paginas_web || [];
+
+        /*
+          Antes aquí estaba:
+          this.documentoFirmadoCargado = false;
+
+          Eso causaba el problema:
+          1. Subías el PDF.
+          2. documentoFirmadoCargado pasaba a true.
+          3. Se llamaba cargarDetalle().
+          4. cargarDetalle() lo volvía a false.
+          5. El botón de aprobar quedaba deshabilitado.
+
+          Ahora:
+          - Conserva el true si ya se subió un documento.
+          - También soporta una respuesta futura del backend con documentos.
+        */
+
+        const documentos = (response as any).documentos || [];
+
+        const existeDocumentoFirmado = documentos.some((documento: any) => {
+          return (
+            documento.firmado === true ||
+            documento.firmado === 1 ||
+            documento.firma_validada === true ||
+            documento.firma_validada === 1
+          );
+        });
+
+        this.documentoFirmadoCargado =
+          (response as any).documento_firmado_cargado === true ||
+          response.solicitud?.firma_actual_validada === true ||
+          response.solicitud?.firma_actual_validada === 1 ||
+          !!response.solicitud?.documento_actual_id ||
+          existeDocumentoFirmado ||
+          this.documentoFirmadoCargado;
       },
       error: (err) => {
         this.cargando = false;
@@ -77,8 +114,190 @@ export class SolicitudDetalle implements OnInit {
     });
   }
 
+  descargarPdf(): void {
+    if (!this.solicitud) {
+      return;
+    }
+
+    this.procesando = true;
+    this.error = '';
+    this.mensajeOk = '';
+
+    this.solicitudesService.descargarPdfSolicitud(this.solicitud.id).subscribe({
+      next: (blob) => {
+        this.procesando = false;
+
+        const archivo = new Blob([blob], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(archivo);
+        const enlace = document.createElement('a');
+
+        enlace.href = url;
+        enlace.download = `${this.solicitud?.codigo_solicitud || 'solicitud-inamhi'}.pdf`;
+        enlace.click();
+
+        window.URL.revokeObjectURL(url);
+
+        Swal.fire({
+          title: 'PDF generado',
+          text: 'El documento PDF A4 se descargó correctamente.',
+          icon: 'success',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#1d4ed8',
+          background: '#ffffff',
+          color: '#0f172a'
+        });
+      },
+      error: (err) => {
+        this.procesando = false;
+
+        if (err.status === 401 || err.status === 403) {
+          this.authService.logout();
+          this.router.navigate(['/auth/login']);
+          return;
+        }
+
+        this.mostrarError(
+          'No se pudo descargar',
+          'No se pudo generar o descargar el PDF de la solicitud.'
+        );
+      }
+    });
+  }
+
+  seleccionarFirmaManual(event: Event): void {
+    const input = event.target as HTMLInputElement;
+
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+
+    const archivo = input.files[0];
+
+    if (!this.validarArchivoPdf(archivo)) {
+      input.value = '';
+      return;
+    }
+
+    this.subirDocumentoFirmado(
+      archivo,
+      'pdf_firmado_manual',
+      'PDF firmado manualmente, escaneado y cargado al sistema.'
+    );
+
+    input.value = '';
+  }
+
+  seleccionarFirmaElectronica(event: Event): void {
+    const input = event.target as HTMLInputElement;
+
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+
+    const archivo = input.files[0];
+
+    if (!this.validarArchivoPdf(archivo)) {
+      input.value = '';
+      return;
+    }
+
+    this.subirDocumentoFirmado(
+      archivo,
+      'pdf_firmado_electronico',
+      'PDF firmado electrónicamente y cargado al sistema.'
+    );
+
+    input.value = '';
+  }
+
+  validarArchivoPdf(archivo: File): boolean {
+    const maxSizeMb = 10;
+    const maxSizeBytes = maxSizeMb * 1024 * 1024;
+
+    const nombreArchivo = archivo.name || '';
+
+    if (!nombreArchivo.toLowerCase().endsWith('.pdf')) {
+      this.mostrarError('Archivo inválido', 'Solo se permiten archivos con extensión .pdf.');
+      return false;
+    }
+
+    if (archivo.size > maxSizeBytes) {
+      this.mostrarError('Archivo demasiado grande', `El archivo no puede superar ${maxSizeMb} MB.`);
+      return false;
+    }
+
+    return true;
+  }
+
+  subirDocumentoFirmado(
+    archivo: File,
+    tipoDocumento: string,
+    observacion: string
+  ): void {
+    if (!this.solicitud?.id) {
+      this.mostrarError('Solicitud no encontrada', 'No se encontró la solicitud.');
+      return;
+    }
+
+    this.procesando = true;
+    this.error = '';
+    this.mensajeOk = '';
+
+    this.solicitudesService.subirDocumentoFirmado(
+      this.solicitud.id,
+      archivo,
+      tipoDocumento,
+      observacion
+    ).subscribe({
+      next: (response) => {
+        this.procesando = false;
+        this.documentoFirmadoCargado = true;
+
+        Swal.fire({
+          title: 'Documento cargado',
+          text: response?.mensaje || 'El PDF firmado fue subido correctamente.',
+          icon: 'success',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#1d4ed8',
+          background: '#ffffff',
+          color: '#0f172a'
+        }).then(() => {
+          this.cargarDetalle();
+        });
+      },
+      error: (err) => {
+        this.procesando = false;
+
+        if (err.status === 401 || err.status === 403) {
+          this.authService.logout();
+          this.router.navigate(['/auth/login']);
+          return;
+        }
+
+        this.mostrarError(
+          'No se pudo subir el documento',
+          err.error?.mensaje || 'Error al subir el PDF firmado.'
+        );
+      }
+    });
+  }
+
   async confirmarAprobacion(): Promise<void> {
     if (!this.solicitud) {
+      return;
+    }
+
+    if (!this.documentoFirmadoCargado) {
+      Swal.fire({
+        title: 'Documento firmado requerido',
+        text: 'Antes de aprobar debe subir un PDF firmado manualmente o electrónicamente.',
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#d97706',
+        background: '#ffffff',
+        color: '#0f172a'
+      });
+
       return;
     }
 
@@ -147,6 +366,7 @@ export class SolicitudDetalle implements OnInit {
           color: '#0f172a'
         });
 
+        this.documentoFirmadoCargado = false;
         this.cargarDetalle();
       },
       error: (err) => {
@@ -220,6 +440,7 @@ export class SolicitudDetalle implements OnInit {
           color: '#0f172a'
         });
 
+        this.documentoFirmadoCargado = false;
         this.cargarDetalle();
       },
       error: (err) => {
