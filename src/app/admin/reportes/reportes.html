@@ -1,0 +1,266 @@
+<section class="reportes-page">
+  <aside class="sidebar no-print">
+    <div class="brand">
+      <div class="logo-box">IN</div>
+
+      <div>
+        <h2>INAMHI</h2>
+        <span>Panel administrador</span>
+      </div>
+    </div>
+
+    <nav class="menu">
+      <a routerLink="/admin/dashboard" routerLinkActive="active">
+        Dashboard
+      </a>
+
+      <a routerLink="/admin/solicitudes" routerLinkActive="active">
+        Solicitudes
+      </a>
+
+      <a routerLink="/admin/usuarios" routerLinkActive="active">
+        Usuarios
+      </a>
+
+      <a routerLink="/admin/reportes" routerLinkActive="active">
+        Reportes
+      </a>
+
+      <a routerLink="/admin/auditoria" routerLinkActive="active">
+        Auditoría
+      </a>
+    </nav>
+
+    <button type="button" class="logout" (click)="logout()">
+      Cerrar sesión
+    </button>
+  </aside>
+
+  <main class="content">
+    <header class="topbar no-print">
+      <div>
+        <span class="eyebrow">Reportería institucional</span>
+        <h1>Reportes de Solicitudes</h1>
+        <p>
+          Consulte, filtre, exporte e imprima reportes del flujo de liberación web.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="refresh-btn"
+        (click)="cargarDatos()"
+        [disabled]="cargando"
+      >
+        {{ cargando ? 'Cargando...' : 'Actualizar' }}
+      </button>
+    </header>
+
+    <section class="print-header only-print">
+      <h1>Reporte de Solicitudes de Liberación Web</h1>
+      <p>Sistema de Gestión de Solicitudes de Liberación Web - INAMHI</p>
+      <span>Fecha de impresión: {{ fechaDesde || 'Todas' }} - {{ fechaHasta || 'Todas' }}</span>
+    </section>
+
+    <section class="stats-grid">
+      <article class="stat-card total">
+        <span>Total filtrado</span>
+        <strong>{{ totalSolicitudes }}</strong>
+        <p>Solicitudes dentro del reporte.</p>
+      </article>
+
+      <article class="stat-card pendiente">
+        <span>Pendientes iniciales</span>
+        <strong>{{ totalPendientes }}</strong>
+        <p>Pendientes de firma o validación inicial.</p>
+      </article>
+
+      <article class="stat-card aprobacion">
+        <span>En aprobación</span>
+        <strong>{{ totalAprobacion }}</strong>
+        <p>Jefe inmediato o máxima autoridad.</p>
+      </article>
+
+      <article class="stat-card tics">
+        <span>En TICS</span>
+        <strong>{{ totalTics }}</strong>
+        <p>Validación técnica o ejecución.</p>
+      </article>
+
+      <article class="stat-card finalizada">
+        <span>Finalizadas</span>
+        <strong>{{ totalFinalizadas }}</strong>
+        <p>Solicitudes cerradas.</p>
+      </article>
+
+      <article class="stat-card rechazada">
+        <span>Rechazadas</span>
+        <strong>{{ totalRechazadas }}</strong>
+        <p>Solicitudes rechazadas.</p>
+      </article>
+    </section>
+
+    <section class="filters-card no-print">
+      <div>
+        <h2>Filtros del reporte</h2>
+        <p>
+          Use los filtros para generar reportes específicos por estado, fecha o búsqueda general.
+        </p>
+      </div>
+
+      <div class="filters-grid">
+        <label>
+          Buscar
+          <input
+            type="text"
+            [(ngModel)]="textoBusqueda"
+            (input)="aplicarFiltros()"
+            placeholder="Código, nombre, cédula, correo, dependencia..."
+          />
+        </label>
+
+        <label>
+          Estado
+          <select
+            [(ngModel)]="filtroEstado"
+            (change)="aplicarFiltros()"
+          >
+            <option
+              *ngFor="let estado of estados"
+              [value]="estado.valor"
+            >
+              {{ estado.texto }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Desde
+          <input
+            type="date"
+            [(ngModel)]="fechaDesde"
+            (change)="aplicarFiltros()"
+          />
+        </label>
+
+        <label>
+          Hasta
+          <input
+            type="date"
+            [(ngModel)]="fechaHasta"
+            (change)="aplicarFiltros()"
+          />
+        </label>
+      </div>
+
+      <div class="report-actions">
+        <button type="button" class="clear-btn" (click)="limpiarFiltros()">
+          Limpiar filtros
+        </button>
+
+        <button type="button" class="csv-btn" (click)="exportarCsv()">
+          Exportar CSV / Excel
+        </button>
+
+        <button type="button" class="print-btn" (click)="imprimirReporte()">
+          Imprimir reporte
+        </button>
+      </div>
+    </section>
+
+    <section class="table-card">
+      <div class="table-header">
+        <div>
+          <h2>Detalle del reporte</h2>
+          <p>
+            Mostrando {{ solicitudesFiltradas.length }} de {{ solicitudes.length }} solicitudes registradas.
+          </p>
+        </div>
+      </div>
+
+      <div class="loading" *ngIf="cargando">
+        Cargando datos del reporte...
+      </div>
+
+      <div class="error-box" *ngIf="error">
+        {{ error }}
+      </div>
+
+      <div
+        class="empty-box"
+        *ngIf="!cargando && !error && solicitudesFiltradas.length === 0"
+      >
+        No existen registros para los filtros seleccionados.
+      </div>
+
+      <div
+        class="table-wrapper"
+        *ngIf="!cargando && !error && solicitudesFiltradas.length > 0"
+      >
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Solicitante</th>
+              <th>Correo</th>
+              <th>Dependencia</th>
+              <th>Estado</th>
+              <th>Etapa</th>
+              <th>Fecha</th>
+              <th class="no-print">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let solicitud of solicitudesFiltradas">
+              <td>
+                <strong class="code">{{ solicitud.codigo_solicitud }}</strong>
+              </td>
+
+              <td>
+                <strong>{{ solicitud.nombres_completos }}</strong>
+                <span>{{ solicitud.cedula }}</span>
+              </td>
+
+              <td>
+                {{ solicitud.correo_institucional }}
+              </td>
+
+              <td>
+                <strong>{{ solicitud.dependencia }}</strong>
+                <span>{{ solicitud.area_unidad }}</span>
+              </td>
+
+              <td>
+                <span
+                  class="status"
+                  [ngClass]="getEstadoClase(solicitud.estado)"
+                >
+                  {{ getEstadoTexto(solicitud.estado) }}
+                </span>
+              </td>
+
+              <td>
+                {{ getEtapaTexto(solicitud.etapa_actual) }}
+              </td>
+
+              <td>
+                {{ solicitud.fecha_solicitud }}
+              </td>
+
+              <td class="actions-cell no-print">
+                <button
+                  type="button"
+                  class="detail-btn"
+                  (click)="verDetalle(solicitud.id)"
+                >
+                  Ver detalle
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</section>

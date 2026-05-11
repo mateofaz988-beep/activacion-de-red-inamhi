@@ -7,6 +7,10 @@ import { SeguimientoSolicitud } from './public/seguimiento-solicitud/seguimiento
 
 import { AdminDashboard } from './admin/dashboard/dashboard';
 import { SolicitudDetalle } from './admin/solicitud-detalle/solicitud-detalle';
+import { Solicitudes } from './admin/solicitudes/solicitudes';
+import { Usuarios } from './admin/usuarios/usuarios';
+import { Reportes } from './admin/reportes/reportes';
+import { Auditoria } from './admin/auditoria/auditoria';
 
 import { Dashboard as JefeDashboard } from './jefe/dashboard/dashboard';
 import { Dashboard as AutoridadDashboard } from './autoridad/dashboard/dashboard';
@@ -29,14 +33,40 @@ export const routes: Routes = [
     path: 'public/seguimiento',
     component: SeguimientoSolicitud
   },
+
+  // =========================
+  // ADMIN
+  // =========================
+
   {
     path: 'admin/dashboard',
     component: AdminDashboard
   },
   {
+    path: 'admin/solicitudes',
+    component: Solicitudes
+  },
+  {
     path: 'admin/solicitudes/:id',
     component: SolicitudDetalle
   },
+  {
+    path: 'admin/usuarios',
+    component: Usuarios
+  },
+  {
+    path: 'admin/reportes',
+    component: Reportes
+  },
+  {
+    path: 'admin/auditoria',
+    component: Auditoria
+  },
+
+  // =========================
+  // ROLES
+  // =========================
+
   {
     path: 'jefe/dashboard',
     component: JefeDashboard
@@ -49,6 +79,7 @@ export const routes: Routes = [
     path: 'tics/dashboard',
     component: TicsDashboard
   },
+
   {
     path: '**',
     redirectTo: ''

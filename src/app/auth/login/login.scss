@@ -3,6 +3,10 @@
   min-height: 100vh;
 }
 
+/* =====================================================
+   PÁGINA LOGIN
+===================================================== */
+
 .login-page {
   position: relative;
   min-height: 100vh;
@@ -13,7 +17,18 @@
     linear-gradient(135deg, #06121f 0%, #0a263f 50%, #06121f 100%);
   color: #ffffff;
   padding: 32px;
+  box-sizing: border-box;
 }
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* =====================================================
+   FONDOS DECORATIVOS
+===================================================== */
 
 .background-glow {
   position: absolute;
@@ -39,16 +54,20 @@
   bottom: 60px;
 }
 
+/* =====================================================
+   CONTENEDOR PRINCIPAL
+===================================================== */
+
 .login-wrapper {
   position: relative;
   z-index: 2;
   min-height: calc(100vh - 64px);
-  max-width: 1160px;
+  max-width: 1180px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 430px;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 430px);
   align-items: center;
-  gap: 44px;
+  gap: 48px;
 }
 
 .info-panel {
@@ -58,13 +77,17 @@
   justify-content: center;
 }
 
+/* =====================================================
+   BOTÓN VOLVER
+===================================================== */
+
 .back-link {
   position: absolute;
   top: 0;
   left: 0;
   color: #dcefff;
   text-decoration: none;
-  font-weight: 700;
+  font-weight: 800;
   padding: 10px 14px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
@@ -76,38 +99,31 @@
   }
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 46px;
+/* =====================================================
+   LOGO INAMHI LOGIN
+===================================================== */
 
-  h1 {
-    margin: 0;
-    font-size: 30px;
-    font-weight: 900;
-    letter-spacing: 1px;
-  }
-
-  p {
-    margin: 4px 0 0;
-    color: #b8d5e8;
-    font-size: 14px;
-  }
+.login-logo-inamhi {
+  width: 500PX;
+  height: 280px;
+  object-fit: contain;
+  display: block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 28px 0 30px;
+  filter: drop-shadow(0 22px 34px rgba(0, 0, 0, 0.44));
+  transition: transform 0.25s ease, filter 0.25s ease;
 }
 
-.logo-box {
-  width: 66px;
-  height: 66px;
-  border-radius: 20px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #ffffff, #dcefff);
-  color: #0a3760;
-  font-size: 24px;
-  font-weight: 900;
-  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.28);
+.login-logo-inamhi:hover {
+  transform: translateY(-3px) scale(1.03);
+  filter: drop-shadow(0 28px 44px rgba(0, 0, 0, 0.54));
 }
+
+/* =====================================================
+   PANEL INFORMATIVO
+===================================================== */
 
 .info-content {
   .badge {
@@ -117,8 +133,9 @@
     background: rgba(255, 255, 255, 0.12);
     color: #d9efff;
     font-size: 13px;
-    font-weight: 800;
+    font-weight: 850;
     margin-bottom: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
   h2 {
@@ -127,7 +144,7 @@
     font-size: clamp(42px, 5vw, 68px);
     line-height: 0.95;
     letter-spacing: -2px;
-    font-weight: 900;
+    font-weight: 950;
   }
 
   p {
@@ -150,30 +167,38 @@
     border-radius: 999px;
     color: #eaf7ff;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 750;
     background: rgba(255, 255, 255, 0.11);
     border: 1px solid rgba(255, 255, 255, 0.14);
   }
 }
 
+/* =====================================================
+   TARJETA LOGIN
+===================================================== */
+
 .login-card {
   width: 100%;
+  max-width: 430px;
+  justify-self: end;
   border-radius: 30px;
-  padding: 30px;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(22px);
+  padding: 32px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.09));
+  backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 34px 90px rgba(0, 0, 0, 0.34);
 
   h3 {
     margin: 18px 0 6px;
     font-size: 30px;
-    font-weight: 900;
+    font-weight: 950;
   }
 
   .subtitle {
     margin: 0 0 24px;
     color: #bfd8ea;
+    line-height: 1.5;
   }
 }
 
@@ -182,7 +207,7 @@
   align-items: center;
   gap: 10px;
   color: #dcefff;
-  font-weight: 800;
+  font-weight: 850;
 }
 
 .status-dot {
@@ -193,41 +218,53 @@
   box-shadow: 0 0 18px rgba(46, 229, 157, 0.95);
 }
 
+/* =====================================================
+   FORMULARIO
+===================================================== */
+
 form {
   display: grid;
   gap: 18px;
+  width: 100%;
 }
 
 label {
   display: grid;
   gap: 8px;
+  width: 100%;
   color: #e7f4ff;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 850;
 }
 
 input {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: block;
   border: none;
   outline: none;
   border-radius: 16px;
   padding: 15px 16px;
   color: #ffffff;
   font-size: 15px;
-  background: rgba(0, 0, 0, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-sizing: border-box;
 
   &::placeholder {
     color: #8eaac0;
   }
 
   &:focus {
-    border-color: rgba(247, 201, 72, 0.8);
-    box-shadow: 0 0 0 4px rgba(247, 201, 72, 0.12);
+    border-color: rgba(247, 201, 72, 0.85);
+    box-shadow: 0 0 0 4px rgba(247, 201, 72, 0.13);
+    background: rgba(0, 0, 0, 0.30);
   }
 }
 
 .error-box {
+  width: 100%;
   padding: 13px 14px;
   border-radius: 16px;
   background: rgba(255, 78, 78, 0.14);
@@ -238,6 +275,7 @@ input {
 }
 
 button {
+  width: 100%;
   cursor: pointer;
   border: none;
   margin-top: 4px;
@@ -245,13 +283,14 @@ button {
   border-radius: 16px;
   color: #102236;
   font-size: 15px;
-  font-weight: 900;
+  font-weight: 950;
   background: linear-gradient(135deg, #f7c948, #ffdf77);
   box-shadow: 0 20px 36px rgba(247, 201, 72, 0.22);
   transition: 0.25s ease;
 
   &:hover:not(:disabled) {
     transform: translateY(-3px);
+    filter: brightness(1.04);
   }
 
   &:disabled {
@@ -259,6 +298,10 @@ button {
     opacity: 0.72;
   }
 }
+
+/* =====================================================
+   USUARIOS DE PRUEBA
+===================================================== */
 
 .test-users {
   margin-top: 22px;
@@ -269,6 +312,7 @@ button {
   background: rgba(0, 0, 0, 0.18);
   color: #bfd8ea;
   font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 
   strong {
     color: #ffffff;
@@ -277,8 +321,13 @@ button {
 
   span {
     font-family: Consolas, monospace;
+    word-break: break-word;
   }
 }
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
 
 @media (max-width: 960px) {
   .login-page {
@@ -301,14 +350,48 @@ button {
     width: fit-content;
     margin-bottom: 24px;
   }
+
+  .login-logo-inamhi {
+    width: 500px;
+    height: 500px;
+    margin: 18px 0 24px;
+  }
+
+  .login-card {
+    max-width: 100%;
+    justify-self: stretch;
+  }
 }
 
 @media (max-width: 520px) {
-  .login-card {
-    padding: 22px;
+  .login-page {
+    padding: 18px;
   }
 
-  .brand {
-    align-items: flex-start;
+  .login-logo-inamhi {
+    width: 150px;
+    height: 150px;
+    margin: 16px 0 22px;
+  }
+
+  .info-content {
+    h2 {
+      font-size: clamp(36px, 12vw, 52px);
+      letter-spacing: -1.5px;
+    }
+
+    p {
+      font-size: 16px;
+    }
+  }
+
+  .login-card {
+    padding: 22px;
+    border-radius: 24px;
+  }
+
+  input,
+  button {
+    border-radius: 14px;
   }
 }

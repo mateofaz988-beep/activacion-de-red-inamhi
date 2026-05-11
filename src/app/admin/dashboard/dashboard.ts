@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { AuthService, UsuarioLogin } from '../../services/auth.service';
 import {
@@ -12,7 +12,12 @@ import {
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    RouterLinkActive
+  ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
@@ -49,25 +54,27 @@ export class AdminDashboard implements OnInit {
     this.cargando = true;
     this.error = '';
 
-    this.solicitudesService.listarSolicitudes(this.filtroEstado, this.busqueda.trim()).subscribe({
-      next: (response) => {
-        this.cargando = false;
-        this.solicitudes = response.solicitudes || [];
-        this.solicitudesFiltradas = [...this.solicitudes];
-        this.calcularEstadisticas();
-      },
-      error: (err) => {
-        this.cargando = false;
+    this.solicitudesService
+      .listarSolicitudes(this.filtroEstado, this.busqueda.trim())
+      .subscribe({
+        next: (response) => {
+          this.cargando = false;
+          this.solicitudes = response.solicitudes || [];
+          this.solicitudesFiltradas = [...this.solicitudes];
+          this.calcularEstadisticas();
+        },
+        error: (err) => {
+          this.cargando = false;
 
-        if (err.status === 401 || err.status === 403) {
-          this.authService.logout();
-          this.router.navigate(['/auth/login']);
-          return;
+          if (err.status === 401 || err.status === 403) {
+            this.authService.logout();
+            this.router.navigate(['/auth/login']);
+            return;
+          }
+
+          this.error = err.error?.mensaje || 'No se pudieron cargar las solicitudes.';
         }
-
-        this.error = err.error?.mensaje || 'No se pudieron cargar las solicitudes.';
-      }
-    });
+      });
   }
 
   calcularEstadisticas(): void {
@@ -119,6 +126,10 @@ export class AdminDashboard implements OnInit {
   }
 
   getEstadoClase(estado: string): string {
+    if (!estado) {
+      return 'normal';
+    }
+
     if (estado.includes('rechazada')) {
       return 'rechazada';
     }

@@ -1,0 +1,365 @@
+<section class="auditoria-page">
+  <aside class="sidebar no-print">
+    <div class="brand">
+      <div class="logo-box">IN</div>
+
+      <div>
+        <h2>INAMHI</h2>
+        <span>Panel administrador</span>
+      </div>
+    </div>
+
+    <nav class="menu">
+      <a routerLink="/admin/dashboard" routerLinkActive="active">
+        Dashboard
+      </a>
+
+      <a routerLink="/admin/solicitudes" routerLinkActive="active">
+        Solicitudes
+      </a>
+
+      <a routerLink="/admin/usuarios" routerLinkActive="active">
+        Usuarios
+      </a>
+
+      <a routerLink="/admin/reportes" routerLinkActive="active">
+        Reportes
+      </a>
+
+      <a routerLink="/admin/auditoria" routerLinkActive="active">
+        Auditoría
+      </a>
+    </nav>
+
+    <button type="button" class="logout" (click)="logout()">
+      Cerrar sesión
+    </button>
+  </aside>
+
+  <main class="content">
+    <header class="topbar no-print">
+      <div>
+        <span class="eyebrow">Trazabilidad del sistema</span>
+        <h1>Auditoría</h1>
+        <p>
+          Consulte el historial de acciones realizadas sobre solicitudes, usuarios,
+          documentos y operaciones del sistema.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="refresh-btn"
+        (click)="cargarAuditoria()"
+        [disabled]="cargando"
+      >
+        {{ cargando ? 'Cargando...' : 'Actualizar' }}
+      </button>
+    </header>
+
+    <section class="print-header only-print">
+      <h1>Reporte de Auditoría del Sistema</h1>
+      <p>Sistema de Gestión de Solicitudes de Liberación Web - INAMHI</p>
+      <span>Fecha de impresión: {{ fechaDesde || 'Todas' }} - {{ fechaHasta || 'Todas' }}</span>
+    </section>
+
+    <section class="stats-grid">
+      <article class="stat-card total">
+        <span>Total registros</span>
+        <strong>{{ totalRegistros }}</strong>
+        <p>Eventos encontrados con los filtros actuales.</p>
+      </article>
+
+      <article class="stat-card solicitudes">
+        <span>Solicitudes</span>
+        <strong>{{ totalSolicitudes }}</strong>
+        <p>Acciones sobre solicitudes.</p>
+      </article>
+
+      <article class="stat-card documentos">
+        <span>Documentos</span>
+        <strong>{{ totalDocumentos }}</strong>
+        <p>Carga o validación de PDFs.</p>
+      </article>
+
+      <article class="stat-card usuarios">
+        <span>Usuarios</span>
+        <strong>{{ totalUsuarios }}</strong>
+        <p>Gestión de cuentas y accesos.</p>
+      </article>
+
+      <article class="stat-card sistema">
+        <span>Sistema</span>
+        <strong>{{ totalSistema }}</strong>
+        <p>Autenticación u operaciones generales.</p>
+      </article>
+    </section>
+
+    <section class="filters-card no-print">
+      <div>
+        <h2>Filtros de auditoría</h2>
+        <p>
+          Filtre por texto, módulo, acción o rango de fechas para revisar eventos específicos.
+        </p>
+      </div>
+
+      <div class="filters-grid">
+        <label>
+          Buscar
+          <input
+            type="text"
+            [(ngModel)]="textoBusqueda"
+            (input)="aplicarFiltros()"
+            placeholder="Usuario, código, acción, IP, descripción..."
+          />
+        </label>
+
+        <label>
+          Módulo
+          <select
+            [(ngModel)]="filtroModulo"
+            (change)="aplicarFiltros()"
+          >
+            <option
+              *ngFor="let modulo of modulos"
+              [value]="modulo.valor"
+            >
+              {{ modulo.texto }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Acción
+          <select
+            [(ngModel)]="filtroAccion"
+            (change)="aplicarFiltros()"
+          >
+            <option
+              *ngFor="let accion of acciones"
+              [value]="accion.valor"
+            >
+              {{ accion.texto }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Desde
+          <input
+            type="date"
+            [(ngModel)]="fechaDesde"
+            (change)="aplicarFiltros()"
+          />
+        </label>
+
+        <label>
+          Hasta
+          <input
+            type="date"
+            [(ngModel)]="fechaHasta"
+            (change)="aplicarFiltros()"
+          />
+        </label>
+      </div>
+
+      <div class="audit-actions">
+        <button type="button" class="clear-btn" (click)="limpiarFiltros()">
+          Limpiar filtros
+        </button>
+
+        <button type="button" class="csv-btn" (click)="exportarCsv()">
+          Exportar CSV / Excel
+        </button>
+
+        <button type="button" class="print-btn" (click)="imprimirAuditoria()">
+          Imprimir auditoría
+        </button>
+      </div>
+    </section>
+
+    <section class="table-card">
+      <div class="table-header">
+        <div>
+          <h2>Registros de auditoría</h2>
+          <p>
+            Mostrando {{ registrosFiltrados.length }} de {{ registros.length }} registros.
+          </p>
+        </div>
+      </div>
+
+      <div class="loading" *ngIf="cargando">
+        Cargando registros de auditoría...
+      </div>
+
+      <div class="error-box" *ngIf="error">
+        {{ error }}
+      </div>
+
+      <div
+        class="empty-box"
+        *ngIf="!cargando && !error && registrosFiltrados.length === 0"
+      >
+        No existen registros de auditoría con los filtros seleccionados.
+      </div>
+
+      <div
+        class="table-wrapper"
+        *ngIf="!cargando && !error && registrosFiltrados.length > 0"
+      >
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Fecha</th>
+              <th>Usuario</th>
+              <th>Solicitud</th>
+              <th>Módulo</th>
+              <th>Acción</th>
+              <th>Descripción</th>
+              <th>IP</th>
+              <th class="no-print">Detalle</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let registro of registrosFiltrados">
+              <td>
+                <strong class="audit-id">#{{ registro.id }}</strong>
+              </td>
+
+              <td>
+                {{ registro.created_at }}
+              </td>
+
+              <td>
+                <strong>{{ getUsuarioTexto(registro) }}</strong>
+                <span *ngIf="registro.usuario_id">ID: {{ registro.usuario_id }}</span>
+              </td>
+
+              <td>
+                <strong *ngIf="registro.codigo_solicitud; else sinSolicitud">
+                  {{ registro.codigo_solicitud }}
+                </strong>
+
+                <ng-template #sinSolicitud>
+                  <span>Sin solicitud</span>
+                </ng-template>
+
+                <span *ngIf="registro.solicitud_id">
+                  ID: {{ registro.solicitud_id }}
+                </span>
+              </td>
+
+              <td>
+                <span
+                  class="module"
+                  [ngClass]="getModuloClase(registro.modulo)"
+                >
+                  {{ getModuloTexto(registro.modulo) }}
+                </span>
+              </td>
+
+              <td>
+                <span
+                  class="action"
+                  [ngClass]="getAccionClase(registro.accion)"
+                >
+                  {{ getAccionTexto(registro.accion) }}
+                </span>
+              </td>
+
+              <td class="description-cell">
+                {{ registro.descripcion }}
+              </td>
+
+              <td>
+                {{ registro.ip_origen || 'No registrada' }}
+              </td>
+
+              <td class="actions-cell no-print">
+                <button
+                  type="button"
+                  class="detail-btn"
+                  (click)="abrirDetalle(registro)"
+                >
+                  Ver detalle
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div
+    class="modal-backdrop no-print"
+    *ngIf="mostrarModalDetalle && registroSeleccionado"
+  >
+    <section class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2>Detalle de auditoría</h2>
+          <p>Registro #{{ registroSeleccionado.id }}</p>
+        </div>
+
+        <button type="button" (click)="cerrarDetalle()">
+          ×
+        </button>
+      </div>
+
+      <div class="modal-grid">
+        <div>
+          <span>Fecha</span>
+          <strong>{{ registroSeleccionado.created_at }}</strong>
+        </div>
+
+        <div>
+          <span>Usuario</span>
+          <strong>{{ getUsuarioTexto(registroSeleccionado) }}</strong>
+        </div>
+
+        <div>
+          <span>Módulo</span>
+          <strong>{{ getModuloTexto(registroSeleccionado.modulo) }}</strong>
+        </div>
+
+        <div>
+          <span>Acción</span>
+          <strong>{{ getAccionTexto(registroSeleccionado.accion) }}</strong>
+        </div>
+
+        <div>
+          <span>Solicitud</span>
+          <strong>{{ registroSeleccionado.codigo_solicitud || 'Sin solicitud asociada' }}</strong>
+        </div>
+
+        <div>
+          <span>IP origen</span>
+          <strong>{{ registroSeleccionado.ip_origen || 'No registrada' }}</strong>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <h3>Descripción</h3>
+        <p>{{ registroSeleccionado.descripcion }}</p>
+      </div>
+
+      <div class="modal-section">
+        <h3>Datos anteriores</h3>
+        <pre>{{ formatearJson(registroSeleccionado.datos_anteriores) }}</pre>
+      </div>
+
+      <div class="modal-section">
+        <h3>Datos nuevos</h3>
+        <pre>{{ formatearJson(registroSeleccionado.datos_nuevos) }}</pre>
+      </div>
+
+      <div class="modal-section" *ngIf="registroSeleccionado.user_agent">
+        <h3>Navegador / User Agent</h3>
+        <p>{{ registroSeleccionado.user_agent }}</p>
+      </div>
+    </section>
+  </div>
+</section>

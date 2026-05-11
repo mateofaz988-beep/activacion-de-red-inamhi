@@ -1,0 +1,472 @@
+<section class="usuarios-page">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo-box">IN</div>
+
+      <div>
+        <h2>INAMHI</h2>
+        <span>Panel administrador</span>
+      </div>
+    </div>
+
+    <nav class="menu">
+      <a routerLink="/admin/dashboard" routerLinkActive="active">
+        Dashboard
+      </a>
+
+      <a routerLink="/admin/solicitudes" routerLinkActive="active">
+        Solicitudes
+      </a>
+
+      <a routerLink="/admin/usuarios" routerLinkActive="active">
+        Usuarios
+      </a>
+
+      <a routerLink="/admin/reportes" routerLinkActive="active">
+        Reportes
+      </a>
+
+      <a routerLink="/admin/auditoria" routerLinkActive="active">
+        Auditoría
+      </a>
+    </nav>
+
+    <button type="button" class="logout" (click)="logout()">
+      Cerrar sesión
+    </button>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div>
+        <span class="eyebrow">Administración de accesos</span>
+        <h1>Gestión de Usuarios</h1>
+        <p>
+          Administre los usuarios internos que participan en el flujo de revisión,
+          aprobación, validación TICS y ejecución técnica.
+        </p>
+      </div>
+
+      <div class="topbar-actions">
+        <button
+          type="button"
+          class="refresh-btn"
+          (click)="cargarUsuarios()"
+          [disabled]="cargando"
+        >
+          {{ cargando ? 'Cargando...' : 'Actualizar' }}
+        </button>
+
+        <button
+          type="button"
+          class="new-btn"
+          (click)="abrirFormulario()"
+        >
+          + Nuevo usuario
+        </button>
+      </div>
+    </header>
+
+    <section class="stats-grid">
+      <article class="stat-card total">
+        <span>Total usuarios</span>
+        <strong>{{ totalUsuarios }}</strong>
+        <p>Usuarios registrados en el sistema.</p>
+      </article>
+
+      <article class="stat-card activos">
+        <span>Activos</span>
+        <strong>{{ totalActivos }}</strong>
+        <p>Usuarios habilitados para iniciar sesión.</p>
+      </article>
+
+      <article class="stat-card inactivos">
+        <span>Inactivos</span>
+        <strong>{{ totalInactivos }}</strong>
+        <p>Usuarios bloqueados o deshabilitados.</p>
+      </article>
+
+      <article class="stat-card administradores">
+        <span>Administradores</span>
+        <strong>{{ totalAdministradores }}</strong>
+        <p>Usuarios con permisos de administración.</p>
+      </article>
+    </section>
+
+    <section class="filters-card">
+      <div>
+        <h2>Filtros de búsqueda</h2>
+        <p>
+          Busque usuarios por nombres, apellidos, cédula, correo, usuario, cargo,
+          área, dependencia o rol.
+        </p>
+      </div>
+
+      <div class="filters-grid">
+        <label>
+          Buscar
+          <input
+            type="text"
+            [(ngModel)]="textoBusqueda"
+            (input)="aplicarFiltros()"
+            placeholder="Ejemplo: admin, jefe, correo, cédula..."
+          />
+        </label>
+
+        <label>
+          Rol
+          <select
+            [(ngModel)]="filtroRol"
+            (change)="aplicarFiltros()"
+          >
+            <option value="">Todos los roles</option>
+            <option value="administrador">Administrador</option>
+            <option value="jefe_inmediato">Jefe inmediato</option>
+            <option value="maxima_autoridad">Máxima autoridad</option>
+            <option value="analista_tics">Analista TICS</option>
+          </select>
+        </label>
+
+        <label>
+          Estado
+          <select
+            [(ngModel)]="filtroEstado"
+            (change)="aplicarFiltros()"
+          >
+            <option value="">Todos los estados</option>
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+        </label>
+
+        <button
+          type="button"
+          class="clear-btn"
+          (click)="limpiarFiltros()"
+        >
+          Limpiar filtros
+        </button>
+      </div>
+    </section>
+
+    <section class="form-card" *ngIf="mostrarFormulario">
+      <div class="form-header">
+        <div>
+          <span class="form-mode">
+            {{ usuarioEditando ? 'Modo edición' : 'Nuevo registro' }}
+          </span>
+
+          <h2>
+            {{ usuarioEditando ? 'Editar usuario' : 'Registrar nuevo usuario' }}
+          </h2>
+
+          <p>
+            Complete la información del funcionario que tendrá acceso al sistema.
+            Los campos marcados con * son obligatorios.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="close-form-btn"
+          (click)="cerrarFormulario()"
+        >
+          Cerrar
+        </button>
+      </div>
+
+      <form (ngSubmit)="guardarUsuario()" #usuarioForm="ngForm">
+        <div class="form-grid">
+          <label>
+            Nombres *
+            <input
+              type="text"
+              name="nombres"
+              [(ngModel)]="formulario.nombres"
+              placeholder="Ejemplo: Juan Carlos"
+              maxlength="120"
+              autocomplete="given-name"
+              required
+            />
+          </label>
+
+          <label>
+            Apellidos *
+            <input
+              type="text"
+              name="apellidos"
+              [(ngModel)]="formulario.apellidos"
+              placeholder="Ejemplo: Pérez López"
+              maxlength="120"
+              autocomplete="family-name"
+              required
+            />
+          </label>
+
+          <label>
+            Cédula *
+            <input
+              type="text"
+              name="cedula"
+              [(ngModel)]="formulario.cedula"
+              placeholder="Ingrese 10 números"
+              maxlength="10"
+              inputmode="numeric"
+              autocomplete="off"
+              required
+            />
+          </label>
+
+          <label>
+            Correo *
+            <input
+              type="email"
+              name="correo"
+              [(ngModel)]="formulario.correo"
+              placeholder="usuario@correo.com"
+              maxlength="150"
+              autocomplete="email"
+              required
+            />
+          </label>
+
+          <label>
+            Usuario *
+            <input
+              type="text"
+              name="usuario"
+              [(ngModel)]="formulario.usuario"
+              placeholder="Ejemplo: jperez"
+              maxlength="80"
+              autocomplete="username"
+              required
+            />
+          </label>
+
+          <label>
+            Contraseña {{ usuarioEditando ? '' : '*' }}
+            <input
+              type="password"
+              name="password"
+              [(ngModel)]="formulario.password"
+              placeholder="{{ usuarioEditando ? 'Dejar vacío para conservar la contraseña actual' : 'Mínimo 6 caracteres' }}"
+              autocomplete="new-password"
+              [required]="!usuarioEditando"
+            />
+
+            <small class="field-help" *ngIf="usuarioEditando">
+              Deje este campo vacío si no desea cambiar la contraseña.
+            </small>
+
+            <small class="field-help" *ngIf="!usuarioEditando">
+              La contraseña será necesaria para que el usuario pueda iniciar sesión.
+            </small>
+          </label>
+
+          <label>
+            Rol *
+            <select
+              name="rol"
+              [(ngModel)]="formulario.rol"
+              required
+            >
+              <option value="">Seleccione un rol</option>
+              <option value="administrador">Administrador</option>
+              <option value="jefe_inmediato">Jefe inmediato</option>
+              <option value="maxima_autoridad">Máxima autoridad</option>
+              <option value="analista_tics">Analista TICS</option>
+            </select>
+          </label>
+
+          <label>
+            Estado *
+            <select
+              name="estado"
+              [(ngModel)]="formulario.estado"
+              required
+            >
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+            </select>
+          </label>
+
+          <label>
+            Cargo *
+            <input
+              type="text"
+              name="cargo"
+              [(ngModel)]="formulario.cargo"
+              placeholder="Ejemplo: Analista Institucional"
+              maxlength="150"
+              required
+            />
+          </label>
+
+          <label>
+            Área / Unidad *
+            <input
+              type="text"
+              name="area_unidad"
+              [(ngModel)]="formulario.area_unidad"
+              placeholder="Ejemplo: Unidad de TICS"
+              maxlength="150"
+              required
+            />
+          </label>
+
+          <label>
+            Dependencia *
+            <input
+              type="text"
+              name="dependencia"
+              [(ngModel)]="formulario.dependencia"
+              placeholder="Ejemplo: INAMHI"
+              maxlength="150"
+              required
+            />
+          </label>
+
+          <label>
+            Teléfono / Extensión
+            <input
+              type="text"
+              name="telefono_ext"
+              [(ngModel)]="formulario.telefono_ext"
+              placeholder="Ejemplo: 1001"
+              maxlength="20"
+              inputmode="numeric"
+            />
+          </label>
+        </div>
+
+        <div class="form-note">
+          <strong>Importante:</strong>
+          el usuario podrá acceder al sistema según el rol asignado.
+          Si se marca como inactivo, no podrá iniciar sesión.
+        </div>
+
+        <div class="form-actions">
+          <button
+            type="button"
+            class="cancel-btn"
+            (click)="cerrarFormulario()"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            class="save-btn"
+            [disabled]="guardando || usuarioForm.invalid"
+          >
+            {{ guardando ? 'Guardando...' : usuarioEditando ? 'Actualizar usuario' : 'Guardar usuario' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="table-card">
+      <div class="table-header">
+        <div>
+          <h2>Usuarios registrados</h2>
+          <p>
+            Mostrando {{ usuariosFiltrados.length }} de {{ usuarios.length }} usuarios.
+          </p>
+        </div>
+      </div>
+
+      <div class="loading" *ngIf="cargando">
+        Cargando usuarios...
+      </div>
+
+      <div class="error-box" *ngIf="error">
+        {{ error }}
+      </div>
+
+      <div
+        class="empty-box"
+        *ngIf="!cargando && !error && usuariosFiltrados.length === 0"
+      >
+        No existen usuarios con los filtros seleccionados.
+      </div>
+
+      <div
+        class="table-wrapper"
+        *ngIf="!cargando && !error && usuariosFiltrados.length > 0"
+      >
+        <table>
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Datos personales</th>
+              <th>Correo</th>
+              <th>Rol</th>
+              <th>Cargo / Área</th>
+              <th>Estado</th>
+              <th>Último acceso</th>
+              <th class="actions-col">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let usuario of usuariosFiltrados">
+              <td>
+                <strong class="username">{{ usuario.usuario }}</strong>
+                <span>ID: {{ usuario.id }}</span>
+              </td>
+
+              <td>
+                <strong>{{ usuario.nombres }} {{ usuario.apellidos }}</strong>
+                <span>{{ usuario.cedula }}</span>
+              </td>
+
+              <td>
+                {{ usuario.correo }}
+              </td>
+
+              <td>
+                <span class="role" [ngClass]="getRolClase(usuario.rol)">
+                  {{ getRolTexto(usuario.rol) }}
+                </span>
+              </td>
+
+              <td>
+                <strong>{{ usuario.cargo }}</strong>
+                <span>{{ usuario.area_unidad }}</span>
+              </td>
+
+              <td>
+                <span class="status" [ngClass]="usuario.estado">
+                  {{ usuario.estado }}
+                </span>
+              </td>
+
+              <td>
+                {{ usuario.ultimo_acceso || 'Sin registro' }}
+              </td>
+
+              <td class="actions-cell">
+                <button
+                  type="button"
+                  class="edit-btn"
+                  (click)="editarUsuario(usuario)"
+                >
+                  Editar
+                </button>
+
+                <button
+                  type="button"
+                  class="status-btn"
+                  [ngClass]="usuario.estado === 'activo' ? 'danger' : 'success'"
+                  (click)="cambiarEstadoUsuario(usuario)"
+                >
+                  {{ usuario.estado === 'activo' ? 'Desactivar' : 'Activar' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</section>

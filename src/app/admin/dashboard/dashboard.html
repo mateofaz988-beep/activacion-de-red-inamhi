@@ -2,6 +2,7 @@
   <aside class="sidebar">
     <div class="brand">
       <div class="logo-box">IN</div>
+
       <div>
         <h2>INAMHI</h2>
         <span>Liberación Web</span>
@@ -9,11 +10,41 @@
     </div>
 
     <nav class="menu">
-      <a class="active">Dashboard</a>
-      <a>Solicitudes</a>
-      <a>Usuarios</a>
-      <a>Reportes</a>
-      <a>Auditoría</a>
+      <a
+        routerLink="/admin/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Dashboard
+      </a>
+
+      <a
+        routerLink="/admin/solicitudes"
+        routerLinkActive="active"
+      >
+        Solicitudes
+      </a>
+
+      <a
+        routerLink="/admin/usuarios"
+        routerLinkActive="active"
+      >
+        Usuarios
+      </a>
+
+      <a
+        routerLink="/admin/reportes"
+        routerLinkActive="active"
+      >
+        Reportes
+      </a>
+
+      <a
+        routerLink="/admin/auditoria"
+        routerLinkActive="active"
+      >
+        Auditoría
+      </a>
     </nav>
 
     <button class="logout" type="button" (click)="logout()">
@@ -68,8 +99,12 @@
           <p>Consulta, filtra y revisa las solicitudes registradas.</p>
         </div>
 
-        <button type="button" (click)="cargarSolicitudes()">
-          Actualizar
+        <button
+          type="button"
+          (click)="cargarSolicitudes()"
+          [disabled]="cargando"
+        >
+          {{ cargando ? 'Cargando...' : 'Actualizar' }}
         </button>
       </div>
 
@@ -94,8 +129,13 @@
           <option value="rechazada_tics">Rechazada TICS</option>
         </select>
 
-        <button type="button" (click)="buscar()">Buscar</button>
-        <button type="button" class="clear-btn" (click)="limpiarFiltros()">Limpiar</button>
+        <button type="button" (click)="buscar()">
+          Buscar
+        </button>
+
+        <button type="button" class="clear-btn" (click)="limpiarFiltros()">
+          Limpiar
+        </button>
       </div>
 
       <div class="error-box" *ngIf="error">
@@ -125,7 +165,9 @@
           <tbody>
             <tr *ngFor="let solicitud of solicitudesFiltradas">
               <td>
-                <strong class="code">{{ solicitud.codigo_solicitud }}</strong>
+                <strong class="code">
+                  {{ solicitud.codigo_solicitud }}
+                </strong>
               </td>
 
               <td>{{ solicitud.nombres_completos }}</td>
@@ -135,7 +177,10 @@
               <td>{{ solicitud.fecha_solicitud }}</td>
 
               <td>
-                <span class="status" [ngClass]="getEstadoClase(solicitud.estado)">
+                <span
+                  class="status"
+                  [ngClass]="getEstadoClase(solicitud.estado)"
+                >
                   {{ getEstadoTexto(solicitud.estado) }}
                 </span>
               </td>
@@ -143,7 +188,10 @@
               <td>{{ solicitud.total_paginas }}</td>
 
               <td class="actions-cell">
-                <a class="detail-btn" [routerLink]="['/admin/solicitudes', solicitud.id]">
+                <a
+                  class="detail-btn"
+                  [routerLink]="['/admin/solicitudes', solicitud.id]"
+                >
                   Ver detalle
                 </a>
               </td>

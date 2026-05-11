@@ -4,17 +4,19 @@
   font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
 }
 
-.dashboard-page {
+.solicitudes-page {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 280px 1fr;
   background:
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 34%),
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 34%),
     linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
   color: #0f172a;
 }
 
-/* SIDEBAR */
+/* =====================================================
+   SIDEBAR
+===================================================== */
 
 .sidebar {
   position: sticky;
@@ -22,7 +24,7 @@
   min-height: 100vh;
   padding: 24px;
   background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(8, 47, 73, 0.98));
+    linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(18, 41, 74, 0.98) 100%);
   color: #ffffff;
   display: flex;
   flex-direction: column;
@@ -41,10 +43,11 @@
     margin: 0;
     font-size: 22px;
     font-weight: 950;
+    letter-spacing: -0.02em;
   }
 
   span {
-    color: #bae6fd;
+    color: #bfdbfe;
     font-size: 13px;
     font-weight: 700;
   }
@@ -56,11 +59,11 @@
   border-radius: 18px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  background: linear-gradient(135deg, #38bdf8, #2563eb);
   color: #ffffff;
   font-weight: 950;
   font-size: 20px;
-  box-shadow: 0 16px 34px rgba(14, 165, 233, 0.32);
+  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.32);
 }
 
 .menu {
@@ -102,11 +105,13 @@
   }
 }
 
-/* CONTENT */
+/* =====================================================
+   CONTENT
+===================================================== */
 
 .content {
   padding: 30px;
-  max-width: 1500px;
+  max-width: 1600px;
   width: 100%;
 }
 
@@ -136,8 +141,8 @@
   display: inline-flex;
   padding: 7px 12px;
   border-radius: 999px;
-  background: #e0f2fe;
-  color: #0369a1;
+  background: #dbeafe;
+  color: #1d4ed8;
   font-size: 12px;
   font-weight: 950;
   text-transform: uppercase;
@@ -151,7 +156,7 @@
   border-radius: 14px;
   color: #ffffff;
   font-weight: 950;
-  background: linear-gradient(135deg, #0284c7, #2563eb);
+  background: linear-gradient(135deg, #2563eb, #0284c7);
   box-shadow: 0 14px 28px rgba(37, 99, 235, 0.20);
   transition: 0.2s ease;
 
@@ -166,48 +171,62 @@
   }
 }
 
-/* STATS */
+/* =====================================================
+   STATS
+===================================================== */
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(7, minmax(150px, 1fr));
+  gap: 16px;
   margin-bottom: 22px;
 }
 
 .stat-card {
-  padding: 22px;
-  border-radius: 24px;
+  padding: 20px;
+  border-radius: 22px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.07);
 
   span {
     color: #64748b;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 900;
   }
 
   strong {
     display: block;
     margin: 10px 0;
-    font-size: 38px;
+    font-size: 34px;
     font-weight: 950;
   }
 
   p {
     margin: 0;
     color: #64748b;
-    line-height: 1.5;
-    font-size: 14px;
+    line-height: 1.45;
+    font-size: 13px;
   }
 
-  &.pendiente strong {
-    color: #0369a1;
+  &.total strong {
+    color: #0f172a;
   }
 
-  &.ejecucion strong {
+  &.firma strong {
+    color: #ca8a04;
+  }
+
+  &.jefe strong {
+    color: #2563eb;
+  }
+
+  &.autoridad strong {
     color: #7c3aed;
+  }
+
+  &.tics strong {
+    color: #0369a1;
   }
 
   &.finalizada strong {
@@ -219,9 +238,11 @@
   }
 }
 
-/* WORKFLOW */
+/* =====================================================
+   FILTERS
+===================================================== */
 
-.workflow-card,
+.filters-card,
 .table-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -229,45 +250,75 @@
   box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
 }
 
-.workflow-card {
+.filters-card {
   padding: 24px;
   margin-bottom: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
 
   h2 {
     margin: 0 0 8px;
-    font-size: 24px;
+    font-size: 23px;
     font-weight: 950;
   }
 
   p {
     margin: 0;
     color: #64748b;
-    line-height: 1.6;
-    max-width: 820px;
   }
 }
 
-.workflow-steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
+.filters-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr auto;
+  gap: 14px;
+  align-items: end;
 
-  span {
-    padding: 10px 13px;
-    border-radius: 999px;
-    background: #eff6ff;
-    color: #1d4ed8;
+  label {
+    display: grid;
+    gap: 8px;
+    color: #334155;
     font-size: 13px;
-    font-weight: 950;
+    font-weight: 900;
+  }
+
+  input,
+  select {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 15px;
+    padding: 13px 14px;
+    outline: none;
+    color: #0f172a;
+    background: #ffffff;
+    font-size: 14px;
+
+    &:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10);
+    }
   }
 }
 
-/* TABLE */
+.clear-btn {
+  border: none;
+  cursor: pointer;
+  padding: 13px 16px;
+  border-radius: 15px;
+  color: #334155;
+  background: #f1f5f9;
+  font-weight: 950;
+  border: 1px solid #cbd5e1;
+  transition: 0.2s ease;
+
+  &:hover {
+    background: #e2e8f0;
+    transform: translateY(-2px);
+  }
+}
+
+/* =====================================================
+   TABLE
+===================================================== */
 
 .table-card {
   padding: 24px;
@@ -316,8 +367,8 @@
 
 table {
   width: 100%;
+  min-width: 1150px;
   border-collapse: collapse;
-  min-width: 1000px;
 }
 
 thead th {
@@ -348,6 +399,7 @@ tbody td {
 
 .code {
   color: #1d4ed8;
+  font-weight: 950;
 }
 
 .status {
@@ -358,14 +410,29 @@ tbody td {
   font-size: 12px;
   font-weight: 950;
 
-  &.pendiente {
+  &.firma {
+    color: #92400e;
+    background: #fef3c7;
+  }
+
+  &.jefe {
+    color: #1d4ed8;
+    background: #dbeafe;
+  }
+
+  &.autoridad {
+    color: #6d28d9;
+    background: #ede9fe;
+  }
+
+  &.tics {
     color: #0369a1;
     background: #e0f2fe;
   }
 
-  &.ejecucion {
-    color: #6d28d9;
-    background: #ede9fe;
+  &.pendiente {
+    color: #92400e;
+    background: #fef3c7;
   }
 
   &.finalizada {
@@ -418,25 +485,18 @@ tbody td {
   background: linear-gradient(135deg, #334155, #0f172a);
 }
 
-/* RESPONSIVE */
+/* =====================================================
+   RESPONSIVE
+===================================================== */
 
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .workflow-card {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .workflow-steps {
-    justify-content: flex-start;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 900px) {
-  .dashboard-page {
+@media (max-width: 1100px) {
+  .solicitudes-page {
     grid-template-columns: 1fr;
   }
 
@@ -452,9 +512,17 @@ tbody td {
   .topbar {
     flex-direction: column;
   }
+
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .clear-btn {
+    width: 100%;
+  }
 }
 
-@media (max-width: 620px) {
+@media (max-width: 680px) {
   .stats-grid {
     grid-template-columns: 1fr;
   }

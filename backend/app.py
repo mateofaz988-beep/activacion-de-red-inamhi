@@ -1,6 +1,15 @@
 from io import BytesIO
-
-
+import json
+import smtplib
+import html
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import os
+import smtplib
+import html
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
 import os
 import re
 import ipaddress
@@ -38,6 +47,16 @@ import bcrypt
 
 load_dotenv()
 
+
+# =====================================================
+# configuración SMTP para envío de correos
+# =====================================================
+
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER)
 
 # =====================================================
 # configuración principal
@@ -2693,7 +2712,127 @@ def aprobar_solicitud(solicitud_id):
             "error": str(error)
         }), 500
 
+# =====================================================
+# envío de correo por rechazo de solicitud
+# =====================================================
 
+def enviar_correo_rechazo_solicitud(solicitud, motivo, rol_rechazo):
+    if not SMTP_HOST or not SMTP_USER or not SMTP_PASSWORD:
+        print("configuración SMTP incompleta. No se envió el correo de rechazo.")
+        return False
+
+    correo_destino = limpiar_texto(solicitud.get("correo_institucional")).lower()
+
+    if not correo_destino:
+        print("la solicitud no tiene correo registrado.")
+        return False
+
+    codigo_solicitud = solicitud.get("codigo_solicitud", "")
+    nombres = solicitud.get("nombres_completos", "")
+    fecha_actual = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    nombres_seguro = html.escape(str(nombres))
+    codigo_seguro = html.escape(str(codigo_solicitud))
+    motivo_seguro = html.escape(str(motivo))
+    rol_seguro = html.escape(str(rol_rechazo))
+    fecha_segura = html.escape(str(fecha_actual))
+
+    asunto = f"Solicitud rechazada - {codigo_solicitud}"
+
+    cuerpo_texto = f"""
+Solicitud de Liberación Web Rechazada
+
+Estimado/a {nombres},
+
+Se informa que su solicitud de liberación web ha sido rechazada.
+
+Código de solicitud: {codigo_solicitud}
+Rechazado por: {rol_rechazo}
+Fecha: {fecha_actual}
+
+Motivo del rechazo:
+{motivo}
+
+Puede revisar la observación y registrar una nueva solicitud con la información corregida.
+
+Sistema de Gestión de Solicitudes de Liberación Web - INAMHI
+"""
+
+    cuerpo_html = f"""
+    <html>
+      <body style="margin:0; padding:0; background:#f1f5f9; font-family:Arial, sans-serif;">
+        <div style="max-width:720px; margin:32px auto; background:#ffffff; border-radius:18px; overflow:hidden; border:1px solid #e2e8f0;">
+          
+          <div style="background:#991b1b; color:#ffffff; padding:24px;">
+            <h2 style="margin:0; font-size:22px;">Solicitud de Liberación Web Rechazada</h2>
+            <p style="margin:8px 0 0; font-size:14px;">
+              Sistema de Gestión de Solicitudes de Liberación Web - INAMHI
+            </p>
+          </div>
+
+          <div style="padding:26px; color:#0f172a;">
+            <p style="font-size:16px;">Estimado/a <strong>{nombres_seguro}</strong>,</p>
+
+            <p style="font-size:15px; line-height:1.7;">
+              Se informa que su solicitud de liberación web ha sido 
+              <strong style="color:#991b1b;">rechazada</strong>.
+            </p>
+
+            <table style="width:100%; border-collapse:collapse; margin:22px 0; font-size:14px;">
+              <tr>
+                <td style="padding:12px; border:1px solid #e2e8f0; background:#f8fafc;"><strong>Código de solicitud</strong></td>
+                <td style="padding:12px; border:1px solid #e2e8f0;">{codigo_seguro}</td>
+              </tr>
+              <tr>
+                <td style="padding:12px; border:1px solid #e2e8f0; background:#f8fafc;"><strong>Rechazado por</strong></td>
+                <td style="padding:12px; border:1px solid #e2e8f0;">{rol_seguro}</td>
+              </tr>
+              <tr>
+                <td style="padding:12px; border:1px solid #e2e8f0; background:#f8fafc;"><strong>Fecha</strong></td>
+                <td style="padding:12px; border:1px solid #e2e8f0;">{fecha_segura}</td>
+              </tr>
+            </table>
+
+            <div style="background:#fef2f2; border:1px solid #fecaca; color:#7f1d1d; border-radius:14px; padding:18px;">
+              <strong>Motivo del rechazo:</strong>
+              <p style="margin:10px 0 0; line-height:1.7;">{motivo_seguro}</p>
+            </div>
+
+            <p style="margin-top:24px; font-size:15px; line-height:1.7;">
+              Puede revisar la observación y registrar una nueva solicitud con la información corregida.
+            </p>
+
+            <p style="margin-top:28px; color:#475569; font-size:14px;">
+              Atentamente,<br>
+              <strong>Sistema de Gestión de Solicitudes de Liberación Web - INAMHI</strong>
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+    """
+
+    try:
+        mensaje = MIMEMultipart("alternative")
+        mensaje["Subject"] = asunto
+        mensaje["From"] = SMTP_FROM
+        mensaje["To"] = correo_destino
+
+        mensaje.attach(MIMEText(cuerpo_texto, "plain", "utf-8"))
+        mensaje.attach(MIMEText(cuerpo_html, "html", "utf-8"))
+
+        servidor = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        servidor.starttls()
+        servidor.login(SMTP_USER, SMTP_PASSWORD)
+        servidor.sendmail(SMTP_USER, [correo_destino], mensaje.as_string())
+        servidor.quit()
+
+        print(f"correo de rechazo enviado a {correo_destino}")
+        return True
+
+    except Exception as error:
+        print("error al enviar correo de rechazo:", error)
+        return False
 # =====================================================
 # rechazo de solicitud
 # =====================================================
@@ -2737,6 +2876,223 @@ def rechazar_solicitud(solicitud_id):
     try:
         cursor = conexion.cursor(dictionary=True)
 
+        # =====================================================
+        # Obtener solicitud actual
+        # =====================================================
+
+        cursor.execute("""
+            select
+                id,
+                codigo_solicitud,
+                nombres_completos,
+                correo_institucional,
+                estado,
+                etapa_actual,
+                bloqueada
+            from solicitudes
+            where id = %s
+            limit 1;
+        """, (solicitud_id,))
+
+        solicitud = cursor.fetchone()
+
+        if solicitud is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "solicitud no encontrada."
+            }), 404
+
+        if solicitud["bloqueada"]:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "la solicitud se encuentra bloqueada y no puede ser procesada."
+            }), 409
+
+        estado_anterior = solicitud["estado"]
+        etapa_anterior = solicitud["etapa_actual"]
+
+        # =====================================================
+        # Reglas de rechazo por rol
+        # =====================================================
+
+        reglas_rechazo = {
+            "jefe_inmediato": {
+                "estado_permitido": "pendiente_jefe_inmediato",
+                "nuevo_estado": "rechazada_jefe_inmediato",
+                "nueva_etapa": "jefe_inmediato",
+                "mensaje": "solicitud rechazada por el jefe inmediato."
+            },
+            "maxima_autoridad": {
+                "estado_permitido": "pendiente_maxima_autoridad",
+                "nuevo_estado": "rechazada_maxima_autoridad",
+                "nueva_etapa": "maxima_autoridad",
+                "mensaje": "solicitud rechazada por la máxima autoridad."
+            },
+            "analista_tics": {
+                "estado_permitido": "pendiente_tics",
+                "nuevo_estado": "rechazada_tics",
+                "nueva_etapa": "tics",
+                "mensaje": "solicitud rechazada por TICS."
+            }
+        }
+
+        regla = reglas_rechazo.get(rol_actual)
+
+        if regla is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "rol no autorizado para rechazar solicitudes."
+            }), 403
+
+        if estado_anterior != regla["estado_permitido"]:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": f"la solicitud no puede ser rechazada por {rol_actual} en el estado actual.",
+                "estado_actual": estado_anterior,
+                "estado_requerido": regla["estado_permitido"]
+            }), 409
+
+        # =====================================================
+        # Actualizar solicitud
+        # =====================================================
+
+        cursor.execute("""
+            update solicitudes
+            set
+                estado = %s,
+                etapa_actual = %s,
+                observacion_general = %s,
+                updated_at = current_timestamp
+            where id = %s;
+        """, (
+            regla["nuevo_estado"],
+            regla["nueva_etapa"],
+            motivo,
+            solicitud_id
+        ))
+
+        # =====================================================
+        # Registrar auditoría
+        # =====================================================
+
+        datos_anteriores = {
+            "estado": estado_anterior,
+            "etapa_actual": etapa_anterior
+        }
+
+        datos_nuevos = {
+            "estado": regla["nuevo_estado"],
+            "etapa_actual": regla["nueva_etapa"],
+            "motivo": motivo,
+            "rechazado_por": rol_actual,
+            "usuario_id": usuario_actual["id"]
+        }
+
+        cursor.execute("""
+            insert into auditoria (
+                usuario_id,
+                solicitud_id,
+                modulo,
+                accion,
+                descripcion,
+                datos_anteriores,
+                datos_nuevos,
+                ip_origen,
+                user_agent
+            ) values (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s
+            );
+        """, (
+            usuario_actual["id"],
+            solicitud_id,
+            "flujo_solicitud",
+            "rechazar_solicitud",
+            f"{regla['mensaje']} código: {solicitud['codigo_solicitud']}",
+            json.dumps(datos_anteriores, ensure_ascii=False),
+            json.dumps(datos_nuevos, ensure_ascii=False),
+            request.remote_addr,
+            request.headers.get("User-Agent")
+        ))
+
+        conexion.commit()
+
+       
+       # =====================================================
+        # Enviar correo automático al solicitante
+        # =====================================================
+
+        correo_enviado = False
+        error_correo = None
+
+        try:
+            correo_enviado = enviar_correo_rechazo_solicitud(
+                solicitud=solicitud,
+                motivo=motivo,
+                rol_rechazo=rol_actual
+            )
+        except Exception as error_email:
+            correo_enviado = False
+            error_correo = str(error_email)
+            print("error al enviar correo de rechazo:", error_correo)
+
+        cursor.close()
+        conexion.close()
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": regla["mensaje"],
+            "correo_enviado": correo_enviado,
+            "error_correo": error_correo,
+            "solicitud": {
+                "id": solicitud_id,
+                "codigo_solicitud": solicitud["codigo_solicitud"],
+                "correo_destino": solicitud["correo_institucional"],
+                "estado_anterior": estado_anterior,
+                "estado_actual": regla["nuevo_estado"],
+                "etapa_actual": regla["nueva_etapa"],
+                "motivo": motivo
+            }
+        }), 200
+
+    except Error as error:
+        try:
+            conexion.rollback()
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al rechazar la solicitud.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        try:
+            conexion.rollback()
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al rechazar la solicitud.",
+            "error": str(error)
+        }), 500
         # =====================================================
         # Obtener solicitud actual
         # =====================================================
@@ -2902,7 +3258,848 @@ def error_500(error):
         "mensaje": "error interno del servidor."
     }), 500
 
+# =====================================================
+# listado de auditoría
+# =====================================================
 
+@app.route("/api/admin/auditoria", methods=["GET"])
+@token_requerido
+@roles_permitidos("administrador")
+def listar_auditoria():
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select
+                a.id,
+                a.usuario_id,
+                a.solicitud_id,
+                u.usuario,
+                u.nombres,
+                u.apellidos,
+                s.codigo_solicitud,
+                a.modulo,
+                a.accion,
+                a.descripcion,
+                a.datos_anteriores,
+                a.datos_nuevos,
+                a.ip_origen,
+                a.user_agent,
+                a.created_at
+            from auditoria a
+            left join usuarios u on u.id = a.usuario_id
+            left join solicitudes s on s.id = a.solicitud_id
+            order by a.created_at desc, a.id desc
+            limit 500;
+        """)
+
+        registros = cursor.fetchall()
+
+        for registro in registros:
+            registro["created_at"] = serializar_fecha(registro["created_at"])
+
+            if registro.get("datos_anteriores") is None:
+                registro["datos_anteriores"] = None
+
+            if registro.get("datos_nuevos") is None:
+                registro["datos_nuevos"] = None
+
+        cursor.close()
+        conexion.close()
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "auditoría obtenida correctamente.",
+            "total": len(registros),
+            "auditoria": registros
+        }), 200
+
+    except Error as error:
+        try:
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al obtener la auditoría.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        try:
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al obtener la auditoría.",
+            "error": str(error)
+        }), 500
+    
+    # =====================================================
+# listado de usuarios
+# =====================================================
+
+@app.route("/api/admin/usuarios", methods=["GET"])
+@token_requerido
+@roles_permitidos("administrador")
+def listar_usuarios_admin():
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select
+                u.id,
+                u.nombres,
+                u.apellidos,
+                u.cedula,
+                u.correo,
+                u.usuario,
+                r.nombre as rol,
+                u.cargo,
+                u.area_unidad,
+                u.dependencia,
+                u.telefono_ext,
+                u.estado,
+                u.ultimo_acceso,
+                u.created_at,
+                u.updated_at
+            from usuarios u
+            inner join roles r on r.id = u.rol_id
+            order by u.id desc;
+        """)
+
+        usuarios = cursor.fetchall()
+
+        for usuario in usuarios:
+            usuario["ultimo_acceso"] = serializar_fecha(usuario["ultimo_acceso"])
+            usuario["created_at"] = serializar_fecha(usuario["created_at"])
+            usuario["updated_at"] = serializar_fecha(usuario["updated_at"])
+
+        cursor.close()
+        conexion.close()
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "usuarios obtenidos correctamente.",
+            "total": len(usuarios),
+            "usuarios": usuarios
+        }), 200
+
+    except Error as error:
+        try:
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al obtener los usuarios.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        try:
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al obtener los usuarios.",
+            "error": str(error)
+        }), 500
+    # =====================================================
+# crear usuario
+# =====================================================
+
+@app.route("/api/admin/usuarios", methods=["POST"])
+@token_requerido
+@roles_permitidos("administrador")
+def crear_usuario_admin():
+    usuario_actual = request.usuario_actual
+    data = request.get_json() or {}
+
+    nombres = normalizar_espacios(data.get("nombres"))
+    apellidos = normalizar_espacios(data.get("apellidos"))
+    cedula = limpiar_texto(data.get("cedula"))
+    correo = limpiar_texto(data.get("correo")).lower()
+    usuario = limpiar_texto(data.get("usuario")).lower()
+    password = limpiar_texto(data.get("password"))
+    rol = limpiar_texto(data.get("rol"))
+    cargo = normalizar_espacios(data.get("cargo"))
+    area_unidad = normalizar_espacios(data.get("area_unidad"))
+    dependencia = normalizar_espacios(data.get("dependencia"))
+    telefono_ext = limpiar_texto(data.get("telefono_ext"))
+    estado = limpiar_texto(data.get("estado")) or "activo"
+
+    errores = {}
+
+    if not nombres:
+        errores["nombres"] = "los nombres son obligatorios."
+
+    if not apellidos:
+        errores["apellidos"] = "los apellidos son obligatorios."
+
+    if not re.match(r"^\d{10}$", cedula):
+        errores["cedula"] = "la cédula debe tener exactamente 10 números."
+
+    if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", correo):
+        errores["correo"] = "ingrese un correo válido."
+
+    if not usuario:
+        errores["usuario"] = "el usuario es obligatorio."
+
+    if not password or len(password) < 6:
+        errores["password"] = "la contraseña debe tener mínimo 6 caracteres."
+
+    if rol not in ["administrador", "jefe_inmediato", "maxima_autoridad", "analista_tics"]:
+        errores["rol"] = "rol no válido."
+
+    if estado not in ["activo", "inactivo"]:
+        errores["estado"] = "estado no válido."
+
+    if not cargo:
+        errores["cargo"] = "el cargo es obligatorio."
+
+    if not area_unidad:
+        errores["area_unidad"] = "el área o unidad es obligatoria."
+
+    if not dependencia:
+        errores["dependencia"] = "la dependencia es obligatoria."
+
+    if errores:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "existen errores de validación.",
+            "errores": errores
+        }), 400
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select id
+            from roles
+            where nombre = %s
+              and estado = 'activo'
+            limit 1;
+        """, (rol,))
+
+        rol_encontrado = cursor.fetchone()
+
+        if rol_encontrado is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "el rol seleccionado no existe o está inactivo."
+            }), 400
+
+        cursor.execute("""
+            select id
+            from usuarios
+            where cedula = %s
+               or correo = %s
+               or usuario = %s
+            limit 1;
+        """, (cedula, correo, usuario))
+
+        duplicado = cursor.fetchone()
+
+        if duplicado:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "ya existe un usuario con la misma cédula, correo o nombre de usuario."
+            }), 409
+
+        password_hash = bcrypt.hashpw(
+            password.encode("utf-8"),
+            bcrypt.gensalt()
+        ).decode("utf-8")
+
+        cursor.execute("""
+            insert into usuarios (
+                rol_id,
+                nombres,
+                apellidos,
+                cedula,
+                correo,
+                usuario,
+                password_hash,
+                cargo,
+                area_unidad,
+                dependencia,
+                telefono_ext,
+                estado
+            ) values (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            );
+        """, (
+            rol_encontrado["id"],
+            nombres,
+            apellidos,
+            cedula,
+            correo,
+            usuario,
+            password_hash,
+            cargo,
+            area_unidad,
+            dependencia,
+            telefono_ext,
+            estado
+        ))
+
+        usuario_id = cursor.lastrowid
+
+        cursor.execute("""
+            insert into auditoria (
+                usuario_id,
+                solicitud_id,
+                modulo,
+                accion,
+                descripcion,
+                datos_anteriores,
+                datos_nuevos,
+                ip_origen,
+                user_agent
+            ) values (
+                %s, null, 'usuarios', 'crear', %s, null, %s, %s, %s
+            );
+        """, (
+            usuario_actual["id"],
+            f"usuario creado: {usuario}",
+            json.dumps({
+                "id": usuario_id,
+                "usuario": usuario,
+                "rol": rol,
+                "estado": estado
+            }, ensure_ascii=False),
+            request.remote_addr,
+            request.headers.get("User-Agent")
+        ))
+
+        conexion.commit()
+
+        cursor.close()
+        conexion.close()
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "usuario registrado correctamente.",
+            "usuario": {
+                "id": usuario_id,
+                "nombres": nombres,
+                "apellidos": apellidos,
+                "cedula": cedula,
+                "correo": correo,
+                "usuario": usuario,
+                "rol": rol,
+                "cargo": cargo,
+                "area_unidad": area_unidad,
+                "dependencia": dependencia,
+                "telefono_ext": telefono_ext,
+                "estado": estado
+            }
+        }), 201
+
+    except Error as error:
+        try:
+            conexion.rollback()
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al registrar el usuario.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        try:
+            conexion.rollback()
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al registrar el usuario.",
+            "error": str(error)
+        }), 500
+
+
+# =====================================================
+# actualizar usuario
+# =====================================================
+
+@app.route("/api/admin/usuarios/<int:usuario_id>", methods=["PUT"])
+@token_requerido
+@roles_permitidos("administrador")
+def actualizar_usuario_admin(usuario_id):
+    usuario_actual = request.usuario_actual
+    data = request.get_json() or {}
+
+    nombres = normalizar_espacios(data.get("nombres"))
+    apellidos = normalizar_espacios(data.get("apellidos"))
+    cedula = limpiar_texto(data.get("cedula"))
+    correo = limpiar_texto(data.get("correo")).lower()
+    usuario = limpiar_texto(data.get("usuario")).lower()
+    password = limpiar_texto(data.get("password"))
+    rol = limpiar_texto(data.get("rol"))
+    cargo = normalizar_espacios(data.get("cargo"))
+    area_unidad = normalizar_espacios(data.get("area_unidad"))
+    dependencia = normalizar_espacios(data.get("dependencia"))
+    telefono_ext = limpiar_texto(data.get("telefono_ext"))
+    estado = limpiar_texto(data.get("estado")) or "activo"
+
+    errores = {}
+
+    if not nombres:
+        errores["nombres"] = "los nombres son obligatorios."
+
+    if not apellidos:
+        errores["apellidos"] = "los apellidos son obligatorios."
+
+    if not re.match(r"^\d{10}$", cedula):
+        errores["cedula"] = "la cédula debe tener exactamente 10 números."
+
+    if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", correo):
+        errores["correo"] = "ingrese un correo válido."
+
+    if not usuario:
+        errores["usuario"] = "el usuario es obligatorio."
+
+    if password and len(password) < 6:
+        errores["password"] = "la contraseña debe tener mínimo 6 caracteres."
+
+    if rol not in ["administrador", "jefe_inmediato", "maxima_autoridad", "analista_tics"]:
+        errores["rol"] = "rol no válido."
+
+    if estado not in ["activo", "inactivo"]:
+        errores["estado"] = "estado no válido."
+
+    if not cargo:
+        errores["cargo"] = "el cargo es obligatorio."
+
+    if not area_unidad:
+        errores["area_unidad"] = "el área o unidad es obligatoria."
+
+    if not dependencia:
+        errores["dependencia"] = "la dependencia es obligatoria."
+
+    if errores:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "existen errores de validación.",
+            "errores": errores
+        }), 400
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select
+                u.id,
+                u.rol_id,
+                r.nombre as rol,
+                u.nombres,
+                u.apellidos,
+                u.cedula,
+                u.correo,
+                u.usuario,
+                u.cargo,
+                u.area_unidad,
+                u.dependencia,
+                u.telefono_ext,
+                u.estado
+            from usuarios u
+            inner join roles r on r.id = u.rol_id
+            where u.id = %s
+            limit 1;
+        """, (usuario_id,))
+
+        usuario_anterior = cursor.fetchone()
+
+        if usuario_anterior is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "usuario no encontrado."
+            }), 404
+
+        cursor.execute("""
+            select id
+            from roles
+            where nombre = %s
+              and estado = 'activo'
+            limit 1;
+        """, (rol,))
+
+        rol_encontrado = cursor.fetchone()
+
+        if rol_encontrado is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "el rol seleccionado no existe o está inactivo."
+            }), 400
+
+        cursor.execute("""
+            select id
+            from usuarios
+            where id <> %s
+              and (
+                cedula = %s
+                or correo = %s
+                or usuario = %s
+              )
+            limit 1;
+        """, (usuario_id, cedula, correo, usuario))
+
+        duplicado = cursor.fetchone()
+
+        if duplicado:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "ya existe otro usuario con la misma cédula, correo o nombre de usuario."
+            }), 409
+
+        if password:
+            password_hash = bcrypt.hashpw(
+                password.encode("utf-8"),
+                bcrypt.gensalt()
+            ).decode("utf-8")
+
+            cursor.execute("""
+                update usuarios
+                set
+                    rol_id = %s,
+                    nombres = %s,
+                    apellidos = %s,
+                    cedula = %s,
+                    correo = %s,
+                    usuario = %s,
+                    password_hash = %s,
+                    cargo = %s,
+                    area_unidad = %s,
+                    dependencia = %s,
+                    telefono_ext = %s,
+                    estado = %s
+                where id = %s;
+            """, (
+                rol_encontrado["id"],
+                nombres,
+                apellidos,
+                cedula,
+                correo,
+                usuario,
+                password_hash,
+                cargo,
+                area_unidad,
+                dependencia,
+                telefono_ext,
+                estado,
+                usuario_id
+            ))
+        else:
+            cursor.execute("""
+                update usuarios
+                set
+                    rol_id = %s,
+                    nombres = %s,
+                    apellidos = %s,
+                    cedula = %s,
+                    correo = %s,
+                    usuario = %s,
+                    cargo = %s,
+                    area_unidad = %s,
+                    dependencia = %s,
+                    telefono_ext = %s,
+                    estado = %s
+                where id = %s;
+            """, (
+                rol_encontrado["id"],
+                nombres,
+                apellidos,
+                cedula,
+                correo,
+                usuario,
+                cargo,
+                area_unidad,
+                dependencia,
+                telefono_ext,
+                estado,
+                usuario_id
+            ))
+
+        datos_nuevos = {
+            "id": usuario_id,
+            "nombres": nombres,
+            "apellidos": apellidos,
+            "cedula": cedula,
+            "correo": correo,
+            "usuario": usuario,
+            "rol": rol,
+            "cargo": cargo,
+            "area_unidad": area_unidad,
+            "dependencia": dependencia,
+            "telefono_ext": telefono_ext,
+            "estado": estado,
+            "password_actualizada": bool(password)
+        }
+
+        cursor.execute("""
+            insert into auditoria (
+                usuario_id,
+                solicitud_id,
+                modulo,
+                accion,
+                descripcion,
+                datos_anteriores,
+                datos_nuevos,
+                ip_origen,
+                user_agent
+            ) values (
+                %s, null, 'usuarios', 'actualizar', %s, %s, %s, %s, %s
+            );
+        """, (
+            usuario_actual["id"],
+            f"usuario actualizado: {usuario}",
+            json.dumps(usuario_anterior, ensure_ascii=False, default=str),
+            json.dumps(datos_nuevos, ensure_ascii=False),
+            request.remote_addr,
+            request.headers.get("User-Agent")
+        ))
+
+        conexion.commit()
+
+        cursor.close()
+        conexion.close()
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "usuario actualizado correctamente.",
+            "usuario": datos_nuevos
+        }), 200
+
+    except Error as error:
+        try:
+            conexion.rollback()
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al actualizar el usuario.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        try:
+            conexion.rollback()
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al actualizar el usuario.",
+            "error": str(error)
+        }), 500
+
+
+# =====================================================
+# cambiar estado de usuario
+# =====================================================
+
+@app.route("/api/admin/usuarios/<int:usuario_id>/estado", methods=["PUT"])
+@token_requerido
+@roles_permitidos("administrador")
+def cambiar_estado_usuario_admin(usuario_id):
+    usuario_actual = request.usuario_actual
+    data = request.get_json() or {}
+
+    nuevo_estado = limpiar_texto(data.get("estado"))
+
+    if nuevo_estado not in ["activo", "inactivo"]:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "estado no válido."
+        }), 400
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select
+                id,
+                usuario,
+                nombres,
+                apellidos,
+                estado
+            from usuarios
+            where id = %s
+            limit 1;
+        """, (usuario_id,))
+
+        usuario_encontrado = cursor.fetchone()
+
+        if usuario_encontrado is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "usuario no encontrado."
+            }), 404
+
+        if usuario_encontrado["id"] == usuario_actual["id"] and nuevo_estado == "inactivo":
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "no puede desactivar su propio usuario."
+            }), 409
+
+        cursor.execute("""
+            update usuarios
+            set estado = %s
+            where id = %s;
+        """, (nuevo_estado, usuario_id))
+
+        cursor.execute("""
+            insert into auditoria (
+                usuario_id,
+                solicitud_id,
+                modulo,
+                accion,
+                descripcion,
+                datos_anteriores,
+                datos_nuevos,
+                ip_origen,
+                user_agent
+            ) values (
+                %s, null, 'usuarios', 'cambiar_estado', %s, %s, %s, %s, %s
+            );
+        """, (
+            usuario_actual["id"],
+            f"estado de usuario cambiado: {usuario_encontrado['usuario']} -> {nuevo_estado}",
+            json.dumps(usuario_encontrado, ensure_ascii=False, default=str),
+            json.dumps({
+                "id": usuario_id,
+                "usuario": usuario_encontrado["usuario"],
+                "estado": nuevo_estado
+            }, ensure_ascii=False),
+            request.remote_addr,
+            request.headers.get("User-Agent")
+        ))
+
+        conexion.commit()
+
+        cursor.close()
+        conexion.close()
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "estado del usuario actualizado correctamente.",
+            "usuario": {
+                "id": usuario_id,
+                "estado": nuevo_estado
+            }
+        }), 200
+
+    except Error as error:
+        try:
+            conexion.rollback()
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al cambiar el estado del usuario.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        try:
+            conexion.rollback()
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al cambiar el estado del usuario.",
+            "error": str(error)
+        }), 500
 # =====================================================
 # iniciar servidor
 # =====================================================

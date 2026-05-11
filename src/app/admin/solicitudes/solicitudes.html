@@ -1,0 +1,251 @@
+<section class="solicitudes-page">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo-box">IN</div>
+
+      <div>
+        <h2>INAMHI</h2>
+        <span>Panel administrador</span>
+      </div>
+    </div>
+
+    <nav class="menu">
+      <a routerLink="/admin/dashboard" routerLinkActive="active">
+        Dashboard
+      </a>
+
+      <a routerLink="/admin/solicitudes" routerLinkActive="active">
+        Solicitudes
+      </a>
+
+      <a routerLink="/admin/usuarios" routerLinkActive="active">
+        Usuarios
+      </a>
+
+      <a routerLink="/admin/reportes" routerLinkActive="active">
+        Reportes
+      </a>
+
+      <a routerLink="/admin/auditoria" routerLinkActive="active">
+        Auditoría
+      </a>
+    </nav>
+
+    <button type="button" class="logout" (click)="logout()">
+      Cerrar sesión
+    </button>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div>
+        <span class="eyebrow">Administración</span>
+        <h1>Gestión de Solicitudes</h1>
+        <p>
+          Listado general de solicitudes de liberación web registradas en el sistema.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="refresh-btn"
+        (click)="cargarSolicitudes()"
+        [disabled]="cargando"
+      >
+        {{ cargando ? 'Cargando...' : 'Actualizar' }}
+      </button>
+    </header>
+
+    <section class="stats-grid">
+      <article class="stat-card total">
+        <span>Total solicitudes</span>
+        <strong>{{ totalSolicitudes }}</strong>
+        <p>Registros encontrados en el sistema.</p>
+      </article>
+
+      <article class="stat-card firma">
+        <span>Firma solicitante</span>
+        <strong>{{ totalPendienteFirma }}</strong>
+        <p>Pendientes de validación inicial.</p>
+      </article>
+
+      <article class="stat-card jefe">
+        <span>Jefe inmediato</span>
+        <strong>{{ totalJefe }}</strong>
+        <p>Solicitudes en revisión del jefe.</p>
+      </article>
+
+      <article class="stat-card autoridad">
+        <span>Máxima autoridad</span>
+        <strong>{{ totalAutoridad }}</strong>
+        <p>Solicitudes en aprobación superior.</p>
+      </article>
+
+      <article class="stat-card tics">
+        <span>TICS</span>
+        <strong>{{ totalTics }}</strong>
+        <p>Validación o ejecución técnica.</p>
+      </article>
+
+      <article class="stat-card finalizada">
+        <span>Finalizadas</span>
+        <strong>{{ totalFinalizadas }}</strong>
+        <p>Solicitudes cerradas correctamente.</p>
+      </article>
+
+      <article class="stat-card rechazada">
+        <span>Rechazadas</span>
+        <strong>{{ totalRechazadas }}</strong>
+        <p>Solicitudes rechazadas en el flujo.</p>
+      </article>
+    </section>
+
+    <section class="filters-card">
+      <div>
+        <h2>Filtros de búsqueda</h2>
+        <p>Busque por código, nombre, cédula, correo, dependencia, cargo o estado.</p>
+      </div>
+
+      <div class="filters-grid">
+        <label>
+          Buscar
+          <input
+            type="text"
+            [(ngModel)]="textoBusqueda"
+            (input)="aplicarFiltros()"
+            placeholder="Ejemplo: INAMHI-WEB, cédula, nombre..."
+          />
+        </label>
+
+        <label>
+          Estado
+          <select
+            [(ngModel)]="filtroEstado"
+            (change)="aplicarFiltros()"
+          >
+            <option
+              *ngFor="let estado of estados"
+              [value]="estado.valor"
+            >
+              {{ estado.texto }}
+            </option>
+          </select>
+        </label>
+
+        <button
+          type="button"
+          class="clear-btn"
+          (click)="limpiarFiltros()"
+        >
+          Limpiar filtros
+        </button>
+      </div>
+    </section>
+
+    <section class="table-card">
+      <div class="table-header">
+        <div>
+          <h2>Solicitudes registradas</h2>
+          <p>
+            Mostrando {{ solicitudesFiltradas.length }} de {{ solicitudes.length }} solicitudes.
+          </p>
+        </div>
+      </div>
+
+      <div class="loading" *ngIf="cargando">
+        Cargando solicitudes...
+      </div>
+
+      <div class="error-box" *ngIf="error">
+        {{ error }}
+      </div>
+
+      <div
+        class="empty-box"
+        *ngIf="!cargando && !error && solicitudesFiltradas.length === 0"
+      >
+        No existen solicitudes con los filtros seleccionados.
+      </div>
+
+      <div
+        class="table-wrapper"
+        *ngIf="!cargando && !error && solicitudesFiltradas.length > 0"
+      >
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Solicitante</th>
+              <th>Contacto</th>
+              <th>Dependencia</th>
+              <th>Estado</th>
+              <th>Etapa</th>
+              <th>Fecha</th>
+              <th class="actions-col">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let solicitud of solicitudesFiltradas">
+              <td>
+                <strong class="code">
+                  {{ solicitud.codigo_solicitud }}
+                </strong>
+              </td>
+
+              <td>
+                <strong>{{ solicitud.nombres_completos }}</strong>
+                <span>{{ solicitud.cedula }}</span>
+              </td>
+
+              <td>
+                <strong>{{ solicitud.correo_institucional }}</strong>
+                <span>{{ solicitud.telefono_ext }}</span>
+              </td>
+
+              <td>
+                <strong>{{ solicitud.dependencia }}</strong>
+                <span>{{ solicitud.area_unidad }}</span>
+              </td>
+
+              <td>
+                <span
+                  class="status"
+                  [ngClass]="getEstadoClase(solicitud.estado)"
+                >
+                  {{ getEstadoTexto(solicitud.estado) }}
+                </span>
+              </td>
+
+              <td>
+                {{ getEtapaTexto(solicitud.etapa_actual) }}
+              </td>
+
+              <td>
+                {{ solicitud.fecha_solicitud }}
+              </td>
+
+              <td class="actions-cell">
+                <button
+                  type="button"
+                  class="detail-btn"
+                  (click)="verDetalle(solicitud.id)"
+                >
+                  Ver detalle
+                </button>
+
+                <button
+                  type="button"
+                  class="pdf-btn"
+                  (click)="descargarPdf(solicitud)"
+                >
+                  PDF
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</section>

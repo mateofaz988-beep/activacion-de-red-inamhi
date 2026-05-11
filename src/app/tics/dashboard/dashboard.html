@@ -1,1 +1,172 @@
-<p>dashboard works!</p>
+<section class="dashboard-page">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo-box">TI</div>
+
+      <div>
+        <h2>TICS</h2>
+        <span>Panel técnico</span>
+      </div>
+    </div>
+
+    <nav class="menu">
+      <a class="active">Dashboard</a>
+      <a routerLink="/admin/dashboard">Panel general</a>
+      <a routerLink="/public/seguimiento">Seguimiento público</a>
+    </nav>
+
+    <button type="button" class="logout" (click)="logout()">
+      Cerrar sesión
+    </button>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div>
+        <span class="eyebrow">Unidad de Tecnologías de la Información</span>
+        <h1>Dashboard TICS</h1>
+        <p>
+          Validación técnica, revisión de solicitudes y ejecución de liberación web institucional.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="refresh-btn"
+        (click)="cargarSolicitudesTics()"
+        [disabled]="cargando"
+      >
+        {{ cargando ? 'Cargando...' : 'Actualizar' }}
+      </button>
+    </header>
+
+    <section class="stats-grid">
+      <article class="stat-card pendiente">
+        <span>Pendientes TICS</span>
+        <strong>{{ totalPendientes }}</strong>
+        <p>Solicitudes listas para validación técnica.</p>
+      </article>
+
+      <article class="stat-card ejecucion">
+        <span>En ejecución</span>
+        <strong>{{ totalEjecucion }}</strong>
+        <p>Solicitudes aprobadas técnicamente y pendientes de cierre.</p>
+      </article>
+
+      <article class="stat-card finalizada">
+        <span>Finalizadas</span>
+        <strong>{{ totalFinalizadas }}</strong>
+        <p>Solicitudes cerradas correctamente.</p>
+      </article>
+
+      <article class="stat-card rechazada">
+        <span>Rechazadas</span>
+        <strong>{{ totalRechazadas }}</strong>
+        <p>Solicitudes rechazadas por validación TICS.</p>
+      </article>
+    </section>
+
+    <section class="workflow-card">
+      <div>
+        <h2>Flujo TICS</h2>
+        <p>
+          TICS recibe solicitudes aprobadas por la máxima autoridad. Desde aquí puede
+          revisar el detalle, descargar el PDF, validar técnicamente y ejecutar la liberación web.
+        </p>
+      </div>
+
+      <div class="workflow-steps">
+        <span>Revisar</span>
+        <span>Validar</span>
+        <span>Ejecutar</span>
+        <span>Finalizar</span>
+      </div>
+    </section>
+
+    <section class="table-card">
+      <div class="table-header">
+        <div>
+          <h2>Solicitudes asignadas a TICS</h2>
+          <p>Listado de solicitudes en etapa técnica o ejecución.</p>
+        </div>
+      </div>
+
+      <div class="loading" *ngIf="cargando">
+        Cargando solicitudes...
+      </div>
+
+      <div class="error-box" *ngIf="error">
+        {{ error }}
+      </div>
+
+      <div class="empty-box" *ngIf="!cargando && !error && solicitudes.length === 0">
+        No existen solicitudes pendientes para TICS.
+      </div>
+
+      <div class="table-wrapper" *ngIf="!cargando && solicitudes.length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Solicitante</th>
+              <th>Correo</th>
+              <th>Dependencia</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+              <th class="actions-col">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let solicitud of solicitudes">
+              <td>
+                <strong class="code">{{ solicitud.codigo_solicitud }}</strong>
+              </td>
+
+              <td>
+                <strong>{{ solicitud.nombres_completos }}</strong>
+                <span>{{ solicitud.cedula }}</span>
+              </td>
+
+              <td>
+                {{ solicitud.correo_institucional }}
+              </td>
+
+              <td>
+                {{ solicitud.dependencia }}
+              </td>
+
+              <td>
+                <span class="status" [ngClass]="getEstadoClase(solicitud.estado)">
+                  {{ getEstadoTexto(solicitud.estado) }}
+                </span>
+              </td>
+
+              <td>
+                {{ solicitud.fecha_solicitud }}
+              </td>
+
+              <td class="actions-cell">
+                <button
+                  type="button"
+                  class="detail-btn"
+                  (click)="verDetalle(solicitud.id)"
+                >
+                  Ver detalle
+                </button>
+
+                <button
+                  type="button"
+                  class="pdf-btn"
+                  (click)="descargarPdf(solicitud)"
+                >
+                  PDF
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</section>

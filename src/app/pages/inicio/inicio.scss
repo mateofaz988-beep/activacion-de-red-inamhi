@@ -3,82 +3,112 @@
   min-height: 100vh;
 }
 
+/* =====================================================
+   PÁGINA DE INICIO
+===================================================== */
+
 .inicio-page {
   position: relative;
   min-height: 100vh;
   overflow: hidden;
   background:
-    radial-gradient(circle at top left, rgba(0, 117, 191, 0.32), transparent 36%),
-    radial-gradient(circle at bottom right, rgba(250, 190, 35, 0.22), transparent 34%),
+    radial-gradient(circle at top left, rgba(0, 117, 191, 0.36), transparent 36%),
+    radial-gradient(circle at bottom right, rgba(250, 190, 35, 0.26), transparent 34%),
     linear-gradient(135deg, #071827 0%, #0b2740 46%, #06121f 100%);
   color: #ffffff;
   padding: 32px;
 }
 
+/* =====================================================
+   EFECTOS DE FONDO
+===================================================== */
+
 .background-glow {
   position: absolute;
   border-radius: 999px;
-  filter: blur(40px);
-  opacity: 0.6;
+  filter: blur(48px);
+  opacity: 0.62;
   pointer-events: none;
 }
 
 .glow-one {
-  width: 260px;
-  height: 260px;
+  width: 290px;
+  height: 290px;
   background: #00a3ff;
   top: 80px;
-  left: -80px;
+  left: -95px;
 }
 
 .glow-two {
-  width: 320px;
-  height: 320px;
+  width: 350px;
+  height: 350px;
   background: #f7c948;
-  right: -100px;
+  right: -120px;
   bottom: 70px;
 }
+
+/* =====================================================
+   HEADER SUPERIOR
+===================================================== */
 
 .top-header {
   position: relative;
   z-index: 2;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 24px;
+  max-width: 1240px;
+  margin: 0 auto;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+/* =====================================================
+   LOGO PRINCIPAL DEL HERO
+===================================================== */
 
-  h1 {
-    margin: 0;
-    font-size: 28px;
-    letter-spacing: 1px;
-    font-weight: 800;
-  }
+.hero-logo-inamhi {
+  /*
+    AJUSTE DE TAMAÑO DEL LOGO:
+    - Para hacerlo más grande, sube estos valores.
+    - Ejemplo: width: 220px; height: 220px;
+    - Para hacerlo más pequeño, baja estos valores.
+    - Ejemplo: width: 140px; height: 140px;
+  */
+  width: 500px;
+  height: 500px;
 
-  p {
-    margin: 3px 0 0;
-    color: #b9d5ea;
-    font-size: 14px;
-  }
+  /*
+    object-fit: contain mantiene la imagen completa sin deformarla.
+  */
+  object-fit: contain;
+
+  /*
+    Si tu imagen PNG tiene fondo transparente, se verá sin fondo.
+    Si se ve blanco, significa que el fondo blanco viene dentro de la imagen.
+  */
+  background: transparent;
+  border: none;
+  padding: 0;
+
+  display: block;
+  margin-bottom: 24px;
+
+  /*
+    Sombra para que el logo destaque sobre el fondo oscuro.
+    Puedes reducirla si quieres un logo más limpio.
+  */
+  filter: drop-shadow(0 20px 32px rgba(0, 0, 0, 0.42));
+  transition: transform 0.25s ease, filter 0.25s ease;
 }
 
-.logo-box {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #ffffff, #dfefff);
-  color: #0a3760;
-  font-weight: 900;
-  font-size: 24px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+.hero-logo-inamhi:hover {
+  transform: translateY(-3px) scale(1.03);
+  filter: drop-shadow(0 26px 42px rgba(0, 0, 0, 0.52));
 }
+
+/* =====================================================
+   LINK ADMINISTRATIVO
+===================================================== */
 
 .admin-link {
   text-decoration: none;
@@ -88,7 +118,9 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(14px);
+  font-weight: 850;
   transition: 0.25s ease;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.12);
 
   &:hover {
     background: rgba(255, 255, 255, 0.16);
@@ -96,52 +128,64 @@
   }
 }
 
+/* =====================================================
+   HERO PRINCIPAL
+===================================================== */
+
 .hero {
   position: relative;
   z-index: 2;
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
   align-items: center;
-  gap: 42px;
-  min-height: calc(100vh - 170px);
-  max-width: 1180px;
+  gap: 48px;
+  min-height: calc(100vh - 150px);
+  max-width: 1240px;
   margin: 0 auto;
 }
 
 .hero-content {
   .badge {
     display: inline-flex;
+    align-items: center;
     padding: 9px 14px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.12);
     color: #d9efff;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 850;
     letter-spacing: 0.4px;
-    margin-bottom: 20px;
+    margin-bottom: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
   h2 {
     margin: 0;
-    font-size: clamp(42px, 6vw, 72px);
+    font-size: clamp(42px, 6vw, 74px);
     line-height: 0.95;
-    letter-spacing: -2.4px;
-    font-weight: 900;
+    letter-spacing: -2.6px;
+    font-weight: 950;
+    max-width: 760px;
 
     strong {
       display: block;
       color: #f7c948;
+      text-shadow: 0 14px 34px rgba(247, 201, 72, 0.20);
     }
   }
 
   p {
-    max-width: 640px;
-    margin: 24px 0 0;
+    max-width: 650px;
+    margin: 26px 0 0;
     color: #c3d9e9;
     font-size: 18px;
-    line-height: 1.7;
+    line-height: 1.75;
   }
 }
+
+/* =====================================================
+   BOTONES HERO
+===================================================== */
 
 .hero-actions {
   display: flex;
@@ -151,7 +195,7 @@
 
   a {
     text-decoration: none;
-    font-weight: 800;
+    font-weight: 900;
     border-radius: 16px;
     padding: 15px 22px;
     transition: 0.25s ease;
@@ -165,13 +209,14 @@
 
   &:hover {
     transform: translateY(-3px);
+    filter: brightness(1.04);
   }
 }
 
 .btn-secondary {
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.20);
 
   &:hover {
     background: rgba(255, 255, 255, 0.17);
@@ -179,13 +224,18 @@
   }
 }
 
+/* =====================================================
+   PANEL DE ACCESOS
+===================================================== */
+
 .access-panel {
   border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.11);
-  backdrop-filter: blur(22px);
-  border-radius: 30px;
-  padding: 24px;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.08));
+  backdrop-filter: blur(24px);
+  border-radius: 32px;
+  padding: 26px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.30);
 }
 
 .panel-header {
@@ -193,7 +243,7 @@
   align-items: center;
   gap: 10px;
   color: #dcefff;
-  font-weight: 800;
+  font-weight: 900;
   margin-bottom: 18px;
 
   .dot {
@@ -219,31 +269,46 @@
   &:hover {
     transform: translateY(-4px);
     background: rgba(255, 255, 255, 0.17);
+    border-color: rgba(255, 255, 255, 0.22);
   }
 
   .icon {
-    min-width: 48px;
-    height: 48px;
-    border-radius: 16px;
+    min-width: 50px;
+    height: 50px;
+    border-radius: 17px;
     display: grid;
     place-items: center;
-    font-weight: 900;
+    font-weight: 950;
     background: rgba(255, 255, 255, 0.16);
     color: #f7c948;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   }
 
   h3 {
     margin: 0;
     font-size: 18px;
+    font-weight: 900;
   }
 
   p {
     margin: 7px 0 0;
     color: #bfd6e7;
     font-size: 14px;
-    line-height: 1.55;
+    line-height: 1.6;
   }
 }
+
+.public-card:hover .icon {
+  background: rgba(247, 201, 72, 0.18);
+}
+
+.admin-card:hover .icon {
+  background: rgba(0, 163, 255, 0.18);
+}
+
+/* =====================================================
+   INFO BOX
+===================================================== */
 
 .info-box {
   margin-top: 18px;
@@ -252,11 +317,22 @@
   color: #d9eefe;
   background: rgba(0, 0, 0, 0.18);
   line-height: 1.6;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+
+  strong {
+    color: #ffffff;
+  }
 }
+
+/* =====================================================
+   FOOTER
+===================================================== */
 
 footer {
   position: relative;
   z-index: 2;
+  max-width: 1240px;
+  margin: 0 auto;
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -264,22 +340,89 @@ footer {
   font-size: 13px;
 }
 
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
 @media (max-width: 920px) {
   .inicio-page {
     padding: 22px;
   }
 
   .top-header {
-    align-items: flex-start;
-    flex-direction: column;
+    justify-content: center;
+  }
+
+  .admin-link {
+    width: 100%;
+    text-align: center;
   }
 
   .hero {
     grid-template-columns: 1fr;
     padding: 52px 0;
+    gap: 30px;
+  }
+
+  .hero-logo-inamhi {
+    /*
+      TAMAÑO DEL LOGO EN TABLET:
+      Ajusta aquí si lo ves muy grande o muy pequeño.
+    */
+    width: 500px;
+    height: 500px;
+  }
+
+  .hero-content {
+    h2 {
+      font-size: clamp(38px, 12vw, 58px);
+      letter-spacing: -1.8px;
+    }
+
+    p {
+      font-size: 16px;
+    }
+  }
+
+  .hero-actions {
+    a {
+      width: 100%;
+      text-align: center;
+    }
   }
 
   footer {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  .inicio-page {
+    padding: 18px;
+  }
+
+  .hero-logo-inamhi {
+    /*
+      TAMAÑO DEL LOGO EN CELULAR:
+      Ajusta aquí si lo ves muy grande o muy pequeño.
+    */
+    width: 125px;
+    height: 125px;
+    margin-bottom: 20px;
+  }
+
+  .access-panel {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .option-card {
+    flex-direction: column;
+
+    .icon {
+      min-width: 46px;
+      width: 46px;
+      height: 46px;
+    }
   }
 }
