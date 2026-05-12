@@ -1,0 +1,207 @@
+<section class="jefe-layout">
+  <aside class="sidebar no-print">
+    <div class="brand">
+     <div class="logo-box">
+  <i class="bi bi-person-check-fill"></i>
+</div>
+
+      <div>
+        <h2>INAMHI</h2>
+        <span>Jefe inmediato</span>
+      </div>
+    </div>
+
+    <nav class="menu">
+      <a
+        routerLink="/jefe/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Solicitudes asignadas
+      </a>
+
+      <a routerLink="/jefe/historial" routerLinkActive="active">
+        Historial
+      </a>
+
+      <a routerLink="/jefe/reportes" routerLinkActive="active">
+        Reportes
+      </a>
+    </nav>
+
+    <button type="button" class="logout" (click)="logout()">
+      Cerrar sesión
+    </button>
+  </aside>
+
+  <main class="content">
+    <header class="topbar no-print">
+      <div>
+        <span class="eyebrow">Reportes del jefe inmediato</span>
+        <h1>Reporte de solicitudes</h1>
+        <p>
+          Consulte, filtre, exporte e imprima el reporte de solicitudes relacionadas con la revisión del jefe inmediato.
+        </p>
+      </div>
+
+      <div class="user-card">
+        <strong>{{ usuario?.nombres }} {{ usuario?.apellidos }}</strong>
+        <span>{{ usuario?.rol }}</span>
+      </div>
+    </header>
+
+    <section class="print-title only-print">
+      <h1>Reporte de solicitudes - Jefe inmediato</h1>
+      <p>INAMHI - Sistema de Liberación Web</p>
+    </section>
+
+    <section class="stats-grid">
+      <article class="stat-card total">
+        <span>Total</span>
+        <strong>{{ total }}</strong>
+        <p>Solicitudes en el reporte.</p>
+      </article>
+
+      <article class="stat-card pendiente">
+        <span>Pendientes</span>
+        <strong>{{ pendientes }}</strong>
+        <p>Pendientes de revisión.</p>
+      </article>
+
+      <article class="stat-card aprobada">
+        <span>Aprobadas</span>
+        <strong>{{ aprobadas }}</strong>
+        <p>Enviadas a la siguiente etapa.</p>
+      </article>
+
+      <article class="stat-card rechazada">
+        <span>Rechazadas</span>
+        <strong>{{ rechazadas }}</strong>
+        <p>Rechazadas por jefe inmediato.</p>
+      </article>
+    </section>
+
+    <section class="panel no-print">
+      <div class="panel-header">
+        <div>
+          <h2>Filtros del reporte</h2>
+          <p>Filtre por texto, estado o rango de fechas.</p>
+        </div>
+
+        <button
+          type="button"
+          class="refresh-btn"
+          (click)="cargarReporte()"
+          [disabled]="cargando"
+        >
+          {{ cargando ? 'Cargando...' : 'Actualizar' }}
+        </button>
+      </div>
+
+      <div class="filters">
+        <input
+          type="text"
+          [(ngModel)]="busqueda"
+          (input)="aplicarFiltros()"
+          placeholder="Buscar por código, nombre, cédula o correo..."
+        />
+
+        <select [(ngModel)]="filtroEstado" (change)="aplicarFiltros()">
+          <option value="">Todos los estados</option>
+          <option value="pendiente_jefe_inmediato">Pendiente jefe inmediato</option>
+          <option value="pendiente_maxima_autoridad">Aprobada por jefe</option>
+          <option value="rechazada_jefe_inmediato">Rechazada por jefe</option>
+          <option value="finalizada">Finalizada</option>
+        </select>
+
+        <input
+          type="date"
+          [(ngModel)]="fechaDesde"
+          (change)="aplicarFiltros()"
+        />
+
+        <input
+          type="date"
+          [(ngModel)]="fechaHasta"
+          (change)="aplicarFiltros()"
+        />
+      </div>
+
+      <div class="actions">
+        <button type="button" class="clear-btn" (click)="limpiarFiltros()">
+          Limpiar filtros
+        </button>
+
+        
+
+       
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Detalle del reporte</h2>
+          <p>
+            Mostrando {{ solicitudesFiltradas.length }} de {{ solicitudes.length }} solicitudes.
+          </p>
+        </div>
+      </div>
+
+      <div class="loading" *ngIf="cargando">
+        Cargando reporte...
+      </div>
+
+      <div class="error-box" *ngIf="error">
+        {{ error }}
+      </div>
+
+      <div
+        class="empty-box"
+        *ngIf="!cargando && !error && solicitudesFiltradas.length === 0"
+      >
+        No existen solicitudes para los filtros seleccionados.
+      </div>
+
+      <div
+        class="table-wrapper"
+        *ngIf="!cargando && !error && solicitudesFiltradas.length > 0"
+      >
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Solicitante</th>
+              <th>Cédula</th>
+              <th>Correo</th>
+              <th>Área / Unidad</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let solicitud of solicitudesFiltradas">
+              <td>
+                <strong class="code">{{ solicitud.codigo_solicitud }}</strong>
+              </td>
+
+              <td>{{ solicitud.nombres_completos }}</td>
+              <td>{{ solicitud.cedula }}</td>
+              <td>{{ solicitud.correo_institucional }}</td>
+              <td>{{ solicitud.area_unidad }}</td>
+
+              <td>
+                <span class="status" [ngClass]="getEstadoClase(solicitud.estado)">
+                  {{ getEstadoTexto(solicitud.estado) }}
+                </span>
+              </td>
+
+              <td>{{ solicitud.fecha_solicitud }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</section>

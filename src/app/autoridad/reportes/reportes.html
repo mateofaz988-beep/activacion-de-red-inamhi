@@ -1,0 +1,153 @@
+<section class="role-layout">
+  <aside class="sidebar no-print">
+    <div class="brand">
+   <div class="logo-box">
+  <i class="bi bi-shield-check"></i>
+</div>
+
+      <div>
+        <h2>INAMHI</h2>
+        <span>Máxima autoridad</span>
+      </div>
+    </div>
+
+    <nav class="menu">
+      <a
+        routerLink="/autoridad/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Solicitudes asignadas
+      </a>
+
+      <a
+        routerLink="/autoridad/historial"
+        routerLinkActive="active"
+      >
+        Historial
+      </a>
+
+      <a
+        routerLink="/autoridad/reportes"
+        routerLinkActive="active"
+      >
+        Reportes
+      </a>
+    </nav>
+
+    <button type="button" class="logout" (click)="logout()">
+      Cerrar sesión
+    </button>
+  </aside>
+
+  <main class="content">
+    <header class="topbar no-print">
+      <div>
+        <span class="eyebrow">Reportes de máxima autoridad</span>
+
+        <h1>Reporte de solicitudes</h1>
+
+        <p>
+          Consulte las solicitudes revisadas dentro de la etapa de máxima autoridad,
+          incluyendo aprobaciones enviadas a TICS, finalizadas y rechazadas.
+        </p>
+      </div>
+
+      <div class="user-card">
+        <strong>{{ usuario?.nombres }} {{ usuario?.apellidos }}</strong>
+        <span>{{ usuario?.rol }}</span>
+      </div>
+    </header>
+
+    <section class="print-header only-print">
+      <h1>Reporte de solicitudes - Máxima autoridad</h1>
+      <p>INAMHI - Sistema de Gestión de Solicitudes de Liberación Web</p>
+      <span>Generado desde el panel de máxima autoridad</span>
+    </section>
+
+    <section class="summary-card autoridad">
+      <div>
+        <span>Total solicitudes</span>
+        <strong>{{ solicitudes.length }}</strong>
+        <p>Registros considerados para el reporte de máxima autoridad.</p>
+      </div>
+
+      <button type="button" (click)="imprimir()">
+        Imprimir reporte
+      </button>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Detalle del reporte</h2>
+          <p>
+            Solicitudes aprobadas por máxima autoridad, enviadas a TICS,
+            finalizadas o rechazadas dentro del flujo institucional.
+          </p>
+        </div>
+      </div>
+
+      <div class="loading" *ngIf="cargando">
+        Cargando reporte de máxima autoridad...
+      </div>
+
+      <div class="error-box" *ngIf="error">
+        {{ error }}
+      </div>
+
+      <div class="table-wrapper" *ngIf="!cargando && !error">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Solicitante</th>
+              <th>Cédula</th>
+              <th>Correo</th>
+              <th>Área / Unidad</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let solicitud of solicitudes">
+              <td>
+                <strong class="code">
+                  {{ solicitud.codigo_solicitud }}
+                </strong>
+              </td>
+
+              <td>
+                {{ solicitud.nombres_completos }}
+              </td>
+
+              <td>
+                {{ solicitud.cedula }}
+              </td>
+
+              <td>
+                {{ solicitud.correo_institucional }}
+              </td>
+
+              <td>
+                {{ solicitud.area_unidad }}
+              </td>
+
+              <td>
+                <span class="status">
+                  {{ getEstadoTexto(solicitud.estado) }}
+                </span>
+              </td>
+            </tr>
+
+            <tr *ngIf="solicitudes.length === 0">
+              <td colspan="6" class="empty">
+                No existen datos para mostrar en el reporte.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</section>

@@ -1,7 +1,6 @@
 <section class="detail-page">
   <aside class="sidebar">
     <div class="brand">
-      <div class="logo-box">IN</div>
       <div>
         <h2>INAMHI</h2>
         <span>Liberación Web</span>
@@ -9,10 +8,41 @@
     </div>
 
     <nav class="menu">
-      <a routerLink="/admin/dashboard">Dashboard</a>
-      <a class="active">Detalle solicitud</a>
-      <a>Reportes</a>
-      <a>Auditoría</a>
+      <a
+        routerLink="/admin/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Dashboard
+      </a>
+
+      <a
+        routerLink="/admin/solicitudes"
+        routerLinkActive="active"
+      >
+        Solicitudes
+      </a>
+
+      <a
+        routerLink="/admin/usuarios"
+        routerLinkActive="active"
+      >
+        Usuarios
+      </a>
+
+      <a
+        routerLink="/admin/reportes"
+        routerLinkActive="active"
+      >
+        Reportes
+      </a>
+
+      <a
+        routerLink="/admin/auditoria"
+        routerLinkActive="active"
+      >
+        Auditoría
+      </a>
     </nav>
 
     <button class="logout" type="button" (click)="logout()">
@@ -23,7 +53,10 @@
   <main class="content">
     <header class="topbar">
       <div>
-        <a routerLink="/admin/dashboard" class="back-link">← Volver al dashboard</a>
+        <a routerLink="/admin/solicitudes" class="back-link">
+          ← Volver a solicitudes
+        </a>
+
         <h1>Detalle de Solicitud</h1>
         <p>Información completa de la solicitud registrada.</p>
       </div>
@@ -55,7 +88,9 @@
         <div>
           <span class="label">Código de solicitud</span>
           <h2>{{ solicitud.codigo_solicitud }}</h2>
-          <p>{{ solicitud.nombres_completos }} · {{ solicitud.correo_institucional }}</p>
+          <p>
+            {{ solicitud.nombres_completos }} · {{ solicitud.correo_institucional }}
+          </p>
         </div>
 
         <div class="status-group">
@@ -71,23 +106,14 @@
 
       <section class="actions-card">
         <div>
-          <h3>Acciones de flujo</h3>
+          <h3>Acciones de aprobación</h3>
           <p>
-            Descargue el PDF A4 para revisión, firma manual o respaldo documental.
-            Las aprobaciones dependen del estado actual, el rol autenticado y el documento firmado cargado.
+            Apruebe o rechace la solicitud según el estado actual del flujo.
+            Para aprobar, primero debe existir un documento firmado cargado.
           </p>
         </div>
 
         <div class="actions">
-          <button
-            type="button"
-            class="pdf-btn"
-            (click)="descargarPdf()"
-            [disabled]="procesando"
-          >
-            Descargar PDF A4
-          </button>
-
           <button
             type="button"
             class="approve-btn"
@@ -119,8 +145,9 @@
             <span class="label">Documentación</span>
             <h3>Gestión de documentos y firmas</h3>
             <p>
-              Descargue el PDF generado, fírmelo manualmente o electrónicamente,
-              y vuelva a subirlo al sistema para continuar con la aprobación.
+              Descargue el PDF generado para firmarlo o descargue el último PDF firmado
+              cargado por el rol anterior. Luego suba el documento firmado para continuar
+              con el flujo.
             </p>
           </div>
 
@@ -136,28 +163,44 @@
         <div class="documents-flow">
           <article class="flow-step">
             <div class="step-number">1</div>
-            <h4>Descargar PDF</h4>
+
+            <h4>Descargar documento</h4>
+
             <p>
-              Descargue el documento A4 generado por el sistema para revisión,
-              respaldo, impresión o firma.
+              Use “PDF generado” para obtener la plantilla del sistema.
+              Use “PDF firmado actual” para revisar el último documento subido
+              por el rol anterior.
             </p>
 
-            <button
-              type="button"
-              class="btn-doc-secondary"
-              (click)="descargarPdf()"
-              [disabled]="procesando"
-            >
-              Descargar PDF A4
-            </button>
+            <div class="doc-actions">
+              <button
+                type="button"
+                class="btn-doc-secondary"
+                (click)="descargarPdf()"
+                [disabled]="procesando"
+              >
+                Descargar PDF generado
+              </button>
+
+              <button
+                type="button"
+                class="signed-pdf-btn"
+                (click)="descargarDocumentoFirmadoActual()"
+                [disabled]="procesando"
+              >
+                Descargar PDF firmado actual
+              </button>
+            </div>
           </article>
 
           <article class="flow-step">
             <div class="step-number">2</div>
+
             <h4>Firmar documento</h4>
+
             <p>
-              Puede imprimir el PDF y firmarlo manualmente, o firmarlo electrónicamente
-              con una herramienta externa autorizada.
+              Firme el PDF manualmente o electrónicamente según corresponda.
+              El archivo firmado será el documento que revisará el siguiente rol.
             </p>
 
             <div class="hint-box">
@@ -167,7 +210,9 @@
 
           <article class="flow-step">
             <div class="step-number">3</div>
+
             <h4>Subir PDF firmado</h4>
+
             <p>
               Cargue nuevamente el PDF firmado. Este archivo permitirá continuar
               con la aprobación de la solicitud.
@@ -236,7 +281,7 @@
             </div>
 
             <div>
-              <span>Correo institucional</span>
+              <span>Correo</span>
               <strong>{{ solicitud.correo_institucional }}</strong>
             </div>
 
@@ -310,6 +355,7 @@
         <div class="web-list">
           <div class="web-item" *ngFor="let pagina of paginasWeb">
             <span>{{ pagina.numero }}</span>
+
             <div>
               <strong>{{ pagina.url_pagina }}</strong>
               <p>{{ pagina.descripcion || 'Sin descripción' }}</p>
@@ -320,6 +366,7 @@
 
       <section class="card">
         <h3>Justificación institucional</h3>
+
         <p class="justification">
           {{ solicitud.justificacion_necesidad_institucional }}
         </p>
@@ -330,8 +377,10 @@
   <div class="modal-backdrop" *ngIf="mostrarModalRechazo">
     <section class="modal-card">
       <h2>Rechazar solicitud</h2>
+
       <p>
-        Ingrese el motivo de rechazo. Este texto quedará registrado en la auditoría del sistema.
+        Ingrese el motivo de rechazo. Este texto quedará registrado en la auditoría
+        del sistema y será enviado por correo al solicitante.
       </p>
 
       <label>

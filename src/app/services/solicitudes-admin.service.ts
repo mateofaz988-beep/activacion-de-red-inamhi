@@ -32,28 +32,10 @@ export interface SolicitudAdmin {
   updated_at: string;
   total_paginas: number;
 
-  // Campos para control documental
+  // Campos opcionales para control documental
   documento_actual_id?: number | null;
   requiere_firma?: boolean | number;
   firma_actual_validada?: boolean | number;
-}
-
-export interface SolicitudesAdminResponse {
-  estado: string;
-  mensaje: string;
-  total: number;
-  solicitudes: SolicitudAdmin[];
-}
-
-export interface SolicitudDetalleResponse {
-  estado: string;
-  solicitud: SolicitudAdmin;
-  paginas_web: PaginaWebAdmin[];
-
-  // Cuando luego actualicemos el backend para devolver documentos,
-  // estos campos ya estarán listos para usarse.
-  documentos?: DocumentoSolicitud[];
-  documento_firmado_cargado?: boolean;
 }
 
 export interface DocumentoSolicitud {
@@ -73,16 +55,45 @@ export interface DocumentoSolicitud {
   updated_at: string;
 }
 
+export interface SolicitudesAdminResponse {
+  estado: string;
+  mensaje: string;
+  total: number;
+  solicitudes: SolicitudAdmin[];
+}
+
+export interface SolicitudDetalleResponse {
+  estado: string;
+  solicitud: SolicitudAdmin;
+  paginas_web: PaginaWebAdmin[];
+
+  // Documentos cargados durante el flujo
+  documentos?: DocumentoSolicitud[];
+
+  // Indica si ya existe un documento firmado cargado
+  documento_firmado_cargado?: boolean;
+}
+
 export interface FlujoSolicitudResponse {
   estado: string;
   mensaje: string;
+
+  // Campos usados cuando se rechaza una solicitud y se envía correo
+  correo_enviado?: boolean;
+  error_correo?: string | null;
+
   solicitud: {
     id: number;
     codigo_solicitud: string;
+
+    // Campo usado cuando el backend devuelve a qué correo se notificó
+    correo_destino?: string;
+
     estado_anterior: string;
     estado_actual: string;
     etapa_actual: string;
     motivo?: string;
+
     documento_firmado?: {
       id: number;
       tipo_documento: string;
@@ -124,7 +135,10 @@ export class SolicitudesAdminService {
     });
   }
 
-  listarSolicitudes(estado: string = '', q: string = ''): Observable<SolicitudesAdminResponse> {
+  listarSolicitudes(
+    estado: string = '',
+    q: string = ''
+  ): Observable<SolicitudesAdminResponse> {
     const params: string[] = [];
 
     if (estado) {
@@ -175,7 +189,10 @@ export class SolicitudesAdminService {
     );
   }
 
-  rechazarSolicitud(id: number, motivo: string): Observable<FlujoSolicitudResponse> {
+  rechazarSolicitud(
+    id: number,
+    motivo: string
+  ): Observable<FlujoSolicitudResponse> {
     return this.http.put<FlujoSolicitudResponse>(
       `${this.API_URL}/${id}/rechazar`,
       {
@@ -187,9 +204,32 @@ export class SolicitudesAdminService {
     );
   }
 
+  /*
+    Descarga el PDF generado por el sistema.
+    Este normalmente sale desde la plantilla A4.
+  */
   descargarPdfSolicitud(id: number): Observable<Blob> {
     return this.http.get(
       `${this.API_URL}/${id}/pdf`,
+      {
+        headers: this.getHeaders(),
+        responseType: 'blob'
+      }
+    );
+  }
+
+  /*
+    Descarga el último PDF firmado cargado en el flujo.
+    Este es el documento que debe revisar el siguiente rol.
+
+    Ejemplo:
+    - Admin sube PDF firmado -> Jefe descarga este documento.
+    - Jefe sube PDF firmado -> Autoridad descarga este documento.
+    - Autoridad sube PDF firmado -> TICS descarga este documento.
+  */
+  descargarDocumentoActualSolicitud(id: number): Observable<Blob> {
+    return this.http.get(
+      `${this.API_URL}/${id}/documento-actual`,
       {
         headers: this.getHeaders(),
         responseType: 'blob'

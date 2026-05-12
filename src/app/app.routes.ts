@@ -13,8 +13,16 @@ import { Reportes } from './admin/reportes/reportes';
 import { Auditoria } from './admin/auditoria/auditoria';
 
 import { Dashboard as JefeDashboard } from './jefe/dashboard/dashboard';
+import { Historial as JefeHistorial } from './jefe/historial/historial';
+import { Reportes as JefeReportes } from './jefe/reportes/reportes';
+
 import { Dashboard as AutoridadDashboard } from './autoridad/dashboard/dashboard';
+import { Historial as AutoridadHistorial } from './autoridad/historial/historial';
+import { Reportes as AutoridadReportes } from './autoridad/reportes/reportes';
+
 import { TicsDashboard } from './tics/dashboard/dashboard';
+import { Historial as TicsHistorial } from './tics/historial/historial';
+import { Reportes as TicsReportes } from './tics/reportes/reportes';
 
 export const routes: Routes = [
   {
@@ -64,7 +72,7 @@ export const routes: Routes = [
   },
 
   // =========================
-  // ROLES
+  // JEFE INMEDIATO
   // =========================
 
   {
@@ -72,13 +80,51 @@ export const routes: Routes = [
     component: JefeDashboard
   },
   {
+    path: 'jefe/historial',
+    component: JefeHistorial
+  },
+  {
+    path: 'jefe/reportes',
+    component: JefeReportes
+  },
+
+  // =========================
+  // MÁXIMA AUTORIDAD
+  // =========================
+
+  {
     path: 'autoridad/dashboard',
     component: AutoridadDashboard
   },
   {
+    path: 'autoridad/historial',
+    component: AutoridadHistorial
+  },
+  {
+    path: 'autoridad/reportes',
+    component: AutoridadReportes
+  },
+
+  // =========================
+  // TICS
+  // =========================
+
+  {
     path: 'tics/dashboard',
     component: TicsDashboard
   },
+  {
+    path: 'tics/historial',
+    component: TicsHistorial
+  },
+  {
+    path: 'tics/reportes',
+    component: TicsReportes
+  },
+
+  // =========================
+  // RUTA NO ENCONTRADA
+  // =========================
 
   {
     path: '**',

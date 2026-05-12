@@ -25,6 +25,13 @@ export interface AuditoriaRegistro {
   created_at: string;
 }
 
+export interface CambioAuditoria {
+  campo: string;
+  anterior: string;
+  nuevo: string;
+  cambioReal: boolean;
+}
+
 @Component({
   selector: 'app-auditoria',
   standalone: true,
@@ -64,6 +71,7 @@ export class Auditoria implements OnInit {
     { valor: '', texto: 'Todos los módulos' },
     { valor: 'auth', texto: 'Autenticación' },
     { valor: 'solicitudes', texto: 'Solicitudes' },
+    { valor: 'flujo_solicitud', texto: 'Flujo de solicitud' },
     { valor: 'documentos', texto: 'Documentos' },
     { valor: 'usuarios', texto: 'Usuarios' },
     { valor: 'reportes', texto: 'Reportes' },
@@ -77,7 +85,9 @@ export class Auditoria implements OnInit {
     { valor: 'actualizar', texto: 'Actualizar' },
     { valor: 'eliminar', texto: 'Eliminar' },
     { valor: 'aprobar', texto: 'Aprobar' },
+    { valor: 'aprobar_solicitud', texto: 'Aprobar solicitud' },
     { valor: 'rechazar', texto: 'Rechazar' },
+    { valor: 'rechazar_solicitud', texto: 'Rechazar solicitud' },
     { valor: 'subir_documento_firmado', texto: 'Subir documento firmado' },
     { valor: 'descargar_pdf', texto: 'Descargar PDF' },
     { valor: 'cambiar_estado', texto: 'Cambiar estado' }
@@ -208,7 +218,8 @@ export class Auditoria implements OnInit {
     this.totalRegistros = this.registrosFiltrados.length;
 
     this.totalSolicitudes = this.registrosFiltrados.filter((registro) =>
-      registro.modulo === 'solicitudes'
+      registro.modulo === 'solicitudes' ||
+      registro.modulo === 'flujo_solicitud'
     ).length;
 
     this.totalUsuarios = this.registrosFiltrados.filter((registro) =>
@@ -335,13 +346,14 @@ export class Auditoria implements OnInit {
     const modulos: Record<string, string> = {
       auth: 'Autenticación',
       solicitudes: 'Solicitudes',
+      flujo_solicitud: 'Flujo de solicitud',
       documentos: 'Documentos',
       usuarios: 'Usuarios',
       reportes: 'Reportes',
       sistema: 'Sistema'
     };
 
-    return modulos[modulo] || modulo;
+    return modulos[modulo] || this.formatearTexto(modulo);
   }
 
   getAccionTexto(accion: string): string {
@@ -351,19 +363,22 @@ export class Auditoria implements OnInit {
       actualizar: 'Actualizar',
       eliminar: 'Eliminar',
       aprobar: 'Aprobar',
+      aprobar_solicitud: 'Aprobar solicitud',
       rechazar: 'Rechazar',
+      rechazar_solicitud: 'Rechazar solicitud',
       subir_documento_firmado: 'Subir documento firmado',
       descargar_pdf: 'Descargar PDF',
       cambiar_estado: 'Cambiar estado'
     };
 
-    return acciones[accion] || accion;
+    return acciones[accion] || this.formatearTexto(accion);
   }
 
   getModuloClase(modulo: string): string {
     const clases: Record<string, string> = {
       auth: 'auth',
       solicitudes: 'solicitudes',
+      flujo_solicitud: 'solicitudes',
       documentos: 'documentos',
       usuarios: 'usuarios',
       reportes: 'reportes',
@@ -374,6 +389,10 @@ export class Auditoria implements OnInit {
   }
 
   getAccionClase(accion: string): string {
+    if (!accion) {
+      return 'normal';
+    }
+
     if (accion.includes('aprobar')) {
       return 'aprobar';
     }
@@ -401,20 +420,102 @@ export class Auditoria implements OnInit {
     return 'normal';
   }
 
-  formatearJson(valor: any): string {
+  // =====================================================
+  // FORMATEO PROFESIONAL DEL DETALLE DE AUDITORÍA
+  // =====================================================
+
+  formatearTexto(valor: string | null | undefined): string {
     if (!valor) {
-      return 'Sin datos';
+      return 'No registrado';
+    }
+
+    return String(valor)
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, letra => letra.toUpperCase());
+  }
+
+  formatearValor(valor: any): string {
+    if (valor === null || valor === undefined || valor === '') {
+      return 'No registrado';
+    }
+
+    if (typeof valor === 'boolean') {
+      return valor ? 'Sí' : 'No';
+    }
+
+    if (typeof valor === 'number') {
+      return String(valor);
+    }
+
+    if (typeof valor === 'object') {
+      return JSON.stringify(valor);
+    }
+
+    return String(valor).replace(/_/g, ' ');
+  }
+
+  private convertirJson(valor: any): Record<string, any> {
+    if (!valor) {
+      return {};
+    }
+
+    if (typeof valor === 'object') {
+      return valor;
     }
 
     try {
-      if (typeof valor === 'string') {
-        return JSON.stringify(JSON.parse(valor), null, 2);
-      }
-
-      return JSON.stringify(valor, null, 2);
+      return JSON.parse(valor);
     } catch {
-      return String(valor);
+      return {};
     }
+  }
+
+  obtenerCambiosAuditoria(registro: AuditoriaRegistro | null): CambioAuditoria[] {
+    if (!registro) {
+      return [];
+    }
+
+    const anteriores = this.convertirJson(registro.datos_anteriores);
+    const nuevos = this.convertirJson(registro.datos_nuevos);
+
+    const campos = Array.from(
+      new Set([
+        ...Object.keys(anteriores),
+        ...Object.keys(nuevos)
+      ])
+    );
+
+    return campos.map((campo) => {
+      const anterior = this.formatearValor(anteriores[campo]);
+      const nuevo = this.formatearValor(nuevos[campo]);
+
+      return {
+        campo: this.formatearTexto(campo),
+        anterior,
+        nuevo,
+        cambioReal: anterior !== nuevo
+      };
+    });
+  }
+
+  tieneCambiosAuditoria(registro: AuditoriaRegistro | null): boolean {
+    return this.obtenerCambiosAuditoria(registro).length > 0;
+  }
+
+  getFechaTexto(registro: AuditoriaRegistro | null): string {
+    return registro?.created_at || 'No registrada';
+  }
+
+  getIpTexto(registro: AuditoriaRegistro | null): string {
+    return registro?.ip_origen || 'No registrada';
+  }
+
+  getSolicitudTexto(registro: AuditoriaRegistro | null): string {
+    if (!registro) {
+      return 'No aplica';
+    }
+
+    return registro.codigo_solicitud || `Solicitud ID ${registro.solicitud_id || 'No aplica'}`;
   }
 
   logout(): void {

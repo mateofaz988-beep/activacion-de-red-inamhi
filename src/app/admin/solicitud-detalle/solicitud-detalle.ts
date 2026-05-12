@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import Swal from 'sweetalert2';
 
 import { AuthService } from '../../services/auth.service';
@@ -14,7 +14,12 @@ import {
 @Component({
   selector: 'app-solicitud-detalle',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    RouterLinkActive
+  ],
   templateUrl: './solicitud-detalle.html',
   styleUrl: './solicitud-detalle.scss'
 })
@@ -62,23 +67,7 @@ export class SolicitudDetalle implements OnInit {
         this.solicitud = response.solicitud;
         this.paginasWeb = response.paginas_web || [];
 
-        /*
-          Antes aquí estaba:
-          this.documentoFirmadoCargado = false;
-
-          Eso causaba el problema:
-          1. Subías el PDF.
-          2. documentoFirmadoCargado pasaba a true.
-          3. Se llamaba cargarDetalle().
-          4. cargarDetalle() lo volvía a false.
-          5. El botón de aprobar quedaba deshabilitado.
-
-          Ahora:
-          - Conserva el true si ya se subió un documento.
-          - También soporta una respuesta futura del backend con documentos.
-        */
-
-        const documentos = (response as any).documentos || [];
+        const documentos = response.documentos || [];
 
         const existeDocumentoFirmado = documentos.some((documento: any) => {
           return (
@@ -90,7 +79,7 @@ export class SolicitudDetalle implements OnInit {
         });
 
         this.documentoFirmadoCargado =
-          (response as any).documento_firmado_cargado === true ||
+          response.documento_firmado_cargado === true ||
           response.solicitud?.firma_actual_validada === true ||
           response.solicitud?.firma_actual_validada === 1 ||
           !!response.solicitud?.documento_actual_id ||
@@ -114,6 +103,10 @@ export class SolicitudDetalle implements OnInit {
     });
   }
 
+  /*
+    Descarga el PDF generado por el sistema desde la plantilla A4.
+    Este NO es necesariamente el documento firmado por el rol anterior.
+  */
   descargarPdf(): void {
     if (!this.solicitud) {
       return;
@@ -139,7 +132,7 @@ export class SolicitudDetalle implements OnInit {
 
         Swal.fire({
           title: 'PDF generado',
-          text: 'El documento PDF A4 se descargó correctamente.',
+          text: 'El documento PDF generado desde la plantilla se descargó correctamente.',
           icon: 'success',
           confirmButtonText: 'Entendido',
           confirmButtonColor: '#1d4ed8',
@@ -159,6 +152,66 @@ export class SolicitudDetalle implements OnInit {
         this.mostrarError(
           'No se pudo descargar',
           'No se pudo generar o descargar el PDF de la solicitud.'
+        );
+      }
+    });
+  }
+
+  /*
+    Descarga el último PDF firmado cargado en el flujo.
+    Este es el documento correcto que debe revisar el siguiente rol.
+
+    Flujo esperado:
+    - Admin sube PDF firmado -> Jefe descarga este documento.
+    - Jefe sube PDF firmado -> Autoridad descarga este documento.
+    - Autoridad sube PDF firmado -> TICS descarga este documento.
+    - TICS sube PDF final -> queda como respaldo final.
+  */
+  descargarDocumentoFirmadoActual(): void {
+    if (!this.solicitud) {
+      return;
+    }
+
+    this.procesando = true;
+    this.error = '';
+    this.mensajeOk = '';
+
+    this.solicitudesService.descargarDocumentoActualSolicitud(this.solicitud.id).subscribe({
+      next: (blob) => {
+        this.procesando = false;
+
+        const archivo = new Blob([blob], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(archivo);
+        const enlace = document.createElement('a');
+
+        enlace.href = url;
+        enlace.download = `${this.solicitud?.codigo_solicitud || 'solicitud-inamhi'}-firmado.pdf`;
+        enlace.click();
+
+        window.URL.revokeObjectURL(url);
+
+        Swal.fire({
+          title: 'PDF firmado descargado',
+          text: 'Se descargó el último documento firmado cargado en el flujo.',
+          icon: 'success',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#15803d',
+          background: '#ffffff',
+          color: '#0f172a'
+        });
+      },
+      error: (err) => {
+        this.procesando = false;
+
+        if (err.status === 401 || err.status === 403) {
+          this.authService.logout();
+          this.router.navigate(['/auth/login']);
+          return;
+        }
+
+        this.mostrarError(
+          'Documento firmado no disponible',
+          err.error?.mensaje || 'Todavía no existe un PDF firmado cargado para esta solicitud.'
         );
       }
     });
@@ -430,9 +483,13 @@ export class SolicitudDetalle implements OnInit {
         this.mostrarModalRechazo = false;
         this.motivoRechazo = '';
 
+        const correoEnviado = response?.correo_enviado === true;
+
         Swal.fire({
           title: 'Solicitud rechazada',
-          text: response.mensaje || 'La solicitud fue rechazada correctamente.',
+          text: correoEnviado
+            ? 'La solicitud fue rechazada correctamente y se notificó al correo del solicitante.'
+            : response.mensaje || 'La solicitud fue rechazada correctamente.',
           icon: 'success',
           confirmButtonText: 'Entendido',
           confirmButtonColor: '#1d4ed8',

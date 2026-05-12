@@ -509,4 +509,23 @@ tbody tr:hover .actions-cell {
   .filters button {
     width: 100%;
   }
+
+  .logo-box {
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+
+  background: linear-gradient(135deg, #06b6d4, #0284c7);
+  color: #ffffff;
+
+  box-shadow: 0 16px 34px rgba(14, 165, 233, 0.36);
+}
+
+.logo-box i {
+  font-size: 26px;
+  line-height: 1;
+}
 }

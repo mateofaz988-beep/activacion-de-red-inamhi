@@ -2009,52 +2009,109 @@ def generar_pdf_solicitud_a4(solicitud, paginas_web, incluir_seccion_tics=False)
     elementos.append(Spacer(1, 0.18 * cm))
 
     # =====================================================
-    # 3. páginas web solicitadas
+    # 3. PÁGINAS WEB SOLICITADAS
     # =====================================================
 
-    agregar_titulo_seccion(elementos, "3. PÁGINAS WEB SOLICITADAS", estilos)
+    agregar_titulo_seccion(
+        elementos,
+        "3. PÁGINAS WEB SOLICITADAS",
+        estilos
+    )
+
+    estilo_web_header = ParagraphStyle(
+        "estilo_web_header",
+        fontName="Helvetica-Bold",
+        fontSize=7.5,
+        leading=9,
+        textColor=colors.HexColor("#0f172a"),
+        alignment=1
+    )
+
+    estilo_web_numero = ParagraphStyle(
+        "estilo_web_numero",
+        fontName="Helvetica-Bold",
+        fontSize=7.5,
+        leading=9,
+        textColor=colors.HexColor("#1d4ed8"),
+        alignment=1
+    )
+
+    estilo_web_cell = ParagraphStyle(
+        "estilo_web_cell",
+        fontName="Helvetica",
+        fontSize=7.5,
+        leading=9,
+        textColor=colors.HexColor("#334155"),
+        wordWrap="CJK"
+    )
 
     data_paginas = [
         [
-            Paragraph("<b>N°</b>", estilos["cell_label"]),
-            Paragraph("<b>URL / Página web</b>", estilos["cell_label"]),
-            Paragraph("<b>Descripción</b>", estilos["cell_label"])
+            Paragraph("N°", estilo_web_header),
+            Paragraph("URL / Página web", estilo_web_header),
+            Paragraph("Descripción", estilo_web_header)
         ]
     ]
 
-    paginas_limitadas = paginas_web[:2]
+    if paginas_web:
+        for pagina in paginas_web:
+            descripcion = pagina.get("descripcion")
 
-    if paginas_limitadas:
-        for pagina in paginas_limitadas:
             data_paginas.append([
-                Paragraph(str(pagina.get("numero", "")), estilos["cell_text"]),
-                Paragraph(texto_seguro(pagina.get("url_pagina"))[:70], estilos["cell_text"]),
-                Paragraph(texto_seguro(pagina.get("descripcion"))[:70], estilos["cell_text"])
+                Paragraph(str(pagina.get("numero") or ""), estilo_web_numero),
+                Paragraph(str(pagina.get("url_pagina") or ""), estilo_web_cell),
+                Paragraph(str(descripcion or "Sin descripción"), estilo_web_cell)
             ])
     else:
         data_paginas.append([
-            Paragraph("-", estilos["cell_text"]),
-            Paragraph("Sin páginas registradas", estilos["cell_text"]),
-            Paragraph("-", estilos["cell_text"])
+            Paragraph("-", estilo_web_numero),
+            Paragraph("No registra páginas web solicitadas.", estilo_web_cell),
+            Paragraph("-", estilo_web_cell)
         ])
+
+    # IMPORTANTE:
+    # No usar documento.width aquí porque en tu PDF queda más ancho
+    # que las demás tablas. Este ancho mantiene la tabla alineada.
+    ancho_tabla_paginas = 500
 
     tabla_paginas = Table(
         data_paginas,
-        colWidths=[1.1 * cm, 8.1 * cm, 8.2 * cm],
-        rowHeights=[0.50 * cm] + [0.50 * cm for _ in range(len(data_paginas) - 1)]
+        colWidths=[
+            38,
+            285,
+            170
+        ],
+        repeatRows=1,
+        hAlign="CENTER"
     )
 
     tabla_paginas.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#111827")),
-        ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#374151")),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f8fafc")),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        # Encabezado
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#eaf1ff")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+        ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
+
+        # Cuerpo
+        ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#ffffff")),
+        ("BACKGROUND", (0, 1), (0, -1), colors.HexColor("#f8fafc")),
+        ("VALIGN", (0, 1), (-1, -1), "MIDDLE"),
+        ("ALIGN", (0, 1), (0, -1), "CENTER"),
+
+        # Bordes
+        ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#64748b")),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#475569")),
+
+        # Espaciado
         ("TOPPADDING", (0, 0), (-1, -1), 4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
     ]))
 
     elementos.append(tabla_paginas)
-    elementos.append(Spacer(1, 0.18 * cm))
+    elementos.append(Spacer(1, 8))
 
     # =====================================================
     # 4. justificación
@@ -2091,7 +2148,7 @@ def generar_pdf_solicitud_a4(solicitud, paginas_web, incluir_seccion_tics=False)
 
     agregar_espacios_firmas(elementos, estilos)
 
-    # =====================================================
+  # =====================================================
     # 6. sección exclusiva TICS
     # =====================================================
 
@@ -2120,6 +2177,28 @@ def descargar_pdf_solicitud(solicitud_id):
         rol_actual = request.usuario_actual["rol"]
         incluir_seccion_tics = rol_actual == "analista_tics"
 
+        # =====================================================
+        # Depuración temporal para verificar páginas del PDF
+        # =====================================================
+
+        print("==============================================")
+        print("GENERANDO PDF DE SOLICITUD")
+        print("ID SOLICITUD:", solicitud_id)
+        print("CÓDIGO:", solicitud.get("codigo_solicitud"))
+        print("ROL ACTUAL:", rol_actual)
+        print("INCLUIR SECCIÓN TICS:", incluir_seccion_tics)
+        print("TOTAL PÁGINAS WEB RECIBIDAS:", len(paginas_web or []))
+
+        for pagina in paginas_web or []:
+            print(
+                "PÁGINA:",
+                pagina.get("numero"),
+                pagina.get("url_pagina"),
+                pagina.get("descripcion")
+            )
+
+        print("==============================================")
+
         pdf_buffer = generar_pdf_solicitud_a4(
             solicitud,
             paginas_web,
@@ -2128,14 +2207,23 @@ def descargar_pdf_solicitud(solicitud_id):
 
         nombre_archivo = f"{solicitud['codigo_solicitud']}.pdf"
 
-        return send_file(
+        respuesta = send_file(
             pdf_buffer,
             mimetype="application/pdf",
             as_attachment=True,
-            download_name=nombre_archivo
+            download_name=nombre_archivo,
+            max_age=0
         )
 
+        respuesta.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        respuesta.headers["Pragma"] = "no-cache"
+        respuesta.headers["Expires"] = "0"
+
+        return respuesta
+
     except Exception as error:
+        print("ERROR AL GENERAR PDF:", str(error))
+
         return jsonify({
             "estado": "error",
             "mensaje": "error al generar el PDF.",

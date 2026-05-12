@@ -1,7 +1,9 @@
 <section class="solicitudes-page">
   <aside class="sidebar">
     <div class="brand">
-      <div class="logo-box">IN</div>
+      <div class="logo-box">
+  <i class="bi bi-file-earmark-text-fill"></i>
+</div>
 
       <div>
         <h2>INAMHI</h2>
@@ -10,23 +12,40 @@
     </div>
 
     <nav class="menu">
-      <a routerLink="/admin/dashboard" routerLinkActive="active">
+      <a
+        routerLink="/admin/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
         Dashboard
       </a>
 
-      <a routerLink="/admin/solicitudes" routerLinkActive="active">
+      <a
+        routerLink="/admin/solicitudes"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
         Solicitudes
       </a>
 
-      <a routerLink="/admin/usuarios" routerLinkActive="active">
+      <a
+        routerLink="/admin/usuarios"
+        routerLinkActive="active"
+      >
         Usuarios
       </a>
 
-      <a routerLink="/admin/reportes" routerLinkActive="active">
+      <a
+        routerLink="/admin/reportes"
+        routerLinkActive="active"
+      >
         Reportes
       </a>
 
-      <a routerLink="/admin/auditoria" routerLinkActive="active">
+      <a
+        routerLink="/admin/auditoria"
+        routerLinkActive="active"
+      >
         Auditoría
       </a>
     </nav>
@@ -103,7 +122,9 @@
     <section class="filters-card">
       <div>
         <h2>Filtros de búsqueda</h2>
-        <p>Busque por código, nombre, cédula, correo, dependencia, cargo o estado.</p>
+        <p>
+          Busque por código, nombre, cédula, correo, dependencia, cargo o estado.
+        </p>
       </div>
 
       <div class="filters-grid">

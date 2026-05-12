@@ -1,7 +1,9 @@
 <section class="dashboard-page">
   <aside class="sidebar">
     <div class="brand">
-      <div class="logo-box">TI</div>
+        <div class="logo-box">
+  <i class="bi bi-cpu-fill"></i>
+</div>
 
       <div>
         <h2>TICS</h2>
@@ -10,9 +12,27 @@
     </div>
 
     <nav class="menu">
-      <a class="active">Dashboard</a>
-      <a routerLink="/admin/dashboard">Panel general</a>
-      <a routerLink="/public/seguimiento">Seguimiento público</a>
+      <a
+        routerLink="/tics/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Solicitudes asignadas
+      </a>
+
+      <a
+        routerLink="/tics/historial"
+        routerLinkActive="active"
+      >
+        Historial
+      </a>
+
+      <a
+        routerLink="/tics/reportes"
+        routerLinkActive="active"
+      >
+        Reportes
+      </a>
     </nav>
 
     <button type="button" class="logout" (click)="logout()">
@@ -24,9 +44,12 @@
     <header class="topbar">
       <div>
         <span class="eyebrow">Unidad de Tecnologías de la Información</span>
+
         <h1>Dashboard TICS</h1>
+
         <p>
-          Validación técnica, revisión de solicitudes y ejecución de liberación web institucional.
+          Panel exclusivo para validación técnica, ejecución y cierre de solicitudes
+          de liberación web aprobadas por la máxima autoridad.
         </p>
       </div>
 
@@ -56,30 +79,34 @@
       <article class="stat-card finalizada">
         <span>Finalizadas</span>
         <strong>{{ totalFinalizadas }}</strong>
-        <p>Solicitudes cerradas correctamente.</p>
+        <p>Solicitudes cerradas correctamente por TICS.</p>
       </article>
 
       <article class="stat-card rechazada">
         <span>Rechazadas</span>
         <strong>{{ totalRechazadas }}</strong>
-        <p>Solicitudes rechazadas por validación TICS.</p>
+        <p>Solicitudes rechazadas durante la validación técnica.</p>
       </article>
     </section>
 
     <section class="workflow-card">
       <div>
-        <h2>Flujo TICS</h2>
+        <span class="workflow-label">Flujo técnico</span>
+
+        <h2>Proceso operativo TICS</h2>
+
         <p>
-          TICS recibe solicitudes aprobadas por la máxima autoridad. Desde aquí puede
-          revisar el detalle, descargar el PDF, validar técnicamente y ejecutar la liberación web.
+          TICS recibe únicamente solicitudes aprobadas por la máxima autoridad.
+          Primero se realiza la validación técnica; luego, si procede, se ejecuta
+          la liberación web institucional y se finaliza el proceso.
         </p>
       </div>
 
       <div class="workflow-steps">
-        <span>Revisar</span>
-        <span>Validar</span>
-        <span>Ejecutar</span>
-        <span>Finalizar</span>
+        <span>1. Revisar</span>
+        <span>2. Validar</span>
+        <span>3. Ejecutar</span>
+        <span>4. Finalizar</span>
       </div>
     </section>
 
@@ -87,23 +114,31 @@
       <div class="table-header">
         <div>
           <h2>Solicitudes asignadas a TICS</h2>
-          <p>Listado de solicitudes en etapa técnica o ejecución.</p>
+          <p>
+            Se muestran únicamente solicitudes en validación técnica o ejecución TICS.
+          </p>
         </div>
       </div>
 
       <div class="loading" *ngIf="cargando">
-        Cargando solicitudes...
+        Cargando solicitudes asignadas a TICS...
       </div>
 
       <div class="error-box" *ngIf="error">
         {{ error }}
       </div>
 
-      <div class="empty-box" *ngIf="!cargando && !error && solicitudes.length === 0">
+      <div
+        class="empty-box"
+        *ngIf="!cargando && !error && solicitudes.length === 0"
+      >
         No existen solicitudes pendientes para TICS.
       </div>
 
-      <div class="table-wrapper" *ngIf="!cargando && solicitudes.length > 0">
+      <div
+        class="table-wrapper"
+        *ngIf="!cargando && !error && solicitudes.length > 0"
+      >
         <table>
           <thead>
             <tr>
@@ -111,6 +146,7 @@
               <th>Solicitante</th>
               <th>Correo</th>
               <th>Dependencia</th>
+              <th>Área / Unidad</th>
               <th>Estado</th>
               <th>Fecha</th>
               <th class="actions-col">Acciones</th>
@@ -120,7 +156,9 @@
           <tbody>
             <tr *ngFor="let solicitud of solicitudes">
               <td>
-                <strong class="code">{{ solicitud.codigo_solicitud }}</strong>
+                <strong class="code">
+                  {{ solicitud.codigo_solicitud }}
+                </strong>
               </td>
 
               <td>
@@ -137,7 +175,14 @@
               </td>
 
               <td>
-                <span class="status" [ngClass]="getEstadoClase(solicitud.estado)">
+                {{ solicitud.area_unidad }}
+              </td>
+
+              <td>
+                <span
+                  class="status"
+                  [ngClass]="getEstadoClase(solicitud.estado)"
+                >
                   {{ getEstadoTexto(solicitud.estado) }}
                 </span>
               </td>
@@ -152,7 +197,7 @@
                   class="detail-btn"
                   (click)="verDetalle(solicitud.id)"
                 >
-                  Ver detalle
+                  Revisar
                 </button>
 
                 <button

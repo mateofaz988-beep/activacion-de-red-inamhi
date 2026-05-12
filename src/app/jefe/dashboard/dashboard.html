@@ -1,7 +1,10 @@
 <section class="role-layout">
   <aside class="sidebar">
     <div class="brand">
-      <div class="logo-box">IN</div>
+    <div class="logo-box">
+  <i class="bi bi-person-check-fill"></i>
+</div>
+
       <div>
         <h2>INAMHI</h2>
         <span>Jefe inmediato</span>
@@ -9,9 +12,27 @@
     </div>
 
     <nav class="menu">
-      <a class="active">Solicitudes asignadas</a>
-      <a>Historial</a>
-      <a>Reportes</a>
+      <a
+        routerLink="/jefe/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Solicitudes asignadas
+      </a>
+
+      <a
+        routerLink="/jefe/historial"
+        routerLinkActive="active"
+      >
+        Historial
+      </a>
+
+      <a
+        routerLink="/jefe/reportes"
+        routerLinkActive="active"
+      >
+        Reportes
+      </a>
     </nav>
 
     <button class="logout" type="button" (click)="logout()">
@@ -40,8 +61,12 @@
         <p>Solicitudes pendientes para jefe inmediato</p>
       </div>
 
-      <button type="button" (click)="cargarSolicitudes()">
-        Actualizar
+      <button
+        type="button"
+        (click)="cargarSolicitudes()"
+        [disabled]="cargando"
+      >
+        {{ cargando ? 'Cargando...' : 'Actualizar' }}
       </button>
     </section>
 
@@ -61,8 +86,13 @@
           (keyup.enter)="buscar()"
         />
 
-        <button type="button" (click)="buscar()">Buscar</button>
-        <button type="button" class="clear-btn" (click)="limpiar()">Limpiar</button>
+        <button type="button" (click)="buscar()">
+          Buscar
+        </button>
+
+        <button type="button" class="clear-btn" (click)="limpiar()">
+          Limpiar
+        </button>
       </div>
 
       <div class="error-box" *ngIf="error">
@@ -90,7 +120,9 @@
           <tbody>
             <tr *ngFor="let solicitud of solicitudes">
               <td>
-                <strong class="code">{{ solicitud.codigo_solicitud }}</strong>
+                <strong class="code">
+                  {{ solicitud.codigo_solicitud }}
+                </strong>
               </td>
 
               <td>{{ solicitud.nombres_completos }}</td>
@@ -105,7 +137,10 @@
               </td>
 
               <td>
-                <a class="detail-btn" [routerLink]="['/admin/solicitudes', solicitud.id]">
+                <a
+                  class="detail-btn"
+                  [routerLink]="['/admin/solicitudes', solicitud.id]"
+                >
                   Revisar
                 </a>
               </td>

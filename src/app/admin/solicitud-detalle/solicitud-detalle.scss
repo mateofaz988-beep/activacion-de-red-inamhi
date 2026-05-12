@@ -14,6 +14,7 @@
   grid-template-columns: 280px 1fr;
   background:
     radial-gradient(circle at top right, rgba(37, 99, 235, 0.10), transparent 34%),
+    radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.08), transparent 30%),
     linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
   color: #1e293b;
 }
@@ -35,6 +36,7 @@
   flex-direction: column;
   gap: 26px;
   box-shadow: 18px 0 45px rgba(15, 23, 42, 0.16);
+  z-index: 5;
 }
 
 .brand {
@@ -48,13 +50,18 @@
 .logo-box {
   width: 54px;
   height: 54px;
+  min-width: 54px;
   border-radius: 18px;
   display: grid;
   place-items: center;
   background: linear-gradient(135deg, #38bdf8, #2563eb);
-  font-weight: 900;
-  font-size: 21px;
+  color: #ffffff;
   box-shadow: 0 16px 34px rgba(37, 99, 235, 0.32);
+
+  i {
+    font-size: 26px;
+    line-height: 1;
+  }
 }
 
 .brand h2 {
@@ -65,6 +72,8 @@
 }
 
 .brand span {
+  display: block;
+  margin-top: 3px;
   color: #bfdbfe;
   font-size: 13px;
   font-weight: 700;
@@ -81,14 +90,16 @@
   border-radius: 14px;
   color: #dbeafe;
   text-decoration: none;
-  font-weight: 800;
+  font-weight: 850;
   transition: 0.2s ease;
+  border: 1px solid transparent;
 }
 
 .menu a:hover,
 .menu a.active {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.10);
   transform: translateX(3px);
 }
 
@@ -117,6 +128,7 @@
   padding: 30px;
   max-width: 1500px;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .topbar {
@@ -163,6 +175,7 @@
   background: linear-gradient(135deg, #1d4ed8, #0284c7);
   box-shadow: 0 14px 28px rgba(37, 99, 235, 0.20);
   transition: 0.2s ease;
+  white-space: nowrap;
 }
 
 .refresh-btn:hover:not(:disabled) {
@@ -347,6 +360,7 @@
 
 .actions button,
 .btn-doc-secondary,
+.signed-pdf-btn,
 .btn-upload {
   border: none;
   cursor: pointer;
@@ -359,6 +373,7 @@
 
 .actions button:hover:not(:disabled),
 .btn-doc-secondary:hover:not(:disabled),
+.signed-pdf-btn:hover:not(:disabled),
 .btn-upload:hover:not(:disabled) {
   transform: translateY(-2px);
   filter: brightness(1.05);
@@ -366,15 +381,11 @@
 
 .actions button:disabled,
 .btn-doc-secondary:disabled,
+.signed-pdf-btn:disabled,
 .btn-upload:disabled {
   opacity: 0.50;
   cursor: not-allowed;
   transform: none;
-}
-
-.pdf-btn {
-  background: linear-gradient(135deg, #334155, #0f172a);
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.18);
 }
 
 .approve-btn {
@@ -464,7 +475,7 @@
   border: 1px solid #e2e8f0;
   border-radius: 22px;
   padding: 22px;
-  min-height: 235px;
+  min-height: 250px;
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
 }
 
@@ -496,6 +507,11 @@
   line-height: 1.65;
 }
 
+.doc-actions {
+  display: grid;
+  gap: 10px;
+}
+
 .hint-box {
   border: 1px dashed #93c5fd;
   background: #eff6ff;
@@ -516,6 +532,11 @@
 .btn-doc-secondary {
   background: linear-gradient(135deg, #0f172a, #334155);
   box-shadow: 0 14px 28px rgba(15, 23, 42, 0.15);
+}
+
+.signed-pdf-btn {
+  background: linear-gradient(135deg, #15803d, #22c55e);
+  box-shadow: 0 14px 28px rgba(34, 197, 94, 0.18);
 }
 
 .btn-upload.manual {
@@ -709,6 +730,7 @@
   font-size: 15px;
   color: #0f172a;
   background: #ffffff;
+  box-sizing: border-box;
 }
 
 .modal-card textarea:focus {
@@ -814,6 +836,10 @@
     align-items: flex-start;
   }
 
+  .refresh-btn {
+    width: 100%;
+  }
+
   .status-group {
     justify-content: flex-start;
   }
@@ -825,6 +851,7 @@
   .actions,
   .actions button,
   .btn-doc-secondary,
+  .signed-pdf-btn,
   .btn-upload {
     width: 100%;
   }

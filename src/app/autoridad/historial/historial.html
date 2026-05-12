@@ -1,0 +1,120 @@
+<section class="role-layout">
+  <aside class="sidebar">
+    <div class="brand">
+ <div class="logo-box">
+  <i class="bi bi-shield-check"></i>
+</div>
+
+      <div>
+        <h2>INAMHI</h2>
+        <span>Máxima autoridad</span>
+      </div>
+    </div>
+
+    <nav class="menu">
+      <a
+        routerLink="/autoridad/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Solicitudes asignadas
+      </a>
+
+      <a routerLink="/autoridad/historial" routerLinkActive="active">
+        Historial
+      </a>
+
+      <a routerLink="/autoridad/reportes" routerLinkActive="active">
+        Reportes
+      </a>
+    </nav>
+
+    <button type="button" class="logout" (click)="logout()">
+      Cerrar sesión
+    </button>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div>
+        <span class="eyebrow">Historial de máxima autoridad</span>
+        <h1>Solicitudes revisadas</h1>
+        <p>
+          Consulte las solicitudes aprobadas o rechazadas por la máxima autoridad.
+        </p>
+      </div>
+
+      <div class="user-card">
+        <strong>{{ usuario?.nombres }} {{ usuario?.apellidos }}</strong>
+        <span>{{ usuario?.rol }}</span>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Historial de aprobación</h2>
+          <p>Registros procesados por la etapa de máxima autoridad.</p>
+        </div>
+      </div>
+
+      <div class="loading" *ngIf="cargando">
+        Cargando historial...
+      </div>
+
+      <div class="error-box" *ngIf="error">
+        {{ error }}
+      </div>
+
+      <div class="table-wrapper" *ngIf="!cargando && !error">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Solicitante</th>
+              <th>Cédula</th>
+              <th>Correo</th>
+              <th>Área / Unidad</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let solicitud of solicitudes">
+              <td>
+                <strong class="code">{{ solicitud.codigo_solicitud }}</strong>
+              </td>
+
+              <td>{{ solicitud.nombres_completos }}</td>
+              <td>{{ solicitud.cedula }}</td>
+              <td>{{ solicitud.correo_institucional }}</td>
+              <td>{{ solicitud.area_unidad }}</td>
+
+              <td>
+                <span class="status">
+                  {{ getEstadoTexto(solicitud.estado) }}
+                </span>
+              </td>
+
+              <td>
+                <a
+                  class="detail-btn"
+                  [routerLink]="['/admin/solicitudes', solicitud.id]"
+                >
+                  Ver detalle
+                </a>
+              </td>
+            </tr>
+
+            <tr *ngIf="solicitudes.length === 0">
+              <td colspan="7" class="empty">
+                No existen solicitudes en el historial.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</section>

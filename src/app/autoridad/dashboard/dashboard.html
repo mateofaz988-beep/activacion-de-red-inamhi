@@ -1,7 +1,9 @@
 <section class="role-layout">
   <aside class="sidebar">
     <div class="brand">
-      <div class="logo-box">IN</div>
+     <div class="logo-box">
+  <i class="bi bi-shield-check"></i>
+</div>
       <div>
         <h2>INAMHI</h2>
         <span>Máxima autoridad</span>
@@ -9,9 +11,27 @@
     </div>
 
     <nav class="menu">
-      <a class="active">Solicitudes asignadas</a>
-      <a>Historial</a>
-      <a>Reportes</a>
+      <a
+        routerLink="/autoridad/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Solicitudes asignadas
+      </a>
+
+      <a
+        routerLink="/autoridad/historial"
+        routerLinkActive="active"
+      >
+        Historial
+      </a>
+
+      <a
+        routerLink="/autoridad/reportes"
+        routerLinkActive="active"
+      >
+        Reportes
+      </a>
     </nav>
 
     <button class="logout" type="button" (click)="logout()">
@@ -23,8 +43,12 @@
     <header class="topbar">
       <div>
         <span class="eyebrow">Panel de máxima autoridad</span>
+
         <h1>Solicitudes pendientes de aprobación</h1>
-        <p>Revise las solicitudes aprobadas previamente por el jefe inmediato.</p>
+
+        <p>
+          Revise las solicitudes aprobadas previamente por el jefe inmediato.
+        </p>
       </div>
 
       <div class="user-card">
@@ -40,8 +64,12 @@
         <p>Solicitudes pendientes para máxima autoridad</p>
       </div>
 
-      <button type="button" (click)="cargarSolicitudes()">
-        Actualizar
+      <button
+        type="button"
+        (click)="cargarSolicitudes()"
+        [disabled]="cargando"
+      >
+        {{ cargando ? 'Cargando...' : 'Actualizar' }}
       </button>
     </section>
 
@@ -49,7 +77,9 @@
       <div class="panel-header">
         <div>
           <h2>Bandeja de máxima autoridad</h2>
-          <p>Solo se muestran solicitudes en estado pendiente de máxima autoridad.</p>
+          <p>
+            Solo se muestran solicitudes en estado pendiente de máxima autoridad.
+          </p>
         </div>
       </div>
 
@@ -61,8 +91,13 @@
           (keyup.enter)="buscar()"
         />
 
-        <button type="button" (click)="buscar()">Buscar</button>
-        <button type="button" class="clear-btn" (click)="limpiar()">Limpiar</button>
+        <button type="button" (click)="buscar()">
+          Buscar
+        </button>
+
+        <button type="button" class="clear-btn" (click)="limpiar()">
+          Limpiar
+        </button>
       </div>
 
       <div class="error-box" *ngIf="error">
@@ -90,7 +125,9 @@
           <tbody>
             <tr *ngFor="let solicitud of solicitudes">
               <td>
-                <strong class="code">{{ solicitud.codigo_solicitud }}</strong>
+                <strong class="code">
+                  {{ solicitud.codigo_solicitud }}
+                </strong>
               </td>
 
               <td>{{ solicitud.nombres_completos }}</td>
@@ -105,7 +142,10 @@
               </td>
 
               <td>
-                <a class="detail-btn" [routerLink]="['/admin/solicitudes', solicitud.id]">
+                <a
+                  class="detail-btn"
+                  [routerLink]="['/admin/solicitudes', solicitud.id]"
+                >
                   Revisar
                 </a>
               </td>
