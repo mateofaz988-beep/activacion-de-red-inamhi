@@ -23,6 +23,8 @@ import { Reportes as AutoridadReportes } from './autoridad/reportes/reportes';
 import { TicsDashboard } from './tics/dashboard/dashboard';
 import { Historial as TicsHistorial } from './tics/historial/historial';
 import { Reportes as TicsReportes } from './tics/reportes/reportes';
+import { roleGuard } from './guards/role-guard';
+
 
 export const routes: Routes = [
   {
@@ -48,27 +50,51 @@ export const routes: Routes = [
 
   {
     path: 'admin/dashboard',
-    component: AdminDashboard
+    component: AdminDashboard,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['administrador']
+    }
   },
   {
     path: 'admin/solicitudes',
-    component: Solicitudes
+    component: Solicitudes,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['administrador']
+    }
   },
   {
     path: 'admin/solicitudes/:id',
-    component: SolicitudDetalle
+    component: SolicitudDetalle,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['administrador']
+    }
   },
   {
     path: 'admin/usuarios',
-    component: Usuarios
+    component: Usuarios,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['administrador']
+    }
   },
   {
     path: 'admin/reportes',
-    component: Reportes
+    component: Reportes,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['administrador']
+    }
   },
   {
     path: 'admin/auditoria',
-    component: Auditoria
+    component: Auditoria,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['administrador']
+    }
   },
 
   // =========================
@@ -77,15 +103,35 @@ export const routes: Routes = [
 
   {
     path: 'jefe/dashboard',
-    component: JefeDashboard
+    component: JefeDashboard,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['jefe_inmediato']
+    }
   },
   {
     path: 'jefe/historial',
-    component: JefeHistorial
+    component: JefeHistorial,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['jefe_inmediato']
+    }
   },
   {
     path: 'jefe/reportes',
-    component: JefeReportes
+    component: JefeReportes,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['jefe_inmediato']
+    }
+  },
+  {
+    path: 'jefe/solicitudes/:id',
+    component: SolicitudDetalle,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['jefe_inmediato']
+    }
   },
 
   // =========================
@@ -94,15 +140,35 @@ export const routes: Routes = [
 
   {
     path: 'autoridad/dashboard',
-    component: AutoridadDashboard
+    component: AutoridadDashboard,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['maxima_autoridad']
+    }
   },
   {
     path: 'autoridad/historial',
-    component: AutoridadHistorial
+    component: AutoridadHistorial,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['maxima_autoridad']
+    }
   },
   {
     path: 'autoridad/reportes',
-    component: AutoridadReportes
+    component: AutoridadReportes,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['maxima_autoridad']
+    }
+  },
+  {
+    path: 'autoridad/solicitudes/:id',
+    component: SolicitudDetalle,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['maxima_autoridad']
+    }
   },
 
   // =========================
@@ -111,15 +177,35 @@ export const routes: Routes = [
 
   {
     path: 'tics/dashboard',
-    component: TicsDashboard
+    component: TicsDashboard,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['analista_tics']
+    }
   },
   {
     path: 'tics/historial',
-    component: TicsHistorial
+    component: TicsHistorial,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['analista_tics']
+    }
   },
   {
     path: 'tics/reportes',
-    component: TicsReportes
+    component: TicsReportes,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['analista_tics']
+    }
+  },
+  {
+    path: 'tics/solicitudes/:id',
+    component: SolicitudDetalle,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['analista_tics']
+    }
   },
 
   // =========================

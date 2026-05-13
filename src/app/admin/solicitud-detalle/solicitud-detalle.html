@@ -1,13 +1,20 @@
 <section class="detail-page">
   <aside class="sidebar">
     <div class="brand">
+      <div class="logo-box">
+        <i [class]="getIconoRol()"></i>
+      </div>
+
       <div>
         <h2>INAMHI</h2>
-        <span>Liberación Web</span>
+        <span>{{ getTituloRol() }}</span>
       </div>
     </div>
 
-    <nav class="menu">
+    <!-- =========================
+         MENÚ ADMIN
+    ========================== -->
+    <nav class="menu" *ngIf="esAdmin()">
       <a
         routerLink="/admin/dashboard"
         routerLinkActive="active"
@@ -16,32 +23,83 @@
         Dashboard
       </a>
 
-      <a
-        routerLink="/admin/solicitudes"
-        routerLinkActive="active"
-      >
+      <a routerLink="/admin/solicitudes" routerLinkActive="active">
         Solicitudes
       </a>
 
-      <a
-        routerLink="/admin/usuarios"
-        routerLinkActive="active"
-      >
+      <a routerLink="/admin/usuarios" routerLinkActive="active">
         Usuarios
       </a>
 
-      <a
-        routerLink="/admin/reportes"
-        routerLinkActive="active"
-      >
+      <a routerLink="/admin/reportes" routerLinkActive="active">
         Reportes
       </a>
 
-      <a
-        routerLink="/admin/auditoria"
-        routerLinkActive="active"
-      >
+      <a routerLink="/admin/auditoria" routerLinkActive="active">
         Auditoría
+      </a>
+    </nav>
+
+    <!-- =========================
+         MENÚ JEFE INMEDIATO
+    ========================== -->
+    <nav class="menu" *ngIf="esJefe()">
+      <a
+        routerLink="/jefe/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Solicitudes asignadas
+      </a>
+
+      <a routerLink="/jefe/historial" routerLinkActive="active">
+        Historial
+      </a>
+
+      <a routerLink="/jefe/reportes" routerLinkActive="active">
+        Reportes
+      </a>
+    </nav>
+
+    <!-- =========================
+         MENÚ MÁXIMA AUTORIDAD
+    ========================== -->
+    <nav class="menu" *ngIf="esAutoridad()">
+      <a
+        routerLink="/autoridad/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Solicitudes asignadas
+      </a>
+
+      <a routerLink="/autoridad/historial" routerLinkActive="active">
+        Historial
+      </a>
+
+      <a routerLink="/autoridad/reportes" routerLinkActive="active">
+        Reportes
+      </a>
+    </nav>
+
+    <!-- =========================
+         MENÚ TICS
+    ========================== -->
+    <nav class="menu" *ngIf="esTics()">
+      <a
+        routerLink="/tics/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Solicitudes asignadas
+      </a>
+
+      <a routerLink="/tics/historial" routerLinkActive="active">
+        Historial
+      </a>
+
+      <a routerLink="/tics/reportes" routerLinkActive="active">
+        Reportes
       </a>
     </nav>
 
@@ -53,7 +111,7 @@
   <main class="content">
     <header class="topbar">
       <div>
-        <a routerLink="/admin/solicitudes" class="back-link">
+        <a [routerLink]="getRutaVolver()" class="back-link">
           ← Volver a solicitudes
         </a>
 
@@ -87,7 +145,9 @@
       <section class="hero-card">
         <div>
           <span class="label">Código de solicitud</span>
+
           <h2>{{ solicitud.codigo_solicitud }}</h2>
+
           <p>
             {{ solicitud.nombres_completos }} · {{ solicitud.correo_institucional }}
           </p>
@@ -104,24 +164,63 @@
         </div>
       </section>
 
-      <section class="actions-card">
+      <!-- =====================================================
+           ACCIONES DEL FLUJO
+      ====================================================== -->
+
+      <section class="actions-card" *ngIf="!estaFinalizada()">
         <div>
-          <h3>Acciones de aprobación</h3>
+          <h3>Acciones del flujo</h3>
+
           <p>
-            Apruebe o rechace la solicitud según el estado actual del flujo.
-            Para aprobar, primero debe existir un documento firmado cargado.
+            Gestione la solicitud según el rol autenticado y el estado actual del proceso.
+            Para continuar, primero debe existir un documento firmado cargado.
           </p>
         </div>
 
         <div class="actions">
+          <!-- =====================================================
+               ADMIN / JEFE / AUTORIDAD
+          ====================================================== -->
           <button
+            *ngIf="!esTics()"
             type="button"
             class="approve-btn"
             (click)="confirmarAprobacion()"
             [disabled]="procesando || !puedeAprobar() || !documentoFirmadoCargado"
           >
-            <span *ngIf="!procesando">{{ getTextoBotonAprobar() }}</span>
-            <span *ngIf="procesando">Procesando...</span>
+            <span *ngIf="!procesandoAprobacion">{{ getTextoBotonAprobar() }}</span>
+            <span *ngIf="procesandoAprobacion">Procesando...</span>
+          </button>
+
+          <!-- =====================================================
+               TICS: APROBAR VALIDACIÓN TÉCNICA
+               Estado requerido: pendiente_tics
+          ====================================================== -->
+          <button
+            *ngIf="esTics()"
+            type="button"
+            class="approve-btn"
+            (click)="confirmarAprobacionTics()"
+            [disabled]="procesando || !puedeAprobarValidacionTics() || !documentoFirmadoCargado"
+          >
+            <span *ngIf="!procesandoAprobacion">Aprobar validación TICS</span>
+            <span *ngIf="procesandoAprobacion">Procesando...</span>
+          </button>
+
+          <!-- =====================================================
+               TICS: FINALIZAR PROCESO
+               Estado requerido: pendiente_ejecucion_tics
+          ====================================================== -->
+          <button
+            *ngIf="esTics()"
+            type="button"
+            class="finish-btn"
+            (click)="confirmarFinalizacionTics()"
+            [disabled]="procesando || !puedeFinalizarTics() || !documentoFirmadoCargado"
+          >
+            <span *ngIf="!procesandoFinalizacion">Finalizar proceso TICS</span>
+            <span *ngIf="procesandoFinalizacion">Finalizando...</span>
           </button>
 
           <button
@@ -130,8 +229,29 @@
             (click)="abrirModalRechazo()"
             [disabled]="procesando || !puedeRechazar()"
           >
-            Rechazar solicitud
+            <span *ngIf="!procesandoRechazo">Rechazar solicitud</span>
+            <span *ngIf="procesandoRechazo">Rechazando...</span>
           </button>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           SOLICITUD FINALIZADA
+      ====================================================== -->
+
+      <section class="actions-card completed-card" *ngIf="estaFinalizada()">
+        <div>
+          <h3>Proceso finalizado</h3>
+
+          <p>
+            Esta solicitud fue aprobada y finalizada correctamente. Ya no existen
+            acciones pendientes para este flujo.
+          </p>
+        </div>
+
+        <div class="completed-badge">
+          <i class="bi bi-check-circle-fill"></i>
+          Solicitud finalizada
         </div>
       </section>
 
@@ -143,20 +263,31 @@
         <div class="documents-header">
           <div>
             <span class="label">Documentación</span>
+
             <h3>Gestión de documentos y firmas</h3>
-            <p>
+
+            <p *ngIf="!estaFinalizada()">
               Descargue el PDF generado para firmarlo o descargue el último PDF firmado
               cargado por el rol anterior. Luego suba el documento firmado para continuar
               con el flujo.
+            </p>
+
+            <p *ngIf="estaFinalizada()">
+              La documentación de esta solicitud ya fue procesada y el flujo fue cerrado
+              correctamente.
             </p>
           </div>
 
           <span
             class="document-status"
-            [class.ok]="documentoFirmadoCargado"
-            [class.pending]="!documentoFirmadoCargado"
+            [class.ok]="documentoFirmadoCargado || estaFinalizada()"
+            [class.pending]="!documentoFirmadoCargado && !estaFinalizada()"
           >
-            {{ documentoFirmadoCargado ? 'Documento firmado cargado' : 'Documento firmado pendiente' }}
+            {{
+              estaFinalizada()
+                ? 'Proceso documental finalizado'
+                : (documentoFirmadoCargado ? 'Documento firmado cargado' : 'Documento firmado pendiente')
+            }}
           </span>
         </div>
 
@@ -203,8 +334,12 @@
               El archivo firmado será el documento que revisará el siguiente rol.
             </p>
 
-            <div class="hint-box">
+            <div class="hint-box" *ngIf="!estaFinalizada()">
               Luego escanee o guarde el PDF firmado para volver a cargarlo al sistema.
+            </div>
+
+            <div class="hint-box success" *ngIf="estaFinalizada()">
+              Esta etapa ya fue completada dentro del flujo institucional.
             </div>
           </article>
 
@@ -231,7 +366,7 @@
                 type="button"
                 class="btn-upload manual"
                 (click)="inputFirmaManual.click()"
-                [disabled]="procesando"
+                [disabled]="procesando || estaFinalizada()"
               >
                 Subir PDF firmado manualmente
               </button>
@@ -248,7 +383,7 @@
                 type="button"
                 class="btn-upload electronic"
                 (click)="inputFirmaElectronica.click()"
-                [disabled]="procesando"
+                [disabled]="procesando || estaFinalizada()"
               >
                 Subir PDF firmado electrónicamente
               </button>
@@ -256,12 +391,16 @@
           </article>
         </div>
 
-        <div class="document-warning" *ngIf="!documentoFirmadoCargado">
-          Para aprobar la solicitud primero debe subir un PDF firmado manualmente o electrónicamente.
+        <div class="document-warning" *ngIf="!documentoFirmadoCargado && !estaFinalizada()">
+          Para continuar con el flujo primero debe subir un PDF firmado manualmente o electrónicamente.
         </div>
 
-        <div class="document-success" *ngIf="documentoFirmadoCargado">
-          El documento firmado fue registrado correctamente. Ya puede continuar con la aprobación.
+        <div class="document-success" *ngIf="documentoFirmadoCargado && !estaFinalizada()">
+          El documento firmado fue registrado correctamente. Ya puede continuar con la acción correspondiente.
+        </div>
+
+        <div class="document-success" *ngIf="estaFinalizada()">
+          La solicitud fue finalizada correctamente. No se requieren más acciones documentales.
         </div>
       </section>
 
@@ -413,8 +552,8 @@
           (click)="rechazar()"
           [disabled]="procesando"
         >
-          <span *ngIf="!procesando">Confirmar rechazo</span>
-          <span *ngIf="procesando">Procesando...</span>
+          <span *ngIf="!procesandoRechazo">Confirmar rechazo</span>
+          <span *ngIf="procesandoRechazo">Procesando...</span>
         </button>
       </div>
     </section>

@@ -2,9 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import Swal from 'sweetalert2';
 
-import { AuthService } from '../../services/auth.service';
+import { AuthService, UsuarioLogin } from '../../services/auth.service';
 import {
   SolicitudAdmin,
   SolicitudesAdminService
@@ -24,69 +23,21 @@ import {
 })
 export class Solicitudes implements OnInit {
 
+  usuario: UsuarioLogin | null = null;
+
   solicitudes: SolicitudAdmin[] = [];
   solicitudesFiltradas: SolicitudAdmin[] = [];
 
   cargando = false;
   error = '';
 
+  busqueda = '';
   filtroEstado = '';
-  textoBusqueda = '';
 
   totalSolicitudes = 0;
-  totalPendienteFirma = 0;
-  totalJefe = 0;
-  totalAutoridad = 0;
-  totalTics = 0;
-  totalFinalizadas = 0;
+  totalPendientes = 0;
   totalRechazadas = 0;
-
-  estados = [
-    {
-      valor: '',
-      texto: 'Todos los estados'
-    },
-    {
-      valor: 'pendiente_firma_solicitante',
-      texto: 'Pendiente firma solicitante'
-    },
-    {
-      valor: 'pendiente_jefe_inmediato',
-      texto: 'Pendiente jefe inmediato'
-    },
-    {
-      valor: 'pendiente_maxima_autoridad',
-      texto: 'Pendiente máxima autoridad'
-    },
-    {
-      valor: 'pendiente_tics',
-      texto: 'Pendiente TICS'
-    },
-    {
-      valor: 'pendiente_ejecucion_tics',
-      texto: 'Pendiente ejecución TICS'
-    },
-    {
-      valor: 'finalizada',
-      texto: 'Finalizada'
-    },
-    {
-      valor: 'rechazada_jefe_inmediato',
-      texto: 'Rechazada jefe inmediato'
-    },
-    {
-      valor: 'rechazada_maxima_autoridad',
-      texto: 'Rechazada máxima autoridad'
-    },
-    {
-      valor: 'rechazada_tics',
-      texto: 'Rechazada TICS'
-    },
-    {
-      valor: 'anulada',
-      texto: 'Anulada'
-    }
-  ];
+  totalFinalizadas = 0;
 
   constructor(
     private router: Router,
@@ -95,8 +46,13 @@ export class Solicitudes implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.usuario = this.authService.getUsuario();
     this.cargarSolicitudes();
   }
+
+  // =====================================================
+  // CARGAR SOLICITUDES
+  // =====================================================
 
   cargarSolicitudes(): void {
     this.cargando = true;
@@ -105,10 +61,8 @@ export class Solicitudes implements OnInit {
     this.solicitudesService.listarSolicitudes().subscribe({
       next: (response) => {
         this.cargando = false;
-        this.solicitudes = response.solicitudes || [];
-        this.totalSolicitudes = response.total || this.solicitudes.length;
 
-        this.calcularResumen();
+        this.solicitudes = response.solicitudes || [];
         this.aplicarFiltros();
       },
       error: (err) => {
@@ -125,132 +79,150 @@ export class Solicitudes implements OnInit {
     });
   }
 
+  // =====================================================
+  // BÚSQUEDA Y FILTROS
+  // =====================================================
+
+  buscar(): void {
+    this.aplicarFiltros();
+  }
+
   aplicarFiltros(): void {
-    const busqueda = this.textoBusqueda.trim().toLowerCase();
+    const texto = this.busqueda.trim().toLowerCase();
 
     this.solicitudesFiltradas = this.solicitudes.filter((solicitud) => {
+      const coincideTexto = texto
+        ? this.obtenerTextoBusqueda(solicitud).includes(texto)
+        : true;
+
       const coincideEstado = this.filtroEstado
         ? solicitud.estado === this.filtroEstado
         : true;
 
-      const textoCompleto = `
-        ${solicitud.codigo_solicitud}
-        ${solicitud.nombres_completos}
-        ${solicitud.cedula}
-        ${solicitud.correo_institucional}
-        ${solicitud.dependencia}
-        ${solicitud.area_unidad}
-        ${solicitud.cargo}
-        ${solicitud.estado}
-        ${solicitud.etapa_actual}
-      `.toLowerCase();
-
-      const coincideBusqueda = busqueda
-        ? textoCompleto.includes(busqueda)
-        : true;
-
-      return coincideEstado && coincideBusqueda;
+      return coincideTexto && coincideEstado;
     });
+
+    this.calcularResumen();
   }
 
   limpiarFiltros(): void {
+    this.busqueda = '';
     this.filtroEstado = '';
-    this.textoBusqueda = '';
     this.aplicarFiltros();
   }
 
+  obtenerTextoBusqueda(solicitud: SolicitudAdmin): string {
+    return `
+      ${solicitud.id || ''}
+      ${solicitud.codigo_solicitud || ''}
+      ${solicitud.nombres_completos || ''}
+      ${solicitud.cedula || ''}
+      ${solicitud.correo_institucional || ''}
+      ${solicitud.telefono_ext || ''}
+      ${solicitud.dependencia || ''}
+      ${solicitud.area_unidad || ''}
+      ${solicitud.cargo || ''}
+      ${solicitud.estado || ''}
+      ${solicitud.fecha_solicitud || ''}
+      ${solicitud.created_at || ''}
+    `.toLowerCase();
+  }
+
+  // =====================================================
+  // RESUMEN
+  // =====================================================
+
   calcularResumen(): void {
-    this.totalPendienteFirma = this.solicitudes.filter(
-      solicitud => solicitud.estado === 'pendiente_firma_solicitante'
+    this.totalSolicitudes = this.solicitudesFiltradas.length;
+
+    this.totalPendientes = this.solicitudesFiltradas.filter((solicitud) =>
+      solicitud.estado?.includes('pendiente')
     ).length;
 
-    this.totalJefe = this.solicitudes.filter(
-      solicitud => solicitud.estado === 'pendiente_jefe_inmediato'
+    this.totalRechazadas = this.solicitudesFiltradas.filter((solicitud) =>
+      solicitud.estado?.includes('rechazada')
     ).length;
 
-    this.totalAutoridad = this.solicitudes.filter(
-      solicitud => solicitud.estado === 'pendiente_maxima_autoridad'
-    ).length;
-
-    this.totalTics = this.solicitudes.filter(
-      solicitud =>
-        solicitud.estado === 'pendiente_tics' ||
-        solicitud.estado === 'pendiente_ejecucion_tics'
-    ).length;
-
-    this.totalFinalizadas = this.solicitudes.filter(
-      solicitud => solicitud.estado === 'finalizada'
-    ).length;
-
-    this.totalRechazadas = this.solicitudes.filter(
-      solicitud => solicitud.estado.includes('rechazada')
+    this.totalFinalizadas = this.solicitudesFiltradas.filter((solicitud) =>
+      solicitud.estado === 'finalizada'
     ).length;
   }
 
-  verDetalle(id: number): void {
-    this.router.navigate(['/admin/solicitudes', id]);
+  // =====================================================
+  // FORMATEO DE FECHA Y HORA
+  // =====================================================
+
+  formatearFecha(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return 'Sin fecha';
+    }
+
+    const fechaTexto = String(fecha).trim();
+
+    if (!fechaTexto) {
+      return 'Sin fecha';
+    }
+
+    const soloFecha = fechaTexto.slice(0, 10);
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(soloFecha)) {
+      return fechaTexto;
+    }
+
+    const [anio, mes, dia] = soloFecha.split('-');
+
+    return `${dia}/${mes}/${anio}`;
   }
 
-  descargarPdf(solicitud: SolicitudAdmin): void {
-    this.solicitudesService.descargarPdfSolicitud(solicitud.id).subscribe({
-      next: (blob) => {
-        const archivo = new Blob([blob], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(archivo);
-        const enlace = document.createElement('a');
+  formatearHora(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return '--:--';
+    }
 
-        enlace.href = url;
-        enlace.download = `${solicitud.codigo_solicitud || 'solicitud-inamhi'}.pdf`;
-        enlace.click();
+    const fechaTexto = String(fecha).trim();
 
-        window.URL.revokeObjectURL(url);
-      },
-      error: (err) => {
-        if (err.status === 401 || err.status === 403) {
-          this.authService.logout();
-          this.router.navigate(['/auth/login']);
-          return;
-        }
+    if (!fechaTexto) {
+      return '--:--';
+    }
 
-        Swal.fire({
-          title: 'No se pudo descargar',
-          text: 'No se pudo generar o descargar el PDF de la solicitud.',
-          icon: 'error',
-          confirmButtonText: 'Entendido',
-          confirmButtonColor: '#dc2626'
-        });
-      }
-    });
+    // Formato MySQL: 2026-05-13 12:35:00
+    if (fechaTexto.includes(' ')) {
+      const partes = fechaTexto.split(' ');
+      const hora = partes[1] || '';
+
+      return hora.slice(0, 5) || '--:--';
+    }
+
+    // Formato ISO: 2026-05-13T12:35:00
+    if (fechaTexto.includes('T')) {
+      const partes = fechaTexto.split('T');
+      const hora = partes[1] || '';
+
+      return hora.slice(0, 5) || '--:--';
+    }
+
+    return '--:--';
   }
+
+  // =====================================================
+  // ESTADOS
+  // =====================================================
 
   getEstadoTexto(estado: string): string {
     const estados: Record<string, string> = {
       pendiente_firma_solicitante: 'Pendiente firma solicitante',
       pendiente_jefe_inmediato: 'Pendiente jefe inmediato',
-      rechazada_jefe_inmediato: 'Rechazada jefe inmediato',
       pendiente_maxima_autoridad: 'Pendiente máxima autoridad',
-      rechazada_maxima_autoridad: 'Rechazada máxima autoridad',
       pendiente_tics: 'Pendiente TICS',
-      rechazada_tics: 'Rechazada TICS',
       pendiente_ejecucion_tics: 'Pendiente ejecución TICS',
       finalizada: 'Finalizada',
+      rechazada_jefe_inmediato: 'Rechazada jefe inmediato',
+      rechazada_maxima_autoridad: 'Rechazada máxima autoridad',
+      rechazada_tics: 'Rechazada TICS',
       anulada: 'Anulada'
     };
 
     return estados[estado] || estado;
-  }
-
-  getEtapaTexto(etapa: string): string {
-    const etapas: Record<string, string> = {
-      registro_publico: 'Registro público',
-      firma_solicitante: 'Firma del solicitante',
-      jefe_inmediato: 'Jefe inmediato',
-      maxima_autoridad: 'Máxima autoridad',
-      tics: 'Validación TICS',
-      ejecucion_tics: 'Ejecución TICS',
-      finalizado: 'Finalizado'
-    };
-
-    return etapas[etapa] || etapa;
   }
 
   getEstadoClase(estado: string): string {
@@ -266,28 +238,16 @@ export class Solicitudes implements OnInit {
       return 'finalizada';
     }
 
-    if (estado === 'pendiente_firma_solicitante') {
-      return 'firma';
-    }
-
-    if (estado === 'pendiente_jefe_inmediato') {
-      return 'jefe';
-    }
-
-    if (estado === 'pendiente_maxima_autoridad') {
-      return 'autoridad';
-    }
-
-    if (estado === 'pendiente_tics' || estado === 'pendiente_ejecucion_tics') {
-      return 'tics';
-    }
-
     if (estado.includes('pendiente')) {
       return 'pendiente';
     }
 
     return 'normal';
   }
+
+  // =====================================================
+  // SESIÓN
+  // =====================================================
 
   logout(): void {
     this.authService.logout();

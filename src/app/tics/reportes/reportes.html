@@ -1,9 +1,9 @@
 <section class="tics-page">
   <aside class="sidebar no-print">
     <div class="brand">
-   <div class="logo-box">
-  <i class="bi bi-cpu-fill"></i>
-</div>
+      <div class="logo-box">
+        <i class="bi bi-cpu-fill"></i>
+      </div>
 
       <div>
         <h2>TICS</h2>
@@ -20,17 +20,11 @@
         Solicitudes asignadas
       </a>
 
-      <a
-        routerLink="/tics/historial"
-        routerLinkActive="active"
-      >
+      <a routerLink="/tics/historial" routerLinkActive="active">
         Historial
       </a>
 
-      <a
-        routerLink="/tics/reportes"
-        routerLinkActive="active"
-      >
+      <a routerLink="/tics/reportes" routerLinkActive="active">
         Reportes
       </a>
     </nav>
@@ -197,14 +191,16 @@
               <th>Dependencia</th>
               <th>Área / Unidad</th>
               <th>Estado</th>
-              <th>Fecha</th>
+              <th>Fecha y hora</th>
             </tr>
           </thead>
 
           <tbody>
             <tr *ngFor="let solicitud of solicitudesFiltradas">
               <td>
-                <strong class="code">{{ solicitud.codigo_solicitud }}</strong>
+                <strong class="code">
+                  {{ solicitud.codigo_solicitud }}
+                </strong>
               </td>
 
               <td>{{ solicitud.nombres_completos }}</td>
@@ -219,7 +215,18 @@
                 </span>
               </td>
 
-              <td>{{ solicitud.fecha_solicitud }}</td>
+              <td class="date-cell">
+                <div class="date-wrapper">
+                  <strong class="date-text">
+                    {{ formatearFecha(solicitud.created_at) }}
+                  </strong>
+
+                  <span class="time-text">
+                    <i class="bi bi-clock-fill"></i>
+                    {{ formatearHora(solicitud.created_at) }}
+                  </span>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>

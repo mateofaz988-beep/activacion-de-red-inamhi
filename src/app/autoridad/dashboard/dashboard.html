@@ -1,9 +1,10 @@
 <section class="role-layout">
   <aside class="sidebar">
     <div class="brand">
-     <div class="logo-box">
-  <i class="bi bi-shield-check"></i>
-</div>
+      <div class="logo-box">
+        <i class="bi bi-shield-check"></i>
+      </div>
+
       <div>
         <h2>INAMHI</h2>
         <span>Máxima autoridad</span>
@@ -108,7 +109,17 @@
         Cargando solicitudes asignadas...
       </div>
 
-      <div class="table-wrapper" *ngIf="!cargando">
+      <div
+        class="empty-box"
+        *ngIf="!cargando && !error && solicitudes.length === 0"
+      >
+        No tiene solicitudes pendientes asignadas.
+      </div>
+
+      <div
+        class="table-wrapper"
+        *ngIf="!cargando && solicitudes.length > 0"
+      >
         <table>
           <thead>
             <tr>
@@ -131,8 +142,11 @@
               </td>
 
               <td>{{ solicitud.nombres_completos }}</td>
+
               <td>{{ solicitud.cedula }}</td>
+
               <td>{{ solicitud.correo_institucional }}</td>
+
               <td>{{ solicitud.area_unidad }}</td>
 
               <td>
@@ -144,16 +158,10 @@
               <td>
                 <a
                   class="detail-btn"
-                  [routerLink]="['/admin/solicitudes', solicitud.id]"
+                  [routerLink]="['/autoridad/solicitudes', solicitud.id]"
                 >
                   Revisar
                 </a>
-              </td>
-            </tr>
-
-            <tr *ngIf="solicitudes.length === 0">
-              <td colspan="7" class="empty">
-                No tiene solicitudes pendientes asignadas.
               </td>
             </tr>
           </tbody>

@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 
 import { AuthService } from '../../services/auth.service';
 import {
+  DocumentoSolicitud,
   PaginaWebAdmin,
   SolicitudAdmin,
   SolicitudesAdminService
@@ -27,9 +28,13 @@ export class SolicitudDetalle implements OnInit {
 
   solicitud: SolicitudAdmin | null = null;
   paginasWeb: PaginaWebAdmin[] = [];
+  documentos: DocumentoSolicitud[] = [];
 
   cargando = false;
   procesando = false;
+  procesandoAprobacion = false;
+  procesandoFinalizacion = false;
+  procesandoRechazo = false;
   mostrarModalRechazo = false;
 
   error = '';
@@ -49,6 +54,33 @@ export class SolicitudDetalle implements OnInit {
     this.cargarDetalle();
   }
 
+  // =====================================================
+  // CONTROL LOCAL DE DOCUMENTO FIRMADO
+  // =====================================================
+
+  private getClaveDocumentoLocal(estadoOpcional?: string): string {
+    const solicitudId = this.solicitud?.id || Number(this.route.snapshot.paramMap.get('id'));
+    const estado = estadoOpcional || this.solicitud?.estado || 'sin_estado';
+
+    return `documento_firmado_${solicitudId}_${estado}`;
+  }
+
+  private guardarDocumentoFirmadoLocal(estadoOpcional?: string): void {
+    localStorage.setItem(this.getClaveDocumentoLocal(estadoOpcional), 'true');
+  }
+
+  private existeDocumentoFirmadoLocal(estadoOpcional?: string): boolean {
+    return localStorage.getItem(this.getClaveDocumentoLocal(estadoOpcional)) === 'true';
+  }
+
+  private limpiarDocumentoFirmadoLocal(estadoOpcional?: string): void {
+    localStorage.removeItem(this.getClaveDocumentoLocal(estadoOpcional));
+  }
+
+  // =====================================================
+  // CARGA DE DETALLE
+  // =====================================================
+
   cargarDetalle(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
 
@@ -57,6 +89,8 @@ export class SolicitudDetalle implements OnInit {
       return;
     }
 
+    const documentoFirmadoLocalActual = this.documentoFirmadoCargado;
+
     this.cargando = true;
     this.error = '';
     this.mensajeOk = '';
@@ -64,29 +98,36 @@ export class SolicitudDetalle implements OnInit {
     this.solicitudesService.obtenerSolicitudPorId(id).subscribe({
       next: (response) => {
         this.cargando = false;
+
         this.solicitud = response.solicitud;
         this.paginasWeb = response.paginas_web || [];
+        this.documentos = response.documentos || [];
 
-        const documentos = response.documentos || [];
-
-        const existeDocumentoFirmado = documentos.some((documento: any) => {
+        const existeDocumentoFirmado = this.documentos.some((documento) => {
           return (
             documento.firmado === true ||
             documento.firmado === 1 ||
             documento.firma_validada === true ||
-            documento.firma_validada === 1
+            documento.firma_validada === 1 ||
+            documento.tipo_documento === 'pdf_firmado_manual' ||
+            documento.tipo_documento === 'pdf_firmado_electronico' ||
+            documento.tipo_documento === 'pdf_tics' ||
+            documento.tipo_documento === 'pdf_final'
           );
         });
 
+        const existeDocumentoLocal = this.existeDocumentoFirmadoLocal();
+
         this.documentoFirmadoCargado =
           response.documento_firmado_cargado === true ||
-          response.solicitud?.firma_actual_validada === true ||
-          response.solicitud?.firma_actual_validada === 1 ||
-          !!response.solicitud?.documento_actual_id ||
+          this.solicitud?.firma_actual_validada === true ||
+          this.solicitud?.firma_actual_validada === 1 ||
+          !!this.solicitud?.documento_actual_id ||
           existeDocumentoFirmado ||
-          this.documentoFirmadoCargado;
+          documentoFirmadoLocalActual ||
+          existeDocumentoLocal;
       },
-      error: (err) => {
+      error: (err: any) => {
         this.cargando = false;
 
         if (err.status === 401 || err.status === 403) {
@@ -103,10 +144,94 @@ export class SolicitudDetalle implements OnInit {
     });
   }
 
-  /*
-    Descarga el PDF generado por el sistema desde la plantilla A4.
-    Este NO es necesariamente el documento firmado por el rol anterior.
-  */
+  // =====================================================
+  // MENÚ DINÁMICO POR ROL
+  // =====================================================
+
+  esAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
+  esJefe(): boolean {
+    return this.authService.isJefeInmediato();
+  }
+
+  esAutoridad(): boolean {
+    return this.authService.isMaximaAutoridad();
+  }
+
+  esTics(): boolean {
+    return this.authService.isTics();
+  }
+
+  getTituloRol(): string {
+    if (this.esAdmin()) {
+      return 'Liberación Web';
+    }
+
+    if (this.esJefe()) {
+      return 'Jefe inmediato';
+    }
+
+    if (this.esAutoridad()) {
+      return 'Máxima autoridad';
+    }
+
+    if (this.esTics()) {
+      return 'Panel técnico';
+    }
+
+    return 'Sistema institucional';
+  }
+
+  getIconoRol(): string {
+    if (this.esAdmin()) {
+      return 'bi bi-diagram-3-fill';
+    }
+
+    if (this.esJefe()) {
+      return 'bi bi-person-check-fill';
+    }
+
+    if (this.esAutoridad()) {
+      return 'bi bi-shield-check';
+    }
+
+    if (this.esTics()) {
+      return 'bi bi-cpu-fill';
+    }
+
+    return 'bi bi-building-fill';
+  }
+
+  getRutaVolver(): string {
+    if (this.esAdmin()) {
+      return '/admin/solicitudes';
+    }
+
+    if (this.esJefe()) {
+      return '/jefe/dashboard';
+    }
+
+    if (this.esAutoridad()) {
+      return '/autoridad/dashboard';
+    }
+
+    if (this.esTics()) {
+      return '/tics/dashboard';
+    }
+
+    return '/';
+  }
+
+  estaFinalizada(): boolean {
+    return this.solicitud?.estado === 'finalizada';
+  }
+
+  // =====================================================
+  // DESCARGA DE PDF GENERADO
+  // =====================================================
+
   descargarPdf(): void {
     if (!this.solicitud) {
       return;
@@ -117,22 +242,15 @@ export class SolicitudDetalle implements OnInit {
     this.mensajeOk = '';
 
     this.solicitudesService.descargarPdfSolicitud(this.solicitud.id).subscribe({
-      next: (blob) => {
+      next: (blob: Blob) => {
         this.procesando = false;
 
-        const archivo = new Blob([blob], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(archivo);
-        const enlace = document.createElement('a');
-
-        enlace.href = url;
-        enlace.download = `${this.solicitud?.codigo_solicitud || 'solicitud-inamhi'}.pdf`;
-        enlace.click();
-
-        window.URL.revokeObjectURL(url);
+        const nombreArchivo = `${this.solicitud?.codigo_solicitud || 'solicitud-inamhi'}.pdf`;
+        this.solicitudesService.descargarBlob(blob, nombreArchivo);
 
         Swal.fire({
-          title: 'PDF generado',
-          text: 'El documento PDF generado desde la plantilla se descargó correctamente.',
+          title: 'PDF descargado',
+          text: 'El PDF generado por el sistema se descargó correctamente.',
           icon: 'success',
           confirmButtonText: 'Entendido',
           confirmButtonColor: '#1d4ed8',
@@ -140,7 +258,7 @@ export class SolicitudDetalle implements OnInit {
           color: '#0f172a'
         });
       },
-      error: (err) => {
+      error: (err: any) => {
         this.procesando = false;
 
         if (err.status === 401 || err.status === 403) {
@@ -157,16 +275,10 @@ export class SolicitudDetalle implements OnInit {
     });
   }
 
-  /*
-    Descarga el último PDF firmado cargado en el flujo.
-    Este es el documento correcto que debe revisar el siguiente rol.
+  // =====================================================
+  // DESCARGA DEL ÚLTIMO DOCUMENTO FIRMADO
+  // =====================================================
 
-    Flujo esperado:
-    - Admin sube PDF firmado -> Jefe descarga este documento.
-    - Jefe sube PDF firmado -> Autoridad descarga este documento.
-    - Autoridad sube PDF firmado -> TICS descarga este documento.
-    - TICS sube PDF final -> queda como respaldo final.
-  */
   descargarDocumentoFirmadoActual(): void {
     if (!this.solicitud) {
       return;
@@ -176,23 +288,16 @@ export class SolicitudDetalle implements OnInit {
     this.error = '';
     this.mensajeOk = '';
 
-    this.solicitudesService.descargarDocumentoActualSolicitud(this.solicitud.id).subscribe({
-      next: (blob) => {
+    this.solicitudesService.descargarDocumentoFirmadoActual(this.solicitud.id).subscribe({
+      next: (blob: Blob) => {
         this.procesando = false;
 
-        const archivo = new Blob([blob], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(archivo);
-        const enlace = document.createElement('a');
-
-        enlace.href = url;
-        enlace.download = `${this.solicitud?.codigo_solicitud || 'solicitud-inamhi'}-firmado.pdf`;
-        enlace.click();
-
-        window.URL.revokeObjectURL(url);
+        const nombreArchivo = `${this.solicitud?.codigo_solicitud || 'solicitud'}_documento_firmado_actual.pdf`;
+        this.solicitudesService.descargarBlob(blob, nombreArchivo);
 
         Swal.fire({
-          title: 'PDF firmado descargado',
-          text: 'Se descargó el último documento firmado cargado en el flujo.',
+          title: 'Documento descargado',
+          text: 'El PDF firmado actual se descargó correctamente.',
           icon: 'success',
           confirmButtonText: 'Entendido',
           confirmButtonColor: '#15803d',
@@ -200,7 +305,7 @@ export class SolicitudDetalle implements OnInit {
           color: '#0f172a'
         });
       },
-      error: (err) => {
+      error: (err: any) => {
         this.procesando = false;
 
         if (err.status === 401 || err.status === 403) {
@@ -209,13 +314,22 @@ export class SolicitudDetalle implements OnInit {
           return;
         }
 
-        this.mostrarError(
-          'Documento firmado no disponible',
-          err.error?.mensaje || 'Todavía no existe un PDF firmado cargado para esta solicitud.'
-        );
+        Swal.fire({
+          title: 'Documento firmado no disponible',
+          text: err.error?.mensaje || 'Todavía no existe un PDF firmado cargado para esta solicitud.',
+          icon: 'warning',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#d97706',
+          background: '#ffffff',
+          color: '#0f172a'
+        });
       }
     });
   }
+
+  // =====================================================
+  // SELECCIÓN Y VALIDACIÓN DE ARCHIVOS
+  // =====================================================
 
   seleccionarFirmaManual(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -266,7 +380,6 @@ export class SolicitudDetalle implements OnInit {
   validarArchivoPdf(archivo: File): boolean {
     const maxSizeMb = 10;
     const maxSizeBytes = maxSizeMb * 1024 * 1024;
-
     const nombreArchivo = archivo.name || '';
 
     if (!nombreArchivo.toLowerCase().endsWith('.pdf')) {
@@ -281,6 +394,10 @@ export class SolicitudDetalle implements OnInit {
 
     return true;
   }
+
+  // =====================================================
+  // SUBIR DOCUMENTO FIRMADO
+  // =====================================================
 
   subirDocumentoFirmado(
     archivo: File,
@@ -304,7 +421,9 @@ export class SolicitudDetalle implements OnInit {
     ).subscribe({
       next: (response) => {
         this.procesando = false;
+
         this.documentoFirmadoCargado = true;
+        this.guardarDocumentoFirmadoLocal();
 
         Swal.fire({
           title: 'Documento cargado',
@@ -315,10 +434,12 @@ export class SolicitudDetalle implements OnInit {
           background: '#ffffff',
           color: '#0f172a'
         }).then(() => {
+          this.documentoFirmadoCargado = true;
+          this.guardarDocumentoFirmadoLocal();
           this.cargarDetalle();
         });
       },
-      error: (err) => {
+      error: (err: any) => {
         this.procesando = false;
 
         if (err.status === 401 || err.status === 403) {
@@ -334,6 +455,10 @@ export class SolicitudDetalle implements OnInit {
       }
     });
   }
+
+  // =====================================================
+  // APROBACIÓN GENERAL ADMIN / JEFE / AUTORIDAD
+  // =====================================================
 
   async confirmarAprobacion(): Promise<void> {
     if (!this.solicitud) {
@@ -359,7 +484,7 @@ export class SolicitudDetalle implements OnInit {
       html: `
         <div style="text-align:center">
           <p style="margin: 0 0 10px; color:#475569;">
-            ¿Está seguro de aprobar esta solicitud?
+            ¿Está seguro de continuar con esta acción?
           </p>
           <strong style="display:inline-block; color:#1d4ed8; font-size:17px; margin-bottom:10px;">
             ${this.solicitud.codigo_solicitud}
@@ -373,57 +498,245 @@ export class SolicitudDetalle implements OnInit {
             color:#334155;
             font-size:14px;
           ">
+            Acción: <b>${this.getTextoBotonAprobar()}</b><br>
             Estado actual: <b>${this.getEstadoTexto(this.solicitud.estado)}</b>
           </div>
         </div>
       `,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Sí, aprobar',
+      confirmButtonText: 'Sí, continuar',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#15803d',
       cancelButtonColor: '#64748b',
       reverseButtons: true,
       background: '#ffffff',
-      color: '#0f172a',
-      customClass: {
-        popup: 'swal-profesional'
-      }
+      color: '#0f172a'
     });
 
     if (resultado.isConfirmed) {
-      this.aprobar();
+      this.aprobar('general');
     }
   }
 
-  aprobar(): void {
+  // =====================================================
+  // TICS: APROBAR VALIDACIÓN
+  // =====================================================
+
+  async confirmarAprobacionTics(): Promise<void> {
     if (!this.solicitud) {
       return;
     }
 
+    if (!this.puedeAprobarValidacionTics()) {
+      this.mostrarError(
+        'Acción no disponible',
+        'La solicitud no se encuentra en estado pendiente de validación TICS.'
+      );
+      return;
+    }
+
+    if (!this.documentoFirmadoCargado) {
+      Swal.fire({
+        title: 'Documento firmado requerido',
+        text: 'Para aprobar la validación TICS debe subir un PDF firmado.',
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#d97706',
+        background: '#ffffff',
+        color: '#0f172a'
+      });
+      return;
+    }
+
+    const resultado = await Swal.fire({
+      title: 'Aprobar validación TICS',
+      html: `
+        <div style="text-align:center">
+          <p style="margin: 0 0 10px; color:#475569;">
+            Esta acción aprobará la validación técnica y habilitará la etapa de finalización.
+          </p>
+          <strong style="display:inline-block; color:#1d4ed8; font-size:17px; margin-bottom:10px;">
+            ${this.solicitud.codigo_solicitud}
+          </strong>
+          <div style="
+            margin-top:14px;
+            padding:12px;
+            border-radius:14px;
+            background:#f8fafc;
+            border:1px solid #e2e8f0;
+            color:#334155;
+            font-size:14px;
+          ">
+            Estado actual: <b>${this.getEstadoTexto(this.solicitud.estado)}</b><br>
+            Siguiente estado: <b>Pendiente ejecución TICS</b>
+          </div>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, aprobar validación',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#15803d',
+      cancelButtonColor: '#64748b',
+      reverseButtons: true,
+      background: '#ffffff',
+      color: '#0f172a'
+    });
+
+    if (resultado.isConfirmed) {
+      this.aprobar('validacion_tics');
+    }
+  }
+
+  // =====================================================
+  // TICS: FINALIZAR PROCESO
+  // =====================================================
+
+  async confirmarFinalizacionTics(): Promise<void> {
+    if (!this.solicitud) {
+      return;
+    }
+
+    if (!this.puedeFinalizarTics()) {
+      this.mostrarError(
+        'Finalización no disponible',
+        'Primero debe aprobarse la validación TICS para poder finalizar el proceso.'
+      );
+      return;
+    }
+
+    if (!this.documentoFirmadoCargado) {
+      Swal.fire({
+        title: 'Documento firmado requerido',
+        text: 'Para finalizar el proceso TICS debe existir un PDF firmado cargado.',
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#d97706',
+        background: '#ffffff',
+        color: '#0f172a'
+      });
+      return;
+    }
+
+    const resultado = await Swal.fire({
+      title: 'Finalizar proceso TICS',
+      html: `
+        <div style="text-align:center">
+          <p style="margin: 0 0 10px; color:#475569;">
+            Esta acción marcará la solicitud como finalizada y notificará al solicitante.
+          </p>
+          <strong style="display:inline-block; color:#1d4ed8; font-size:17px; margin-bottom:10px;">
+            ${this.solicitud.codigo_solicitud}
+          </strong>
+          <div style="
+            margin-top:14px;
+            padding:12px;
+            border-radius:14px;
+            background:#f8fafc;
+            border:1px solid #e2e8f0;
+            color:#334155;
+            font-size:14px;
+          ">
+            Estado actual: <b>${this.getEstadoTexto(this.solicitud.estado)}</b><br>
+            Estado final: <b>Finalizada</b>
+          </div>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, finalizar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#15803d',
+      cancelButtonColor: '#64748b',
+      reverseButtons: true,
+      background: '#ffffff',
+      color: '#0f172a'
+    });
+
+    if (resultado.isConfirmed) {
+      this.aprobar('finalizacion_tics');
+    }
+  }
+  // =====================================================
+  // APROBAR / AVANZAR FLUJO
+  // =====================================================
+
+  aprobar(tipoAccion: 'general' | 'validacion_tics' | 'finalizacion_tics' = 'general'): void {
+    if (!this.solicitud) {
+      return;
+    }
+
+    const estadoAntes = this.solicitud.estado;
+
     this.procesando = true;
+    this.procesandoAprobacion = tipoAccion !== 'finalizacion_tics';
+    this.procesandoFinalizacion = tipoAccion === 'finalizacion_tics';
     this.error = '';
     this.mensajeOk = '';
 
     this.solicitudesService.aprobarSolicitud(this.solicitud.id).subscribe({
       next: (response) => {
         this.procesando = false;
+        this.procesandoAprobacion = false;
+        this.procesandoFinalizacion = false;
+
+        const estadoNuevo = response?.solicitud?.estado_actual || '';
+        const etapaNueva = response?.solicitud?.etapa_actual || '';
+
+        if (estadoNuevo && this.solicitud) {
+          this.solicitud.estado = estadoNuevo;
+        }
+
+        if (etapaNueva && this.solicitud) {
+          this.solicitud.etapa_actual = etapaNueva;
+        }
+
+        if (
+          this.esTics() &&
+          estadoAntes === 'pendiente_tics' &&
+          estadoNuevo === 'pendiente_ejecucion_tics'
+        ) {
+          this.documentoFirmadoCargado = true;
+          this.guardarDocumentoFirmadoLocal('pendiente_ejecucion_tics');
+        }
+
+        if (estadoNuevo === 'finalizada') {
+          this.documentoFirmadoCargado = false;
+          this.limpiarDocumentoFirmadoLocal('pendiente_tics');
+          this.limpiarDocumentoFirmadoLocal('pendiente_ejecucion_tics');
+          this.limpiarDocumentoFirmadoLocal('finalizada');
+        }
+
+        let titulo = 'Solicitud aprobada';
+        let texto = response?.mensaje || 'La solicitud avanzó correctamente a la siguiente etapa.';
+
+        if (tipoAccion === 'validacion_tics') {
+          titulo = 'Validación TICS aprobada';
+          texto = 'La validación técnica fue aprobada. Ya puede finalizar el proceso TICS.';
+        }
+
+        if (tipoAccion === 'finalizacion_tics') {
+          titulo = 'Proceso TICS finalizado';
+          texto = response?.mensaje || 'La solicitud fue finalizada correctamente.';
+        }
 
         Swal.fire({
-          title: 'Solicitud aprobada',
-          text: response.mensaje || 'La solicitud avanzó correctamente a la siguiente etapa.',
+          title: titulo,
+          text: texto,
           icon: 'success',
           confirmButtonText: 'Entendido',
           confirmButtonColor: '#1d4ed8',
           background: '#ffffff',
           color: '#0f172a'
+        }).then(() => {
+          this.cargarDetalle();
         });
-
-        this.documentoFirmadoCargado = false;
-        this.cargarDetalle();
       },
-      error: (err) => {
+      error: (err: any) => {
         this.procesando = false;
+        this.procesandoAprobacion = false;
+        this.procesandoFinalizacion = false;
 
         if (err.status === 401 || err.status === 403) {
           this.authService.logout();
@@ -432,12 +745,16 @@ export class SolicitudDetalle implements OnInit {
         }
 
         this.mostrarError(
-          'No se pudo aprobar',
-          err.error?.mensaje || 'No se pudo aprobar la solicitud.'
+          'No se pudo procesar la acción',
+          err.error?.mensaje || 'No se pudo aprobar o finalizar la solicitud.'
         );
       }
     });
   }
+
+  // =====================================================
+  // RECHAZO
+  // =====================================================
 
   abrirModalRechazo(): void {
     this.error = '';
@@ -474,14 +791,17 @@ export class SolicitudDetalle implements OnInit {
     }
 
     this.procesando = true;
+    this.procesandoRechazo = true;
     this.error = '';
     this.mensajeOk = '';
 
     this.solicitudesService.rechazarSolicitud(this.solicitud.id, motivo).subscribe({
       next: (response) => {
         this.procesando = false;
+        this.procesandoRechazo = false;
         this.mostrarModalRechazo = false;
         this.motivoRechazo = '';
+        this.documentoFirmadoCargado = false;
 
         const correoEnviado = response?.correo_enviado === true;
 
@@ -489,19 +809,19 @@ export class SolicitudDetalle implements OnInit {
           title: 'Solicitud rechazada',
           text: correoEnviado
             ? 'La solicitud fue rechazada correctamente y se notificó al correo del solicitante.'
-            : response.mensaje || 'La solicitud fue rechazada correctamente.',
+            : response?.mensaje || 'La solicitud fue rechazada correctamente.',
           icon: 'success',
           confirmButtonText: 'Entendido',
           confirmButtonColor: '#1d4ed8',
           background: '#ffffff',
           color: '#0f172a'
+        }).then(() => {
+          this.cargarDetalle();
         });
-
-        this.documentoFirmadoCargado = false;
-        this.cargarDetalle();
       },
-      error: (err) => {
+      error: (err: any) => {
         this.procesando = false;
+        this.procesandoRechazo = false;
 
         if (err.status === 401 || err.status === 403) {
           this.authService.logout();
@@ -517,32 +837,50 @@ export class SolicitudDetalle implements OnInit {
     });
   }
 
-  mostrarError(titulo: string, mensaje: string): void {
-    Swal.fire({
-      title: titulo,
-      text: mensaje,
-      icon: 'error',
-      confirmButtonText: 'Entendido',
-      confirmButtonColor: '#dc2626',
-      background: '#ffffff',
-      color: '#0f172a'
-    });
-  }
+  // =====================================================
+  // PERMISOS DE ACCIONES
+  // =====================================================
 
   puedeAprobar(): boolean {
     if (!this.solicitud) {
       return false;
     }
 
-    const estadosPermitidos = [
-      'pendiente_firma_solicitante',
-      'pendiente_jefe_inmediato',
-      'pendiente_maxima_autoridad',
-      'pendiente_tics',
-      'pendiente_ejecucion_tics'
-    ];
+    const estado = this.solicitud.estado;
 
-    return estadosPermitidos.includes(this.solicitud.estado);
+    if (this.esAdmin()) {
+      return estado === 'pendiente_firma_solicitante';
+    }
+
+    if (this.esJefe()) {
+      return estado === 'pendiente_jefe_inmediato';
+    }
+
+    if (this.esAutoridad()) {
+      return estado === 'pendiente_maxima_autoridad';
+    }
+
+    if (this.esTics()) {
+      return false;
+    }
+
+    return false;
+  }
+
+  puedeAprobarValidacionTics(): boolean {
+    if (!this.solicitud || !this.esTics()) {
+      return false;
+    }
+
+    return this.solicitud.estado === 'pendiente_tics';
+  }
+
+  puedeFinalizarTics(): boolean {
+    if (!this.solicitud || !this.esTics()) {
+      return false;
+    }
+
+    return this.solicitud.estado === 'pendiente_ejecucion_tics';
   }
 
   puedeRechazar(): boolean {
@@ -550,13 +888,21 @@ export class SolicitudDetalle implements OnInit {
       return false;
     }
 
-    const estadosPermitidos = [
-      'pendiente_jefe_inmediato',
-      'pendiente_maxima_autoridad',
-      'pendiente_tics'
-    ];
+    const estado = this.solicitud.estado;
 
-    return estadosPermitidos.includes(this.solicitud.estado);
+    if (this.esJefe()) {
+      return estado === 'pendiente_jefe_inmediato';
+    }
+
+    if (this.esAutoridad()) {
+      return estado === 'pendiente_maxima_autoridad';
+    }
+
+    if (this.esTics()) {
+      return estado === 'pendiente_tics';
+    }
+
+    return false;
   }
 
   getTextoBotonAprobar(): string {
@@ -567,18 +913,15 @@ export class SolicitudDetalle implements OnInit {
     const textos: Record<string, string> = {
       pendiente_firma_solicitante: 'Validar firma y enviar a jefe',
       pendiente_jefe_inmediato: 'Aprobar como jefe inmediato',
-      pendiente_maxima_autoridad: 'Aprobar como máxima autoridad',
-      pendiente_tics: 'Aprobar validación TICS',
-      pendiente_ejecucion_tics: 'Finalizar ejecución TICS'
+      pendiente_maxima_autoridad: 'Aprobar como máxima autoridad'
     };
 
     return textos[this.solicitud.estado] || 'Aprobar solicitud';
   }
 
-  logout(): void {
-    this.authService.logout();
-    this.router.navigate(['/auth/login']);
-  }
+  // =====================================================
+  // TEXTOS DE ESTADOS Y ETAPAS
+  // =====================================================
 
   getEstadoTexto(estado: string): string {
     const estados: Record<string, string> = {
@@ -608,7 +951,7 @@ export class SolicitudDetalle implements OnInit {
       finalizado: 'Finalizado'
     };
 
-    return etapas[etapa] || etapa;
+    return etapas[etapa] || etapa || 'No registrada';
   }
 
   getEstadoClase(estado: string): string {
@@ -629,5 +972,26 @@ export class SolicitudDetalle implements OnInit {
     }
 
     return 'normal';
+  }
+
+  // =====================================================
+  // MENSAJES Y SESIÓN
+  // =====================================================
+
+  mostrarError(titulo: string, mensaje: string): void {
+    Swal.fire({
+      title: titulo,
+      text: mensaje,
+      icon: 'error',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#dc2626',
+      background: '#ffffff',
+      color: '#0f172a'
+    });
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/auth/login']);
   }
 }

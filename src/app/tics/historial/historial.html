@@ -2,8 +2,8 @@
   <aside class="sidebar">
     <div class="brand">
       <div class="logo-box">
-  <i class="bi bi-cpu-fill"></i>
-</div>
+        <i class="bi bi-cpu-fill"></i>
+      </div>
 
       <div>
         <h2>TICS</h2>
@@ -89,7 +89,9 @@
       <div class="panel-header">
         <div>
           <h2>Historial técnico</h2>
-          <p>Filtre por código, solicitante, cédula, correo, dependencia o estado.</p>
+          <p>
+            Filtre por código, solicitante, cédula, correo, dependencia, área o estado.
+          </p>
         </div>
 
         <button
@@ -151,7 +153,7 @@
               <th>Dependencia</th>
               <th>Área / Unidad</th>
               <th>Estado</th>
-              <th>Fecha</th>
+              <th>Fecha y hora</th>
               <th>Acción</th>
             </tr>
           </thead>
@@ -159,7 +161,9 @@
           <tbody>
             <tr *ngFor="let solicitud of solicitudesFiltradas">
               <td>
-                <strong class="code">{{ solicitud.codigo_solicitud }}</strong>
+                <strong class="code">
+                  {{ solicitud.codigo_solicitud }}
+                </strong>
               </td>
 
               <td>{{ solicitud.nombres_completos }}</td>
@@ -174,13 +178,24 @@
                 </span>
               </td>
 
-              <td>{{ solicitud.fecha_solicitud }}</td>
+              <td class="date-cell">
+                <div class="date-wrapper">
+                  <strong class="date-text">
+                    {{ formatearFecha(solicitud.created_at) }}
+                  </strong>
+
+                  <span class="time-text">
+                    <i class="bi bi-clock-fill"></i>
+                    {{ formatearHora(solicitud.created_at) }}
+                  </span>
+                </div>
+              </td>
 
               <td>
                 <button
                   type="button"
                   class="detail-btn"
-                  (click)="verDetalle(solicitud.id)"
+                  (click)="abrirDetalle(solicitud)"
                 >
                   Ver detalle
                 </button>
@@ -191,4 +206,156 @@
       </div>
     </section>
   </main>
+
+  <!-- =====================================================
+       MODAL DETALLE TICS
+  ====================================================== -->
+
+  <div class="modal-backdrop" *ngIf="mostrarModalDetalle && solicitudSeleccionada">
+    <section class="modal-card">
+      <button
+        type="button"
+        class="modal-close"
+        (click)="cerrarDetalle()"
+        aria-label="Cerrar detalle"
+      >
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+      <div class="modal-header">
+        <div>
+          <span class="modal-eyebrow">Detalle técnico</span>
+
+          <h2>{{ solicitudSeleccionada.codigo_solicitud }}</h2>
+
+          <p>
+            Información resumida de la solicitud procesada por la unidad TICS.
+          </p>
+        </div>
+
+        <span
+          class="status modal-status"
+          [ngClass]="getEstadoClase(solicitudSeleccionada.estado)"
+        >
+          {{ getEstadoTexto(solicitudSeleccionada.estado) }}
+        </span>
+      </div>
+
+      <section class="detail-summary">
+        <article>
+          <span>Solicitante</span>
+          <strong>{{ solicitudSeleccionada.nombres_completos }}</strong>
+        </article>
+
+        <article>
+          <span>Cédula</span>
+          <strong>{{ solicitudSeleccionada.cedula }}</strong>
+        </article>
+
+        <article>
+          <span>Correo institucional</span>
+          <strong>{{ solicitudSeleccionada.correo_institucional }}</strong>
+        </article>
+
+        <article>
+          <span>Teléfono</span>
+          <strong>{{ solicitudSeleccionada.telefono_ext || 'No registrado' }}</strong>
+        </article>
+
+        <article>
+          <span>Dependencia</span>
+          <strong>{{ solicitudSeleccionada.dependencia || 'No registrada' }}</strong>
+        </article>
+
+        <article>
+          <span>Área / Unidad</span>
+          <strong>{{ solicitudSeleccionada.area_unidad || 'No registrada' }}</strong>
+        </article>
+
+        <article>
+          <span>Cargo</span>
+          <strong>{{ solicitudSeleccionada.cargo || 'No registrado' }}</strong>
+        </article>
+
+        <article>
+          <span>Tipo de usuario</span>
+          <strong>{{ solicitudSeleccionada.tipo_usuario || 'No registrado' }}</strong>
+        </article>
+
+        <article>
+          <span>Fecha</span>
+          <strong>{{ formatearFecha(solicitudSeleccionada.created_at) }}</strong>
+        </article>
+
+        <article>
+          <span>Hora</span>
+          <strong>{{ formatearHora(solicitudSeleccionada.created_at) }}</strong>
+        </article>
+
+        <article>
+          <span>Etapa actual</span>
+          <strong>{{ getEtapaTexto(solicitudSeleccionada.etapa_actual) }}</strong>
+        </article>
+
+        <article>
+          <span>Total páginas</span>
+          <strong>{{ solicitudSeleccionada.total_paginas || 0 }}</strong>
+        </article>
+      </section>
+
+      <section class="detail-block">
+        <h3>Justificación institucional</h3>
+
+        <p>
+          {{ solicitudSeleccionada.justificacion_necesidad_institucional || 'Sin justificación registrada.' }}
+        </p>
+      </section>
+
+      <section class="detail-block">
+        <h3>Información técnica</h3>
+
+        <div class="technical-grid">
+          <article>
+            <span>Dirección IP</span>
+            <strong>{{ solicitudSeleccionada.direccion_ip || 'No registrada' }}</strong>
+          </article>
+
+          <article>
+            <span>Vigencia del acceso</span>
+            <strong>{{ solicitudSeleccionada.tiempo_vigencia_acceso || 'No registrada' }}</strong>
+          </article>
+
+          <article>
+            <span>Usuario externo</span>
+            <strong>{{ solicitudSeleccionada.nombre_usuario_externo || 'No aplica' }}</strong>
+          </article>
+
+          <article>
+            <span>Bloqueada</span>
+            <strong>{{ solicitudSeleccionada.bloqueada ? 'Sí' : 'No' }}</strong>
+          </article>
+
+          <article>
+            <span>Creado</span>
+            <strong>{{ solicitudSeleccionada.created_at }}</strong>
+          </article>
+
+          <article>
+            <span>Actualizado</span>
+            <strong>{{ solicitudSeleccionada.updated_at }}</strong>
+          </article>
+        </div>
+      </section>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="cancel-btn"
+          (click)="cerrarDetalle()"
+        >
+          Cerrar
+        </button>
+      </div>
+    </section>
+  </div>
 </section>

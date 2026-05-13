@@ -2,6 +2,10 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+/* =====================================================
+   INTERFACES
+===================================================== */
+
 export interface PaginaWebAdmin {
   id: number;
   numero: number;
@@ -32,7 +36,7 @@ export interface SolicitudAdmin {
   updated_at: string;
   total_paginas: number;
 
-  // Campos opcionales para control documental
+  // Campos opcionales usados para control documental
   documento_actual_id?: number | null;
   requiere_firma?: boolean | number;
   firma_actual_validada?: boolean | number;
@@ -67,10 +71,10 @@ export interface SolicitudDetalleResponse {
   solicitud: SolicitudAdmin;
   paginas_web: PaginaWebAdmin[];
 
-  // Documentos cargados durante el flujo
+  // Documentos cargados en el flujo
   documentos?: DocumentoSolicitud[];
 
-  // Indica si ya existe un documento firmado cargado
+  // Indicador enviado por backend si ya hay documento firmado
   documento_firmado_cargado?: boolean;
 }
 
@@ -78,15 +82,13 @@ export interface FlujoSolicitudResponse {
   estado: string;
   mensaje: string;
 
-  // Campos usados cuando se rechaza una solicitud y se envía correo
+  // Correos de rechazo o finalización
   correo_enviado?: boolean;
   error_correo?: string | null;
 
   solicitud: {
     id: number;
     codigo_solicitud: string;
-
-    // Campo usado cuando el backend devuelve a qué correo se notificó
     correo_destino?: string;
 
     estado_anterior: string;
@@ -117,6 +119,10 @@ export interface SubirDocumentoResponse {
   };
 }
 
+/* =====================================================
+   SERVICIO
+===================================================== */
+
 @Injectable({
   providedIn: 'root'
 })
@@ -127,6 +133,10 @@ export class SolicitudesAdminService {
 
   constructor(private http: HttpClient) {}
 
+  /* =====================================================
+     HEADERS
+  ===================================================== */
+
   private getHeaders(): HttpHeaders {
     const token = localStorage.getItem('auth_token_liberacion_web') || '';
 
@@ -134,6 +144,10 @@ export class SolicitudesAdminService {
       Authorization: `Bearer ${token}`
     });
   }
+
+  /* =====================================================
+     LISTAR SOLICITUDES
+  ===================================================== */
 
   listarSolicitudes(
     estado: string = '',
@@ -170,6 +184,10 @@ export class SolicitudesAdminService {
     );
   }
 
+  /* =====================================================
+     DETALLE DE SOLICITUD
+  ===================================================== */
+
   obtenerSolicitudPorId(id: number): Observable<SolicitudDetalleResponse> {
     return this.http.get<SolicitudDetalleResponse>(
       `${this.API_URL}/${id}`,
@@ -178,6 +196,10 @@ export class SolicitudesAdminService {
       }
     );
   }
+
+  /* =====================================================
+     FLUJO: APROBAR / AVANZAR
+  ===================================================== */
 
   aprobarSolicitud(id: number): Observable<FlujoSolicitudResponse> {
     return this.http.put<FlujoSolicitudResponse>(
@@ -188,6 +210,28 @@ export class SolicitudesAdminService {
       }
     );
   }
+
+  /*
+    Alias semántico para TICS.
+    Backend:
+    pendiente_tics -> pendiente_ejecucion_tics
+  */
+  aprobarValidacionTics(id: number): Observable<FlujoSolicitudResponse> {
+    return this.aprobarSolicitud(id);
+  }
+
+  /*
+    Alias semántico para TICS.
+    Backend:
+    pendiente_ejecucion_tics -> finalizada
+  */
+  finalizarProcesoTics(id: number): Observable<FlujoSolicitudResponse> {
+    return this.aprobarSolicitud(id);
+  }
+
+  /* =====================================================
+     FLUJO: RECHAZAR
+  ===================================================== */
 
   rechazarSolicitud(
     id: number,
@@ -204,10 +248,10 @@ export class SolicitudesAdminService {
     );
   }
 
-  /*
-    Descarga el PDF generado por el sistema.
-    Este normalmente sale desde la plantilla A4.
-  */
+  /* =====================================================
+     DESCARGA DE PDF GENERADO
+  ===================================================== */
+
   descargarPdfSolicitud(id: number): Observable<Blob> {
     return this.http.get(
       `${this.API_URL}/${id}/pdf`,
@@ -218,16 +262,11 @@ export class SolicitudesAdminService {
     );
   }
 
-  /*
-    Descarga el último PDF firmado cargado en el flujo.
-    Este es el documento que debe revisar el siguiente rol.
+  /* =====================================================
+     DESCARGA DE PDF FIRMADO ACTUAL
+  ===================================================== */
 
-    Ejemplo:
-    - Admin sube PDF firmado -> Jefe descarga este documento.
-    - Jefe sube PDF firmado -> Autoridad descarga este documento.
-    - Autoridad sube PDF firmado -> TICS descarga este documento.
-  */
-  descargarDocumentoActualSolicitud(id: number): Observable<Blob> {
+  descargarDocumentoFirmadoActual(id: number): Observable<Blob> {
     return this.http.get(
       `${this.API_URL}/${id}/documento-actual`,
       {
@@ -236,6 +275,14 @@ export class SolicitudesAdminService {
       }
     );
   }
+
+  descargarDocumentoActualSolicitud(id: number): Observable<Blob> {
+    return this.descargarDocumentoFirmadoActual(id);
+  }
+
+  /* =====================================================
+     SUBIDA DE DOCUMENTO FIRMADO
+  ===================================================== */
 
   subirDocumentoFirmado(
     solicitudId: number,
@@ -256,5 +303,25 @@ export class SolicitudesAdminService {
         headers: this.getHeaders()
       }
     );
+  }
+
+  /* =====================================================
+     UTILIDAD OPCIONAL PARA DESCARGAR BLOB
+  ===================================================== */
+
+  descargarBlob(
+    blob: Blob,
+    nombreArchivo: string,
+    mimeType: string = 'application/pdf'
+  ): void {
+    const archivo = new Blob([blob], { type: mimeType });
+    const url = window.URL.createObjectURL(archivo);
+    const enlace = document.createElement('a');
+
+    enlace.href = url;
+    enlace.download = nombreArchivo;
+    enlace.click();
+
+    window.URL.revokeObjectURL(url);
   }
 }

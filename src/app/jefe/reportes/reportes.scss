@@ -531,6 +531,37 @@ td {
   }
 }
 
+.date-cell {
+  min-width: 145px;
+
+  strong {
+    display: block;
+    color: #0f172a;
+    font-weight: 950;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+  }
+}
+
+.time-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-top: 7px;
+  padding: 5px 9px;
+
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 /* =====================================================
    PRINT
 ===================================================== */
@@ -597,4 +628,6 @@ td {
   font-size: 26px;
   line-height: 1;
 }
+
+
 }

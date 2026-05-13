@@ -83,7 +83,11 @@ export class Reportes implements OnInit {
         ? this.obtenerTextoBusqueda(solicitud).includes(texto)
         : true;
 
-      const coincideFecha = this.validarFecha(solicitud.fecha_solicitud);
+      /*
+        Para filtrar por fecha usamos created_at porque tiene fecha y hora real.
+        fecha_solicitud puede venir como 2026-05-13 00:00:00.
+      */
+      const coincideFecha = this.validarFecha(solicitud.created_at);
 
       return coincideEstado && coincideTexto && coincideFecha;
     });
@@ -93,18 +97,23 @@ export class Reportes implements OnInit {
 
   obtenerTextoBusqueda(solicitud: SolicitudAdmin): string {
     return `
-      ${solicitud.codigo_solicitud}
-      ${solicitud.nombres_completos}
-      ${solicitud.cedula}
-      ${solicitud.correo_institucional}
-      ${solicitud.dependencia}
-      ${solicitud.area_unidad}
-      ${solicitud.estado}
+      ${solicitud.codigo_solicitud || ''}
+      ${solicitud.nombres_completos || ''}
+      ${solicitud.cedula || ''}
+      ${solicitud.correo_institucional || ''}
+      ${solicitud.dependencia || ''}
+      ${solicitud.area_unidad || ''}
+      ${solicitud.estado || ''}
+      ${solicitud.created_at || ''}
     `.toLowerCase();
   }
 
-  validarFecha(fechaSolicitud: string): boolean {
+  validarFecha(fechaSolicitud: string | null | undefined): boolean {
     const fecha = String(fechaSolicitud || '').slice(0, 10);
+
+    if (!fecha) {
+      return true;
+    }
 
     if (this.fechaDesde && fecha < this.fechaDesde) {
       return false;
@@ -161,6 +170,8 @@ export class Reportes implements OnInit {
       'Área',
       'Cargo',
       'Fecha',
+      'Hora',
+      'Fecha y hora completa',
       'Estado'
     ];
 
@@ -172,7 +183,9 @@ export class Reportes implements OnInit {
       s.dependencia,
       s.area_unidad,
       s.cargo,
-      s.fecha_solicitud,
+      this.formatearFecha(s.created_at),
+      this.formatearHora(s.created_at),
+      this.formatearFechaHora(s.created_at),
       this.getEstadoTexto(s.estado)
     ]);
 
@@ -201,8 +214,79 @@ export class Reportes implements OnInit {
     window.print();
   }
 
+  formatearFecha(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return 'Sin fecha';
+    }
+
+    const textoFecha = String(fecha);
+
+    /*
+      MySQL normalmente envía:
+      2026-05-13 11:37:26
+      Aquí tomamos solo la fecha.
+    */
+    if (textoFecha.includes(' ')) {
+      const [soloFecha] = textoFecha.split(' ');
+      return soloFecha;
+    }
+
+    const fechaObj = new Date(textoFecha);
+
+    if (Number.isNaN(fechaObj.getTime())) {
+      return textoFecha.slice(0, 10);
+    }
+
+    return fechaObj.toLocaleDateString('es-EC', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  }
+
+  formatearHora(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return 'Sin hora';
+    }
+
+    const textoFecha = String(fecha);
+
+    /*
+      MySQL normalmente envía:
+      2026-05-13 11:37:26
+      Aquí tomamos solo la hora.
+    */
+   
+    if (textoFecha.includes(' ')) {
+      const partes = textoFecha.split(' ');
+      return partes[1] || 'Sin hora';
+    }
+
+    const fechaObj = new Date(textoFecha);
+
+    if (Number.isNaN(fechaObj.getTime())) {
+      return 'Sin hora';
+    }
+
+    return fechaObj.toLocaleTimeString('es-EC', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  }
+
+  formatearFechaHora(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return 'Sin fecha y hora';
+    }
+
+    return `${this.formatearFecha(fecha)} ${this.formatearHora(fecha)}`;
+  }
+
   getEstadoTexto(estado: string): string {
     const estados: Record<string, string> = {
+      pendiente_firma_solicitante: 'Pendiente firma solicitante',
       pendiente_jefe_inmediato: 'Pendiente jefe inmediato',
       pendiente_maxima_autoridad: 'Aprobada por jefe',
       pendiente_tics: 'En TICS',
@@ -210,13 +294,18 @@ export class Reportes implements OnInit {
       finalizada: 'Finalizada',
       rechazada_jefe_inmediato: 'Rechazada por jefe inmediato',
       rechazada_maxima_autoridad: 'Rechazada por máxima autoridad',
-      rechazada_tics: 'Rechazada por TICS'
+      rechazada_tics: 'Rechazada por TICS',
+      anulada: 'Anulada'
     };
 
     return estados[estado] || estado;
   }
 
   getEstadoClase(estado: string): string {
+    if (!estado) {
+      return 'normal';
+    }
+
     if (estado === 'pendiente_jefe_inmediato') {
       return 'pendiente';
     }

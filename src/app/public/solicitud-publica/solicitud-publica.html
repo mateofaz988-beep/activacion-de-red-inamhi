@@ -6,9 +6,11 @@
       </a>
 
       <div class="brand">
-        <div class="logo-box">
-          IN
-        </div>
+        <img
+          src="/inamhi-logo-LETRA-AZUL.png"
+          alt="Logo INAMHI"
+          class="login-logo-inamhi"
+        />
 
         <div>
           <h1>Formulario de Solicitud</h1>
@@ -41,18 +43,30 @@
 
     <section class="success-card" *ngIf="enviado">
       <div class="success-icon">✓</div>
+
       <h3>Solicitud registrada correctamente</h3>
+
       <p>Guarde este código para consultar el estado de su solicitud:</p>
 
       <strong>{{ codigoGenerado }}</strong>
 
       <div class="success-actions">
-        <a routerLink="/public/seguimiento">Consultar estado</a>
-        <button type="button" (click)="enviado = false">Registrar otra solicitud</button>
+        <a routerLink="/public/seguimiento">
+          Consultar estado
+        </a>
+
+        <button type="button" (click)="enviado = false">
+          Registrar otra solicitud
+        </button>
       </div>
     </section>
 
-    <form class="form-card" [formGroup]="formulario" (ngSubmit)="enviarSolicitud()" *ngIf="!enviado">
+    <form
+      class="form-card"
+      [formGroup]="formulario"
+      (ngSubmit)="enviarSolicitud()"
+      *ngIf="!enviado"
+    >
       <div class="form-header">
         <div>
           <h3>Datos de la solicitud</h3>
@@ -64,8 +78,13 @@
         </div>
       </div>
 
+      <!-- =====================================================
+           SECCIÓN 1: INFORMACIÓN DEL SOLICITANTE
+      ====================================================== -->
+
       <div class="section-title">
         <span>1</span>
+
         <div>
           <h4>Información del solicitante</h4>
           <p>Datos del funcionario, usuario externo o solicitante responsable.</p>
@@ -82,6 +101,7 @@
             maxlength="200"
             (input)="limpiarTextoSimple('nombres_completos')"
           />
+
           <small *ngIf="campoInvalido('nombres_completos')">
             {{ obtenerMensajeCampo('nombres_completos') }}
           </small>
@@ -98,6 +118,7 @@
             (keydown)="soloNumeros($event)"
             (input)="limpiarSoloNumeros('cedula', 10)"
           />
+
           <small *ngIf="campoInvalido('cedula')">
             {{ obtenerMensajeCampo('cedula') }}
           </small>
@@ -113,6 +134,7 @@
             autocomplete="email"
             (input)="limpiarCorreoInstitucional()"
           />
+
           <small *ngIf="campoInvalido('correo_institucional')">
             {{ obtenerMensajeCampo('correo_institucional') }}
           </small>
@@ -129,6 +151,7 @@
             (keydown)="soloNumeros($event)"
             (input)="limpiarSoloNumeros('telefono_ext', 10)"
           />
+
           <small *ngIf="campoInvalido('telefono_ext')">
             {{ obtenerMensajeCampo('telefono_ext') }}
           </small>
@@ -143,6 +166,7 @@
             maxlength="150"
             (input)="limpiarTextoSimple('dependencia')"
           />
+
           <small *ngIf="campoInvalido('dependencia')">
             {{ obtenerMensajeCampo('dependencia') }}
           </small>
@@ -157,6 +181,7 @@
             maxlength="150"
             (input)="limpiarTextoSimple('area_unidad')"
           />
+
           <small *ngIf="campoInvalido('area_unidad')">
             {{ obtenerMensajeCampo('area_unidad') }}
           </small>
@@ -171,6 +196,7 @@
             maxlength="150"
             (input)="limpiarTextoSimple('cargo')"
           />
+
           <small *ngIf="campoInvalido('cargo')">
             {{ obtenerMensajeCampo('cargo') }}
           </small>
@@ -178,15 +204,24 @@
 
         <label>
           Fecha de solicitud *
-          <input type="date" formControlName="fecha_solicitud" />
+          <input
+            type="date"
+            formControlName="fecha_solicitud"
+          />
+
           <small *ngIf="campoInvalido('fecha_solicitud')">
             {{ obtenerMensajeCampo('fecha_solicitud') }}
           </small>
         </label>
       </div>
 
+      <!-- =====================================================
+           SECCIÓN 2: INFORMACIÓN DE LA SOLICITUD
+      ====================================================== -->
+
       <div class="section-title">
         <span>2</span>
+
         <div>
           <h4>Información de la solicitud</h4>
           <p>Detalle técnico, vigencia y justificación del acceso requerido.</p>
@@ -197,8 +232,13 @@
         <label>
           Tipo de usuario *
           <select formControlName="tipo_usuario">
-            <option value="funcionario_inamhi">Funcionario INAMHI</option>
-            <option value="externo">Externo</option>
+            <option value="funcionario_inamhi">
+              Funcionario INAMHI
+            </option>
+
+            <option value="externo">
+              Externo
+            </option>
           </select>
         </label>
 
@@ -211,6 +251,7 @@
             maxlength="100"
             (input)="limpiarTextoSimple('tiempo_vigencia_acceso')"
           />
+
           <small *ngIf="campoInvalido('tiempo_vigencia_acceso')">
             {{ obtenerMensajeCampo('tiempo_vigencia_acceso') }}
           </small>
@@ -225,24 +266,44 @@
             maxlength="200"
             (input)="limpiarTextoSimple('nombre_usuario_externo')"
           />
+
           <small *ngIf="campoInvalido('nombre_usuario_externo')">
             {{ obtenerMensajeCampo('nombre_usuario_externo') }}
           </small>
         </label>
 
-        <label>
-          Dirección IP
-          <input
-            type="text"
-            formControlName="direccion_ip"
-            placeholder="Ejemplo: 192.168.1.100"
-            maxlength="15"
-            (input)="limpiarIp()"
-          />
-          <small *ngIf="campoInvalido('direccion_ip')">
-            {{ obtenerMensajeCampo('direccion_ip') }}
-          </small>
-        </label>
+        <!-- =====================================================
+             DIRECCIÓN IP CON BOTÓN DE AYUDA
+        ====================================================== -->
+
+        <div class="ip-field">
+          <label>
+            Dirección IP
+
+            <div class="ip-input-row">
+              <input
+                type="text"
+                formControlName="direccion_ip"
+                placeholder="Ejemplo: 192.168.1.100"
+                maxlength="15"
+                (input)="limpiarIp()"
+              />
+
+              <button
+                type="button"
+                class="ip-help-btn"
+                (click)="abrirModalIp()"
+                title="Ver tutorial para encontrar mi dirección IP"
+              >
+                ¿Cómo ver mi IP?
+              </button>
+            </div>
+
+            <small *ngIf="campoInvalido('direccion_ip')">
+              {{ obtenerMensajeCampo('direccion_ip') }}
+            </small>
+          </label>
+        </div>
       </div>
 
       <label class="full">
@@ -263,6 +324,10 @@
           {{ obtenerMensajeCampo('justificacion_necesidad_institucional') }}
         </small>
       </label>
+
+      <!-- =====================================================
+           SECCIÓN 3: PÁGINAS WEB
+      ====================================================== -->
 
       <div class="section-title pages-title">
         <span>3</span>
@@ -288,7 +353,9 @@
           *ngFor="let pagina of paginasWeb.controls; let i = index"
           [formGroupName]="i"
         >
-          <div class="page-number">{{ i + 1 }}</div>
+          <div class="page-number">
+            {{ i + 1 }}
+          </div>
 
           <label>
             URL *
@@ -299,6 +366,7 @@
               maxlength="255"
               (input)="limpiarUrlPagina(i)"
             />
+
             <small *ngIf="paginaInvalida(i, 'url_pagina')">
               {{ obtenerMensajePagina(i, 'url_pagina') }}
             </small>
@@ -313,6 +381,7 @@
               maxlength="255"
               (input)="limpiarTextoSimple('descripcion')"
             />
+
             <small *ngIf="paginaInvalida(i, 'descripcion')">
               {{ obtenerMensajePagina(i, 'descripcion') }}
             </small>
@@ -334,13 +403,146 @@
       </div>
 
       <div class="actions">
-        <a routerLink="/" class="cancel-btn">Cancelar</a>
+        <a routerLink="/" class="cancel-btn">
+          Cancelar
+        </a>
 
-        <button type="submit" class="submit-btn" [disabled]="cargando">
-          <span *ngIf="!cargando">Enviar solicitud</span>
-          <span *ngIf="cargando">Registrando solicitud...</span>
+        <button
+          type="submit"
+          class="submit-btn"
+          [disabled]="cargando"
+        >
+          <span *ngIf="!cargando">
+            Enviar solicitud
+          </span>
+
+          <span *ngIf="cargando">
+            Registrando solicitud...
+          </span>
         </button>
       </div>
     </form>
   </main>
+
+  <!-- =====================================================
+       MODAL TUTORIAL PARA DIRECCIÓN IP
+  ====================================================== -->
+
+  <div class="modal-backdrop-ip" *ngIf="mostrarModalIp">
+    <section class="modal-ip-card">
+      <button
+        type="button"
+        class="close-modal-ip"
+        (click)="cerrarModalIp()"
+        aria-label="Cerrar tutorial de IP"
+      >
+        ×
+      </button>
+
+      <div class="modal-ip-header">
+        <div class="modal-ip-icon">
+          <i class="bi bi-router-fill"></i>
+        </div>
+
+        <div>
+          <span>Guía rápida</span>
+
+          <h3>¿Cómo encontrar mi dirección IP?</h3>
+
+          <p>
+            La dirección IP identifica el equipo o red desde donde se solicita el acceso.
+            Este dato ayuda al área técnica a revisar la solicitud correctamente.
+          </p>
+        </div>
+      </div>
+
+      <div class="ip-explanation-box">
+        <h4>¿Qué es una dirección IP?</h4>
+
+        <p>
+          Una dirección IP es un número que identifica un dispositivo dentro de una red.
+          Un ejemplo común es <strong>192.168.1.100</strong>. En este formulario se solicita
+          para que TICS pueda validar desde qué equipo o red se requiere el acceso.
+        </p>
+      </div>
+
+      <div class="tutorial-grid">
+        <article class="tutorial-card">
+          <span>Opción 1</span>
+
+          <h4>Ver IP usando comandos de Windows</h4>
+
+          <ol>
+            <li>
+              Presione las teclas <strong>Windows + R</strong>.
+            </li>
+
+            <li>
+              Escriba <strong>cmd</strong> y presione <strong>Enter</strong>.
+            </li>
+
+            <li>
+              En la ventana negra escriba <strong>ipconfig</strong>.
+            </li>
+
+            <li>
+              Presione <strong>Enter</strong>.
+            </li>
+
+            <li>
+              Busque el dato llamado <strong>Dirección IPv4</strong>.
+            </li>
+
+            <li>
+              Copie ese número en el campo <strong>Dirección IP</strong> del formulario.
+            </li>
+          </ol>
+        </article>
+
+        <article class="tutorial-card">
+          <span>Opción 2</span>
+
+          <h4>Ver IP desde Configuración</h4>
+
+          <ol>
+            <li>
+              Abra la <strong>Configuración</strong> de Windows.
+            </li>
+
+            <li>
+              Ingrese a <strong>Red e Internet</strong>.
+            </li>
+
+            <li>
+              Seleccione <strong>Wi-Fi</strong> o <strong>Ethernet</strong>, según su conexión.
+            </li>
+
+            <li>
+              Abra las <strong>Propiedades</strong> de la red conectada.
+            </li>
+
+            <li>
+              Busque el campo <strong>Dirección IPv4</strong>.
+            </li>
+
+            <li>
+              Copie ese número en el formulario.
+            </li>
+          </ol>
+        </article>
+      </div>
+
+      <div class="ip-note">
+        <strong>Importante:</strong>
+        Si no conoce este dato, puede solicitar apoyo al área de TICS. Si la IP no es obligatoria
+        para su caso, puede dejar el campo vacío.
+      </div>
+
+      <div class="modal-ip-actions">
+        <button type="button" (click)="cerrarModalIp()">
+          Entendido
+        </button>
+      </div>
+    </section>
+  </div>
 </section>

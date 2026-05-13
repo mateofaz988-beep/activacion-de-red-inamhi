@@ -59,6 +59,39 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER)
 
 # =====================================================
+# función base para enviar correos
+# =====================================================
+
+def enviar_correo(destinatario, asunto, cuerpo, cuerpo_html=None):
+    if not SMTP_HOST or not SMTP_USER or not SMTP_PASSWORD:
+        raise Exception(
+            "configuración SMTP incompleta. revise SMTP_HOST, SMTP_USER y SMTP_PASSWORD en el archivo .env."
+        )
+
+    destinatario = limpiar_texto(destinatario).lower()
+
+    if not destinatario:
+        raise Exception("no existe correo destinatario.")
+
+    mensaje = MIMEMultipart("alternative")
+    mensaje["Subject"] = asunto
+    mensaje["From"] = SMTP_FROM
+    mensaje["To"] = destinatario
+
+    mensaje.attach(MIMEText(cuerpo, "plain", "utf-8"))
+
+    if cuerpo_html:
+        mensaje.attach(MIMEText(cuerpo_html, "html", "utf-8"))
+
+    servidor = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+    servidor.starttls()
+    servidor.login(SMTP_USER, SMTP_PASSWORD)
+    servidor.sendmail(SMTP_USER, [destinatario], mensaje.as_string())
+    servidor.quit()
+
+    print(f"correo enviado correctamente a {destinatario}")
+    return True
+# =====================================================
 # configuración principal
 # =====================================================
 
@@ -821,6 +854,45 @@ def test_db():
             "estado": "error",
             "mensaje": "error al consultar la base de datos",
             "error": str(error)
+        }), 500
+    
+    # =====================================================
+# prueba de correo SMTP
+# =====================================================
+
+@app.route("/api/test-correo", methods=["GET"])
+def test_correo():
+    try:
+        correo_destino = request.args.get("correo") or SMTP_USER
+
+        enviar_correo(
+            destinatario=correo_destino,
+            asunto="Prueba de correo SMTP - INAMHI",
+            cuerpo="""
+Este es un correo de prueba enviado desde el backend Flask del Sistema de Liberación Web INAMHI.
+
+Si recibió este mensaje, la configuración SMTP funciona correctamente.
+"""
+        )
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "correo de prueba enviado correctamente.",
+            "destinatario": correo_destino
+        }), 200
+
+    except Exception as error:
+        print("ERROR TEST CORREO:", str(error))
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo enviar el correo de prueba.",
+            "error": str(error),
+            "smtp_host": SMTP_HOST,
+            "smtp_port": SMTP_PORT,
+            "smtp_user_configurado": bool(SMTP_USER),
+            "smtp_password_configurado": bool(SMTP_PASSWORD),
+            "smtp_from": SMTP_FROM
         }), 500
 
 
@@ -2249,6 +2321,10 @@ def obtener_solicitud_admin(solicitud_id):
     try:
         cursor = conexion.cursor(dictionary=True)
 
+        # =====================================================
+        # obtener datos principales de la solicitud
+        # =====================================================
+
         sql_solicitud = """
             select
                 id,
@@ -2292,6 +2368,10 @@ def obtener_solicitud_admin(solicitud_id):
         solicitud["created_at"] = serializar_fecha(solicitud["created_at"])
         solicitud["updated_at"] = serializar_fecha(solicitud["updated_at"])
 
+        # =====================================================
+        # obtener páginas web solicitadas
+        # =====================================================
+
         sql_paginas = """
             select
                 id,
@@ -2306,19 +2386,99 @@ def obtener_solicitud_admin(solicitud_id):
         cursor.execute(sql_paginas, (solicitud_id,))
         paginas_web = cursor.fetchall()
 
+        # =====================================================
+        # obtener documentos cargados de la solicitud
+        # =====================================================
+
+        sql_documentos = """
+            select
+                id,
+                solicitud_id,
+                etapa,
+                rol_firmante,
+                usuario_id,
+                tipo_documento,
+                nombre_archivo,
+                ruta_archivo,
+                mime_type,
+                firmado,
+                firma_validada,
+                observacion,
+                created_at,
+                updated_at
+            from solicitud_documentos
+            where solicitud_id = %s
+            order by id desc;
+        """
+
+        cursor.execute(sql_documentos, (solicitud_id,))
+        documentos = cursor.fetchall()
+
+        for documento in documentos:
+            documento["created_at"] = serializar_fecha(documento["created_at"])
+            documento["updated_at"] = serializar_fecha(documento["updated_at"])
+
+        # =====================================================
+        # verificar si existe documento firmado cargado
+        # =====================================================
+
+        documento_firmado_cargado = any(
+            documento["firmado"] == 1 or
+            documento["firmado"] is True or
+            documento["firma_validada"] == 1 or
+            documento["firma_validada"] is True or
+            documento["tipo_documento"] in [
+                "pdf_firmado_manual",
+                "pdf_firmado_electronico",
+                "pdf_tics",
+                "pdf_final"
+            ]
+            for documento in documentos
+        )
+
+        documento_actual = documentos[0] if documentos else None
+
+        if documento_actual:
+            solicitud["documento_actual_id"] = documento_actual["id"]
+            solicitud["firma_actual_validada"] = documento_actual["firma_validada"]
+        else:
+            solicitud["documento_actual_id"] = None
+            solicitud["firma_actual_validada"] = False
+
         cursor.close()
         conexion.close()
 
         return jsonify({
             "estado": "ok",
             "solicitud": solicitud,
-            "paginas_web": paginas_web
+            "paginas_web": paginas_web,
+            "documentos": documentos,
+            "documento_firmado_cargado": documento_firmado_cargado
         }), 200
 
     except Error as error:
+        try:
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
         return jsonify({
             "estado": "error",
             "mensaje": "error al obtener la solicitud.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        try:
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al obtener la solicitud.",
             "error": str(error)
         }), 500
 
@@ -2586,6 +2746,149 @@ def subir_documento_firmado(solicitud_id):
             "mensaje": "error inesperado al subir el documento.",
             "error": str(error)
         }), 500
+    # =====================================================
+# descargar último documento firmado de la solicitud
+# =====================================================
+
+@app.route("/api/admin/solicitudes/<int:solicitud_id>/documento-actual", methods=["GET"])
+@token_requerido
+@roles_permitidos("administrador", "jefe_inmediato", "maxima_autoridad", "analista_tics")
+def descargar_documento_actual_solicitud(solicitud_id):
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        # =====================================================
+        # verificar que exista la solicitud
+        # =====================================================
+
+        cursor.execute("""
+            select
+                id,
+                codigo_solicitud,
+                estado,
+                etapa_actual
+            from solicitudes
+            where id = %s
+            limit 1;
+        """, (solicitud_id,))
+
+        solicitud = cursor.fetchone()
+
+        if solicitud is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "solicitud no encontrada."
+            }), 404
+
+        # =====================================================
+        # buscar el último pdf firmado cargado
+        # =====================================================
+
+        cursor.execute("""
+            select
+                id,
+                solicitud_id,
+                etapa,
+                rol_firmante,
+                usuario_id,
+                tipo_documento,
+                nombre_archivo,
+                ruta_archivo,
+                mime_type,
+                firmado,
+                firma_validada,
+                observacion,
+                created_at,
+                updated_at
+            from solicitud_documentos
+            where solicitud_id = %s
+              and ruta_archivo is not null
+              and ruta_archivo <> ''
+              and mime_type = 'application/pdf'
+              and tipo_documento in (
+                'pdf_firmado_manual',
+                'pdf_firmado_electronico',
+                'pdf_tics',
+                'pdf_final'
+              )
+            order by id desc
+            limit 1;
+        """, (solicitud_id,))
+
+        documento = cursor.fetchone()
+
+        cursor.close()
+        conexion.close()
+
+        if documento is None:
+            return jsonify({
+                "estado": "error",
+                "mensaje": "todavía no existe un PDF firmado cargado para esta solicitud."
+            }), 404
+
+        ruta_archivo = documento.get("ruta_archivo")
+
+        if not ruta_archivo:
+            return jsonify({
+                "estado": "error",
+                "mensaje": "el documento no tiene ruta registrada."
+            }), 404
+
+        ruta_archivo = os.path.normpath(ruta_archivo)
+
+        if not os.path.exists(ruta_archivo):
+            return jsonify({
+                "estado": "error",
+                "mensaje": "el archivo firmado no existe físicamente en el servidor.",
+                "ruta_archivo": ruta_archivo
+            }), 404
+
+        nombre_descarga = documento.get("nombre_archivo") or f"{solicitud['codigo_solicitud']}-firmado.pdf"
+
+        return send_file(
+            ruta_archivo,
+            mimetype=documento.get("mime_type") or "application/pdf",
+            as_attachment=True,
+            download_name=nombre_descarga
+        )
+
+    except Error as error:
+        try:
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al descargar el documento firmado.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        try:
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al descargar el documento firmado.",
+            "error": str(error)
+        }), 500
+    
 
 # =====================================================
 # aprobación de solicitud
@@ -2617,6 +2920,9 @@ def aprobar_solicitud(solicitud_id):
             select
                 id,
                 codigo_solicitud,
+                nombres_completos,
+                cedula,
+                correo_institucional,
                 estado,
                 etapa_actual,
                 bloqueada
@@ -2667,14 +2973,6 @@ def aprobar_solicitud(solicitud_id):
 
         # =====================================================
         # Validar documento firmado obligatorio
-        # =====================================================
-        # Regla:
-        # No se puede aprobar si no existe:
-        # - PDF firmado manualmente
-        # - PDF firmado electrónicamente
-        # - PDF TICS
-        # - PDF final
-        # - o registro con firmado/firma_validada = 1
         # =====================================================
 
         cursor.execute("""
@@ -2738,6 +3036,10 @@ def aprobar_solicitud(solicitud_id):
         cursor.close()
         conexion.close()
 
+        # =====================================================
+        # Auditoría
+        # =====================================================
+
         registrar_auditoria(
             usuario_id=usuario_actual["id"],
             solicitud_id=solicitud_id,
@@ -2757,12 +3059,82 @@ def aprobar_solicitud(solicitud_id):
             }
         )
 
+        # =====================================================
+        # Correo al solicitante cuando TICS finaliza todo
+        # =====================================================
+
+        correo_enviado = False
+        error_correo = None
+
+        if (
+            rol_actual == "analista_tics"
+            and estado_anterior == "pendiente_ejecucion_tics"
+            and nuevo_estado == "finalizada"
+        ):
+            try:
+                enviar_correo_finalizacion_solicitud(solicitud)
+                correo_enviado = True
+
+                registrar_auditoria(
+                    usuario_id=usuario_actual["id"],
+                    solicitud_id=solicitud_id,
+                    modulo="correo",
+                    accion="enviar_correo_finalizacion",
+                    descripcion=f"correo de finalización enviado a {solicitud['correo_institucional']}",
+                    datos_anteriores=None,
+                    datos_nuevos={
+                        "correo_destino": solicitud["correo_institucional"],
+                        "codigo_solicitud": solicitud["codigo_solicitud"],
+                        "estado": nuevo_estado
+                    }
+                )
+
+            except Exception as error:
+                correo_enviado = False
+                error_correo = str(error)
+
+                registrar_auditoria(
+                    usuario_id=usuario_actual["id"],
+                    solicitud_id=solicitud_id,
+                    modulo="correo",
+                    accion="error_correo_finalizacion",
+                    descripcion=f"no se pudo enviar correo de finalización a {solicitud['correo_institucional']}",
+                    datos_anteriores=None,
+                    datos_nuevos={
+                        "correo_destino": solicitud["correo_institucional"],
+                        "codigo_solicitud": solicitud["codigo_solicitud"],
+                        "error": error_correo
+                    }
+                )
+
+        mensaje_respuesta = "solicitud aprobada correctamente."
+
+        if (
+            rol_actual == "analista_tics"
+            and estado_anterior == "pendiente_tics"
+            and nuevo_estado == "pendiente_ejecucion_tics"
+        ):
+            mensaje_respuesta = "validación TICS aprobada correctamente. la solicitud pasa a ejecución técnica."
+
+        if (
+            rol_actual == "analista_tics"
+            and estado_anterior == "pendiente_ejecucion_tics"
+            and nuevo_estado == "finalizada"
+        ):
+            if correo_enviado:
+                mensaje_respuesta = "la solicitud fue finalizada correctamente por TICS y se notificó al solicitante."
+            else:
+                mensaje_respuesta = "la solicitud fue finalizada correctamente por TICS, pero no se pudo enviar el correo al solicitante."
+
         return jsonify({
             "estado": "ok",
-            "mensaje": "solicitud aprobada correctamente.",
+            "mensaje": mensaje_respuesta,
+            "correo_enviado": correo_enviado,
+            "error_correo": error_correo,
             "solicitud": {
                 "id": solicitud_id,
                 "codigo_solicitud": solicitud["codigo_solicitud"],
+                "correo_destino": solicitud.get("correo_institucional"),
                 "estado_anterior": estado_anterior,
                 "estado_actual": nuevo_estado,
                 "etapa_actual": nueva_etapa,
@@ -2921,6 +3293,44 @@ Sistema de Gestión de Solicitudes de Liberación Web - INAMHI
     except Exception as error:
         print("error al enviar correo de rechazo:", error)
         return False
+# =====================================================
+# correo de finalización / aprobación total de solicitud
+# =====================================================
+
+def enviar_correo_finalizacion_solicitud(solicitud):
+    destinatario = limpiar_texto(solicitud.get("correo_institucional")).lower()
+    codigo_solicitud = solicitud.get("codigo_solicitud")
+    nombres = solicitud.get("nombres_completos") or "usuario/a"
+
+    print("==============================================")
+    print("INTENTANDO ENVIAR CORREO DE FINALIZACIÓN")
+    print("DESTINATARIO:", destinatario)
+    print("CÓDIGO:", codigo_solicitud)
+    print("==============================================")
+
+    if not destinatario:
+        raise Exception("la solicitud no tiene correo institucional registrado.")
+
+    asunto = f"Solicitud de Liberación Web finalizada - {codigo_solicitud}"
+
+    cuerpo = f"""
+Estimado/a {nombres},
+
+Su solicitud de Liberación Web con código {codigo_solicitud} ha sido aprobada y finalizada correctamente por la Unidad de Tecnologías de la Información.
+
+El proceso de revisión, aprobación y ejecución técnica ha concluido satisfactoriamente.
+
+Estado actual: Finalizada
+
+Atentamente,
+Sistema de Liberación Web - INAMHI
+"""
+
+    enviar_correo(
+        destinatario=destinatario,
+        asunto=asunto,
+        cuerpo=cuerpo
+    )
 # =====================================================
 # rechazo de solicitud
 # =====================================================
@@ -3130,6 +3540,12 @@ def rechazar_solicitud(solicitud_id):
                 motivo=motivo,
                 rol_rechazo=rol_actual
             )
+            print("==============================================")
+            print("RESULTADO CORREO DE RECHAZO")
+            print("DESTINATARIO:", solicitud.get("correo_institucional"))
+            print("CORREO ENVIADO:", correo_enviado)
+            print("ERROR CORREO:", error_correo)
+            print("==============================================")
         except Exception as error_email:
             correo_enviado = False
             error_correo = str(error_email)

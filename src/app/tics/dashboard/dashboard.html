@@ -1,9 +1,9 @@
 <section class="dashboard-page">
   <aside class="sidebar">
     <div class="brand">
-        <div class="logo-box">
-  <i class="bi bi-cpu-fill"></i>
-</div>
+      <div class="logo-box">
+        <i class="bi bi-cpu-fill"></i>
+      </div>
 
       <div>
         <h2>TICS</h2>
@@ -148,7 +148,7 @@
               <th>Dependencia</th>
               <th>Área / Unidad</th>
               <th>Estado</th>
-              <th>Fecha</th>
+              <th>Fecha y hora</th>
               <th class="actions-col">Acciones</th>
             </tr>
           </thead>
@@ -187,18 +187,26 @@
                 </span>
               </td>
 
-              <td>
-                {{ solicitud.fecha_solicitud }}
+              <td class="date-cell">
+                <div class="date-wrapper">
+                  <strong class="date-text">
+                    {{ formatearFecha(solicitud.created_at) }}
+                  </strong>
+
+                  <span class="time-text">
+                    <i class="bi bi-clock-fill"></i>
+                    {{ formatearHora(solicitud.created_at) }}
+                  </span>
+                </div>
               </td>
 
               <td class="actions-cell">
-                <button
-                  type="button"
+                <a
                   class="detail-btn"
-                  (click)="verDetalle(solicitud.id)"
+                  [routerLink]="['/tics/solicitudes', solicitud.id]"
                 >
                   Revisar
-                </button>
+                </a>
 
                 <button
                   type="button"

@@ -96,34 +96,53 @@ export class Reportes implements OnInit {
         ? solicitud.estado === this.filtroEstado
         : true;
 
-      const contenido = `
-        ${solicitud.codigo_solicitud}
-        ${solicitud.nombres_completos}
-        ${solicitud.cedula}
-        ${solicitud.correo_institucional}
-        ${solicitud.dependencia}
-        ${solicitud.area_unidad}
-        ${solicitud.estado}
-      `.toLowerCase();
-
-      const coincideBusqueda = texto
-        ? contenido.includes(texto)
+      const coincideTexto = texto
+        ? this.obtenerTextoBusqueda(solicitud).includes(texto)
         : true;
 
-      const fechaSolicitud = String(solicitud.fecha_solicitud || '').slice(0, 10);
+      /*
+        Usamos created_at porque contiene fecha y hora real.
+        fecha_solicitud normalmente puede venir como 2026-05-13 00:00:00.
+      */
+      const coincideFecha = this.validarFecha(solicitud.created_at);
 
-      const coincideFechaDesde = this.fechaDesde
-        ? fechaSolicitud >= this.fechaDesde
-        : true;
-
-      const coincideFechaHasta = this.fechaHasta
-        ? fechaSolicitud <= this.fechaHasta
-        : true;
-
-      return coincideEstado && coincideBusqueda && coincideFechaDesde && coincideFechaHasta;
+      return coincideEstado && coincideTexto && coincideFecha;
     });
 
     this.calcularResumen();
+  }
+
+  obtenerTextoBusqueda(solicitud: SolicitudAdmin): string {
+    return `
+      ${solicitud.codigo_solicitud || ''}
+      ${solicitud.nombres_completos || ''}
+      ${solicitud.cedula || ''}
+      ${solicitud.correo_institucional || ''}
+      ${solicitud.dependencia || ''}
+      ${solicitud.area_unidad || ''}
+      ${solicitud.cargo || ''}
+      ${solicitud.estado || ''}
+      ${solicitud.etapa_actual || ''}
+      ${solicitud.created_at || ''}
+    `.toLowerCase();
+  }
+
+  validarFecha(fechaSolicitud: string | null | undefined): boolean {
+    const fecha = String(fechaSolicitud || '').slice(0, 10);
+
+    if (!fecha) {
+      return true;
+    }
+
+    if (this.fechaDesde && fecha < this.fechaDesde) {
+      return false;
+    }
+
+    if (this.fechaHasta && fecha > this.fechaHasta) {
+      return false;
+    }
+
+    return true;
   }
 
   calcularResumen(): void {
@@ -154,10 +173,6 @@ export class Reportes implements OnInit {
     this.aplicarFiltros();
   }
 
-  imprimir(): void {
-    window.print();
-  }
-
   exportarCsv(): void {
     if (this.solicitudesFiltradas.length === 0) {
       this.error = 'No existen datos para exportar.';
@@ -170,27 +185,37 @@ export class Reportes implements OnInit {
       'Cédula',
       'Correo',
       'Dependencia',
-      'Área',
-      'Estado',
-      'Fecha'
+      'Área / Unidad',
+      'Cargo',
+      'Fecha',
+      'Hora',
+      'Fecha y hora completa',
+      'Estado'
     ];
 
-    const filas = this.solicitudesFiltradas.map((s) => [
-      s.codigo_solicitud,
-      s.nombres_completos,
-      s.cedula,
-      s.correo_institucional,
-      s.dependencia,
-      s.area_unidad,
-      this.getEstadoTexto(s.estado),
-      s.fecha_solicitud
+    const filas = this.solicitudesFiltradas.map((solicitud) => [
+      solicitud.codigo_solicitud,
+      solicitud.nombres_completos,
+      solicitud.cedula,
+      solicitud.correo_institucional,
+      solicitud.dependencia,
+      solicitud.area_unidad,
+      solicitud.cargo,
+      this.formatearFecha(solicitud.created_at),
+      this.formatearHora(solicitud.created_at),
+      this.formatearFechaHora(solicitud.created_at),
+      this.getEstadoTexto(solicitud.estado)
     ]);
 
     const contenido = [
       encabezados,
       ...filas
     ]
-      .map(fila => fila.map(valor => `"${String(valor || '').replace(/"/g, '""')}"`).join(';'))
+      .map((fila) =>
+        fila
+          .map((valor) => `"${String(valor || '').replace(/"/g, '""')}"`)
+          .join(';')
+      )
       .join('\n');
 
     const blob = new Blob(['\ufeff' + contenido], {
@@ -199,12 +224,76 @@ export class Reportes implements OnInit {
 
     const url = window.URL.createObjectURL(blob);
     const enlace = document.createElement('a');
+    const fechaActual = new Date().toISOString().slice(0, 10);
 
     enlace.href = url;
-    enlace.download = `reporte-tics-${new Date().toISOString().slice(0, 10)}.csv`;
+    enlace.download = `reporte-tics-${fechaActual}.csv`;
     enlace.click();
 
     window.URL.revokeObjectURL(url);
+  }
+
+  imprimir(): void {
+    window.print();
+  }
+
+  formatearFecha(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return 'Sin fecha';
+    }
+
+    const textoFecha = String(fecha);
+
+    if (textoFecha.includes(' ')) {
+      const [soloFecha] = textoFecha.split(' ');
+      return soloFecha;
+    }
+
+    const fechaObj = new Date(textoFecha);
+
+    if (Number.isNaN(fechaObj.getTime())) {
+      return textoFecha.slice(0, 10);
+    }
+
+    return fechaObj.toLocaleDateString('es-EC', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  }
+
+  formatearHora(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return 'Sin hora';
+    }
+
+    const textoFecha = String(fecha);
+
+    if (textoFecha.includes(' ')) {
+      const partes = textoFecha.split(' ');
+      return partes[1] || 'Sin hora';
+    }
+
+    const fechaObj = new Date(textoFecha);
+
+    if (Number.isNaN(fechaObj.getTime())) {
+      return 'Sin hora';
+    }
+
+    return fechaObj.toLocaleTimeString('es-EC', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  }
+
+  formatearFechaHora(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return 'Sin fecha y hora';
+    }
+
+    return `${this.formatearFecha(fecha)} ${this.formatearHora(fecha)}`;
   }
 
   getEstadoTexto(estado: string): string {
@@ -219,6 +308,10 @@ export class Reportes implements OnInit {
   }
 
   getEstadoClase(estado: string): string {
+    if (!estado) {
+      return 'normal';
+    }
+
     if (estado === 'pendiente_tics') {
       return 'pendiente';
     }
@@ -233,6 +326,10 @@ export class Reportes implements OnInit {
 
     if (estado === 'rechazada_tics') {
       return 'rechazada';
+    }
+
+    if (estado.includes('rechazada')) {
+      return 'rechazada-secundaria';
     }
 
     return 'normal';

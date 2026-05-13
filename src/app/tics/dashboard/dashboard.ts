@@ -3,7 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import Swal from 'sweetalert2';
 
-import { AuthService } from '../../services/auth.service';
+import { AuthService, UsuarioLogin } from '../../services/auth.service';
 import {
   SolicitudAdmin,
   SolicitudesAdminService
@@ -22,19 +22,9 @@ import {
 })
 export class TicsDashboard implements OnInit {
 
-  /*
-    solicitudes:
-    Solo se usan para la tabla principal del dashboard.
-    Aquí deben aparecer únicamente las solicitudes que TICS debe atender.
-  */
-  solicitudes: SolicitudAdmin[] = [];
+  usuario: UsuarioLogin | null = null;
 
-  /*
-    solicitudesTics:
-    Se usa internamente para calcular estadísticas generales de TICS:
-    pendientes, en ejecución, finalizadas y rechazadas.
-  */
-  private solicitudesTics: SolicitudAdmin[] = [];
+  solicitudes: SolicitudAdmin[] = [];
 
   cargando = false;
   error = '';
@@ -51,27 +41,13 @@ export class TicsDashboard implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.usuario = this.authService.getUsuario();
     this.cargarSolicitudesTics();
   }
 
   cargarSolicitudesTics(): void {
     this.cargando = true;
     this.error = '';
-
-    /*
-      Flujo TICS:
-      - pendiente_tics:
-        TICS debe revisar y validar técnicamente.
-
-      - pendiente_ejecucion_tics:
-        TICS ya validó y debe ejecutar/finalizar el proceso.
-
-      - finalizada:
-        Solicitud cerrada correctamente por TICS.
-
-      - rechazada_tics:
-        Solicitud rechazada por TICS.
-    */
 
     this.solicitudesService.listarSolicitudes().subscribe({
       next: (response) => {
@@ -80,32 +56,20 @@ export class TicsDashboard implements OnInit {
         const solicitudes = response.solicitudes || [];
 
         /*
-          Todas las solicitudes relacionadas con TICS.
-          Sirven para estadísticas.
+          TICS solo debe ver solicitudes que están en etapa técnica:
+          - pendiente_tics
+          - pendiente_ejecucion_tics
         */
-        this.solicitudesTics = solicitudes.filter((solicitud) =>
-          [
-            'pendiente_tics',
-            'pendiente_ejecucion_tics',
-            'finalizada',
-            'rechazada_tics'
-          ].includes(solicitud.estado)
-        );
-
-        /*
-          Solo las solicitudes activas que TICS debe trabajar.
-          Estas son las que se muestran en la tabla del dashboard.
-        */
-        this.solicitudes = this.solicitudesTics.filter((solicitud) =>
+        this.solicitudes = solicitudes.filter((solicitud) =>
           [
             'pendiente_tics',
             'pendiente_ejecucion_tics'
           ].includes(solicitud.estado)
         );
 
-        this.calcularResumen();
+        this.calcularResumen(solicitudes);
       },
-      error: (err) => {
+      error: (err: any) => {
         this.cargando = false;
 
         if (err.status === 401 || err.status === 403) {
@@ -114,51 +78,65 @@ export class TicsDashboard implements OnInit {
           return;
         }
 
-        this.error = err.error?.mensaje || 'No se pudieron cargar las solicitudes de TICS.';
+        this.error = err.error?.mensaje || 'No se pudieron cargar las solicitudes asignadas a TICS.';
       }
     });
   }
 
-  calcularResumen(): void {
-    this.totalPendientes = this.solicitudesTics.filter(
+  calcularResumen(solicitudes: SolicitudAdmin[]): void {
+    this.totalPendientes = solicitudes.filter(
       solicitud => solicitud.estado === 'pendiente_tics'
     ).length;
 
-    this.totalEjecucion = this.solicitudesTics.filter(
+    this.totalEjecucion = solicitudes.filter(
       solicitud => solicitud.estado === 'pendiente_ejecucion_tics'
     ).length;
 
-    this.totalFinalizadas = this.solicitudesTics.filter(
+    this.totalFinalizadas = solicitudes.filter(
       solicitud => solicitud.estado === 'finalizada'
     ).length;
 
-    this.totalRechazadas = this.solicitudesTics.filter(
+    this.totalRechazadas = solicitudes.filter(
       solicitud => solicitud.estado === 'rechazada_tics'
     ).length;
   }
 
   verDetalle(id: number): void {
     /*
-      Por ahora reutilizamos el detalle general de solicitudes.
-      La seguridad real la controla el backend con token y rol.
+      TICS NO debe ir a /admin/solicitudes/:id.
+      Debe usar su propia ruta protegida.
     */
-    this.router.navigate(['/admin/solicitudes', id]);
+    this.router.navigate(['/tics/solicitudes', id]);
   }
 
   descargarPdf(solicitud: SolicitudAdmin): void {
+    if (!solicitud?.id) {
+      return;
+    }
+
     this.solicitudesService.descargarPdfSolicitud(solicitud.id).subscribe({
-      next: (blob) => {
+      next: (blob: Blob) => {
         const archivo = new Blob([blob], { type: 'application/pdf' });
         const url = window.URL.createObjectURL(archivo);
         const enlace = document.createElement('a');
 
         enlace.href = url;
-        enlace.download = `${solicitud.codigo_solicitud || 'solicitud-tics'}.pdf`;
+        enlace.download = `${solicitud.codigo_solicitud || 'solicitud-inamhi'}.pdf`;
         enlace.click();
 
         window.URL.revokeObjectURL(url);
+
+        Swal.fire({
+          title: 'PDF descargado',
+          text: 'El documento PDF se descargó correctamente.',
+          icon: 'success',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#0284c7',
+          background: '#ffffff',
+          color: '#0f172a'
+        });
       },
-      error: (err) => {
+      error: (err: any) => {
         if (err.status === 401 || err.status === 403) {
           this.authService.logout();
           this.router.navigate(['/auth/login']);
@@ -167,7 +145,7 @@ export class TicsDashboard implements OnInit {
 
         Swal.fire({
           title: 'No se pudo descargar',
-          text: 'No se pudo generar o descargar el PDF de la solicitud.',
+          text: err.error?.mensaje || 'No se pudo generar o descargar el PDF de la solicitud.',
           icon: 'error',
           confirmButtonText: 'Entendido',
           confirmButtonColor: '#dc2626',
@@ -175,6 +153,57 @@ export class TicsDashboard implements OnInit {
           color: '#0f172a'
         });
       }
+    });
+  }
+
+  formatearFecha(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return 'Sin fecha';
+    }
+
+    const textoFecha = String(fecha);
+
+    if (textoFecha.includes(' ')) {
+      const [soloFecha] = textoFecha.split(' ');
+      return soloFecha;
+    }
+
+    const fechaObj = new Date(textoFecha);
+
+    if (Number.isNaN(fechaObj.getTime())) {
+      return textoFecha.slice(0, 10);
+    }
+
+    return fechaObj.toLocaleDateString('es-EC', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  }
+
+  formatearHora(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return 'Sin hora';
+    }
+
+    const textoFecha = String(fecha);
+
+    if (textoFecha.includes(' ')) {
+      const partes = textoFecha.split(' ');
+      return partes[1] || 'Sin hora';
+    }
+
+    const fechaObj = new Date(textoFecha);
+
+    if (Number.isNaN(fechaObj.getTime())) {
+      return 'Sin hora';
+    }
+
+    return fechaObj.toLocaleTimeString('es-EC', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
     });
   }
 
@@ -190,6 +219,10 @@ export class TicsDashboard implements OnInit {
   }
 
   getEstadoClase(estado: string): string {
+    if (!estado) {
+      return 'normal';
+    }
+
     if (estado === 'pendiente_tics') {
       return 'pendiente';
     }
@@ -204,6 +237,10 @@ export class TicsDashboard implements OnInit {
 
     if (estado === 'rechazada_tics') {
       return 'rechazada';
+    }
+
+    if (estado.includes('rechazada')) {
+      return 'rechazada-secundaria';
     }
 
     return 'normal';

@@ -1,9 +1,9 @@
 <section class="role-layout">
   <aside class="sidebar no-print">
     <div class="brand">
-   <div class="logo-box">
-  <i class="bi bi-shield-check"></i>
-</div>
+      <div class="logo-box">
+        <i class="bi bi-shield-check"></i>
+      </div>
 
       <div>
         <h2>INAMHI</h2>
@@ -20,17 +20,11 @@
         Solicitudes asignadas
       </a>
 
-      <a
-        routerLink="/autoridad/historial"
-        routerLinkActive="active"
-      >
+      <a routerLink="/autoridad/historial" routerLinkActive="active">
         Historial
       </a>
 
-      <a
-        routerLink="/autoridad/reportes"
-        routerLinkActive="active"
-      >
+      <a routerLink="/autoridad/reportes" routerLinkActive="active">
         Reportes
       </a>
     </nav>
@@ -48,8 +42,8 @@
         <h1>Reporte de solicitudes</h1>
 
         <p>
-          Consulte las solicitudes revisadas dentro de la etapa de máxima autoridad,
-          incluyendo aprobaciones enviadas a TICS, finalizadas y rechazadas.
+          Consulte, filtre e imprima el reporte de solicitudes relacionadas con
+          la aprobación de máxima autoridad.
         </p>
       </div>
 
@@ -59,22 +53,99 @@
       </div>
     </header>
 
-    <section class="print-header only-print">
+    <section class="print-title only-print">
       <h1>Reporte de solicitudes - Máxima autoridad</h1>
-      <p>INAMHI - Sistema de Gestión de Solicitudes de Liberación Web</p>
-      <span>Generado desde el panel de máxima autoridad</span>
+      <p>INAMHI - Sistema de Liberación Web</p>
     </section>
 
-    <section class="summary-card autoridad">
-      <div>
-        <span>Total solicitudes</span>
-        <strong>{{ solicitudes.length }}</strong>
-        <p>Registros considerados para el reporte de máxima autoridad.</p>
+    <section class="stats-grid">
+      <article class="stat-card total">
+        <span>Total</span>
+        <strong>{{ total }}</strong>
+        <p>Solicitudes en el reporte.</p>
+      </article>
+
+      <article class="stat-card pendiente">
+        <span>Pendientes</span>
+        <strong>{{ pendientes }}</strong>
+        <p>Pendientes de aprobación.</p>
+      </article>
+
+      <article class="stat-card aprobada">
+        <span>Aprobadas</span>
+        <strong>{{ aprobadas }}</strong>
+        <p>Enviadas a la etapa TICS.</p>
+      </article>
+
+      <article class="stat-card rechazada">
+        <span>Rechazadas</span>
+        <strong>{{ rechazadas }}</strong>
+        <p>Rechazadas por máxima autoridad.</p>
+      </article>
+    </section>
+
+    <section class="panel no-print">
+      <div class="panel-header">
+        <div>
+          <h2>Filtros del reporte</h2>
+          <p>Filtre por texto, estado o rango de fechas.</p>
+        </div>
+
+        <button
+          type="button"
+          class="refresh-btn"
+          (click)="cargarReporte()"
+          [disabled]="cargando"
+        >
+          {{ cargando ? 'Cargando...' : 'Actualizar' }}
+        </button>
       </div>
 
-      <button type="button" (click)="imprimir()">
-        Imprimir reporte
-      </button>
+      <div class="filters">
+        <input
+          type="text"
+          [(ngModel)]="busqueda"
+          (input)="aplicarFiltros()"
+          placeholder="Buscar por código, nombre, cédula o correo..."
+        />
+
+        <select [(ngModel)]="filtroEstado" (change)="aplicarFiltros()">
+          <option value="">Todos los estados</option>
+          <option value="pendiente_maxima_autoridad">
+            Pendiente máxima autoridad
+          </option>
+          <option value="pendiente_tics">
+            Aprobada por máxima autoridad
+          </option>
+          <option value="pendiente_ejecucion_tics">
+            En ejecución TICS
+          </option>
+          <option value="finalizada">
+            Finalizada
+          </option>
+          <option value="rechazada_maxima_autoridad">
+            Rechazada por máxima autoridad
+          </option>
+        </select>
+
+        <input
+          type="date"
+          [(ngModel)]="fechaDesde"
+          (change)="aplicarFiltros()"
+        />
+
+        <input
+          type="date"
+          [(ngModel)]="fechaHasta"
+          (change)="aplicarFiltros()"
+        />
+      </div>
+
+      <div class="actions">
+        <button type="button" class="clear-btn" (click)="limpiarFiltros()">
+          Limpiar filtros
+        </button>
+      </div>
     </section>
 
     <section class="panel">
@@ -82,21 +153,30 @@
         <div>
           <h2>Detalle del reporte</h2>
           <p>
-            Solicitudes aprobadas por máxima autoridad, enviadas a TICS,
-            finalizadas o rechazadas dentro del flujo institucional.
+            Mostrando {{ solicitudesFiltradas.length }} de {{ solicitudes.length }} solicitudes.
           </p>
         </div>
       </div>
 
       <div class="loading" *ngIf="cargando">
-        Cargando reporte de máxima autoridad...
+        Cargando reporte...
       </div>
 
       <div class="error-box" *ngIf="error">
         {{ error }}
       </div>
 
-      <div class="table-wrapper" *ngIf="!cargando && !error">
+      <div
+        class="empty-box"
+        *ngIf="!cargando && !error && solicitudesFiltradas.length === 0"
+      >
+        No existen solicitudes para los filtros seleccionados.
+      </div>
+
+      <div
+        class="table-wrapper"
+        *ngIf="!cargando && !error && solicitudesFiltradas.length > 0"
+      >
         <table>
           <thead>
             <tr>
@@ -106,43 +186,43 @@
               <th>Correo</th>
               <th>Área / Unidad</th>
               <th>Estado</th>
+              <th>Fecha y hora</th>
             </tr>
           </thead>
 
           <tbody>
-            <tr *ngFor="let solicitud of solicitudes">
+            <tr *ngFor="let solicitud of solicitudesFiltradas">
               <td>
                 <strong class="code">
                   {{ solicitud.codigo_solicitud }}
                 </strong>
               </td>
 
-              <td>
-                {{ solicitud.nombres_completos }}
-              </td>
+              <td>{{ solicitud.nombres_completos }}</td>
+              <td>{{ solicitud.cedula }}</td>
+              <td>{{ solicitud.correo_institucional }}</td>
+              <td>{{ solicitud.area_unidad }}</td>
 
               <td>
-                {{ solicitud.cedula }}
-              </td>
-
-              <td>
-                {{ solicitud.correo_institucional }}
-              </td>
-
-              <td>
-                {{ solicitud.area_unidad }}
-              </td>
-
-              <td>
-                <span class="status">
+                <span
+                  class="status"
+                  [ngClass]="getEstadoClase(solicitud.estado)"
+                >
                   {{ getEstadoTexto(solicitud.estado) }}
                 </span>
               </td>
-            </tr>
 
-            <tr *ngIf="solicitudes.length === 0">
-              <td colspan="6" class="empty">
-                No existen datos para mostrar en el reporte.
+              <td class="date-cell">
+                <div class="date-wrapper">
+                  <strong class="date-text">
+                    {{ formatearFecha(solicitud.created_at) }}
+                  </strong>
+
+                  <span class="time-text">
+                    <i class="bi bi-clock-fill"></i>
+                    {{ formatearHora(solicitud.created_at) }}
+                  </span>
+                </div>
               </td>
             </tr>
           </tbody>

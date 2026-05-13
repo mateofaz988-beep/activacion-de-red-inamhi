@@ -1,9 +1,9 @@
 <section class="jefe-layout">
   <aside class="sidebar no-print">
     <div class="brand">
-     <div class="logo-box">
-  <i class="bi bi-person-check-fill"></i>
-</div>
+      <div class="logo-box">
+        <i class="bi bi-person-check-fill"></i>
+      </div>
 
       <div>
         <h2>INAMHI</h2>
@@ -40,7 +40,8 @@
         <span class="eyebrow">Reportes del jefe inmediato</span>
         <h1>Reporte de solicitudes</h1>
         <p>
-          Consulte, filtre, exporte e imprima el reporte de solicitudes relacionadas con la revisión del jefe inmediato.
+          Consulte, filtre, exporte e imprima el reporte de solicitudes relacionadas
+          con la revisión del jefe inmediato.
         </p>
       </div>
 
@@ -131,10 +132,6 @@
         <button type="button" class="clear-btn" (click)="limpiarFiltros()">
           Limpiar filtros
         </button>
-
-        
-
-       
       </div>
     </section>
 
@@ -176,7 +173,7 @@
               <th>Correo</th>
               <th>Área / Unidad</th>
               <th>Estado</th>
-              <th>Fecha</th>
+              <th>Fecha y hora</th>
             </tr>
           </thead>
 
@@ -197,7 +194,10 @@
                 </span>
               </td>
 
-              <td>{{ solicitud.fecha_solicitud }}</td>
+              <td class="date-cell">
+  <strong>{{ formatearFecha(solicitud.created_at) }}</strong>
+  <span class="time-text">{{ formatearHora(solicitud.created_at) }}</span>
+</td>
             </tr>
           </tbody>
         </table>
