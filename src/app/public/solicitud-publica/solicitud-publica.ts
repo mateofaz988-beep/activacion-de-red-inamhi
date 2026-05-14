@@ -25,7 +25,7 @@ import { RouterLink } from '@angular/router';
 })
 export class SolicitudPublica implements OnInit {
 
-  private readonly API_URL = 'http://127.0.0.1:5050/api/public/solicitudes';
+  private readonly API_URL = 'http://10.0.5.120:5050/api/public/solicitudes';
 
   formulario!: FormGroup;
 

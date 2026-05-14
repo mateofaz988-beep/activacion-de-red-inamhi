@@ -195,7 +195,6 @@
 
           <!-- =====================================================
                TICS: APROBAR VALIDACIÓN TÉCNICA
-               Estado requerido: pendiente_tics
           ====================================================== -->
           <button
             *ngIf="esTics()"
@@ -210,7 +209,6 @@
 
           <!-- =====================================================
                TICS: FINALIZAR PROCESO
-               Estado requerido: pendiente_ejecucion_tics
           ====================================================== -->
           <button
             *ngIf="esTics()"
@@ -267,9 +265,8 @@
             <h3>Gestión de documentos y firmas</h3>
 
             <p *ngIf="!estaFinalizada()">
-              Descargue el PDF generado para firmarlo o descargue el último PDF firmado
-              cargado por el rol anterior. Luego suba el documento firmado para continuar
-              con el flujo.
+              Descargue el PDF generado para firmarlo manualmente, o cargue una imagen
+              de firma electrónica para que el sistema la coloque automáticamente en el PDF.
             </p>
 
             <p *ngIf="estaFinalizada()">
@@ -330,12 +327,13 @@
             <h4>Firmar documento</h4>
 
             <p>
-              Firme el PDF manualmente o electrónicamente según corresponda.
-              El archivo firmado será el documento que revisará el siguiente rol.
+              Puede firmar el PDF manualmente y subirlo, o subir una imagen de firma
+              electrónica para que el sistema la inserte automáticamente en el PDF.
             </p>
 
             <div class="hint-box" *ngIf="!estaFinalizada()">
-              Luego escanee o guarde el PDF firmado para volver a cargarlo al sistema.
+              Para firma manual: descargue, firme, escanee y suba el PDF. Para firma electrónica:
+              cargue una imagen PNG, JPG o JPEG de la firma.
             </div>
 
             <div class="hint-box success" *ngIf="estaFinalizada()">
@@ -346,11 +344,11 @@
           <article class="flow-step">
             <div class="step-number">3</div>
 
-            <h4>Subir PDF firmado</h4>
+            <h4>Subir documento o firma</h4>
 
             <p>
-              Cargue nuevamente el PDF firmado. Este archivo permitirá continuar
-              con la aprobación de la solicitud.
+              Puede subir el PDF firmado manualmente o cargar una imagen de firma electrónica.
+              Si carga una imagen, el sistema la colocará automáticamente en el PDF.
             </p>
 
             <div class="upload-buttons">
@@ -373,7 +371,7 @@
 
               <input
                 type="file"
-                accept="application/pdf"
+                accept="image/png,image/jpeg"
                 #inputFirmaElectronica
                 hidden
                 (change)="seleccionarFirmaElectronica($event)"
@@ -385,14 +383,15 @@
                 (click)="inputFirmaElectronica.click()"
                 [disabled]="procesando || estaFinalizada()"
               >
-                Subir PDF firmado electrónicamente
+                Subir firma electrónica
               </button>
             </div>
           </article>
         </div>
 
         <div class="document-warning" *ngIf="!documentoFirmadoCargado && !estaFinalizada()">
-          Para continuar con el flujo primero debe subir un PDF firmado manualmente o electrónicamente.
+          Para continuar con el flujo primero debe subir un PDF firmado manualmente
+          o cargar una imagen de firma electrónica.
         </div>
 
         <div class="document-success" *ngIf="documentoFirmadoCargado && !estaFinalizada()">

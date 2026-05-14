@@ -1,1 +1,414 @@
-/* You can add global styles to this file, and also import other style files */
+/* =====================================================
+   ESTILOS GLOBALES - SISTEMA INAMHI
+===================================================== */
+
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+/* =====================================================
+   VARIABLES GLOBALES
+===================================================== */
+
+:root {
+  --inamhi-primary: #1d4ed8;
+  --inamhi-primary-dark: #0f3a78;
+  --inamhi-primary-light: #dbeafe;
+
+  --inamhi-secondary: #0284c7;
+  --inamhi-accent: #f7c948;
+  --inamhi-success: #16a34a;
+  --inamhi-warning: #d97706;
+  --inamhi-danger: #dc2626;
+
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-soft: #94a3b8;
+
+  --bg-main: #f8fafc;
+  --bg-soft: #eef4fb;
+  --bg-dark: #06121f;
+
+  --border-soft: #e2e8f0;
+  --border-medium: #cbd5e1;
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+
+  --shadow-soft: 0 14px 34px rgba(15, 23, 42, 0.08);
+  --shadow-card: 0 18px 45px rgba(15, 23, 42, 0.10);
+  --shadow-strong: 0 30px 90px rgba(15, 23, 42, 0.22);
+
+  --transition-fast: 0.18s ease;
+  --transition-normal: 0.25s ease;
+}
+
+/* =====================================================
+   RESET GENERAL
+===================================================== */
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* =====================================================
+   SELECCIÓN DE TEXTO
+===================================================== */
+
+::selection {
+  color: #ffffff;
+  background: var(--inamhi-primary);
+}
+
+/* =====================================================
+   SCROLLBAR MODERNO
+===================================================== */
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-track {
+  background: #eaf0f7;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--inamhi-primary), var(--inamhi-secondary));
+  border-radius: 999px;
+  border: 3px solid #eaf0f7;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #1e40af, #0369a1);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--inamhi-primary) #eaf0f7;
+}
+
+/* =====================================================
+   ENLACES
+===================================================== */
+
+a {
+  color: inherit;
+}
+
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* =====================================================
+   BOTONES BASE
+===================================================== */
+
+button {
+  font-family: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* =====================================================
+   INPUTS / SELECTS / TEXTAREAS BASE
+===================================================== */
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+input,
+select,
+textarea {
+  accent-color: var(--inamhi-primary);
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* =====================================================
+   FOCUS ACCESIBLE Y PROFESIONAL
+===================================================== */
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 3px;
+}
+
+/* =====================================================
+   IMÁGENES
+===================================================== */
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* =====================================================
+   UTILIDADES GLOBALES
+===================================================== */
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-success {
+  color: var(--inamhi-success);
+}
+
+.text-danger {
+  color: var(--inamhi-danger);
+}
+
+.text-warning {
+  color: var(--inamhi-warning);
+}
+
+.no-select {
+  user-select: none;
+}
+
+.no-scroll {
+  overflow: hidden;
+}
+
+.full-width {
+  width: 100%;
+}
+
+/* =====================================================
+   ANIMACIONES GLOBALES
+===================================================== */
+
+.fade-in {
+  animation: fadeIn 0.28s ease both;
+}
+
+.slide-up {
+  animation: slideUp 0.32s ease both;
+}
+
+.scale-in {
+  animation: scaleIn 0.24s ease both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* =====================================================
+   TARJETAS GLOBALES REUTILIZABLES
+===================================================== */
+
+.global-card {
+  background: #ffffff;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.global-glass-card {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(22px);
+  box-shadow: var(--shadow-strong);
+}
+
+/* =====================================================
+   ESTADOS GLOBALES
+===================================================== */
+
+.status-pill-global {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  padding: 8px 12px;
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.status-pill-global.success {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.status-pill-global.warning {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.status-pill-global.danger {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.status-pill-global.info {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+/* =====================================================
+   SWEETALERT2 MEJORADO
+===================================================== */
+
+.swal2-popup {
+  border-radius: 24px !important;
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif !important;
+  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.24) !important;
+}
+
+.swal2-title {
+  color: #0f172a !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.03em !important;
+}
+
+.swal2-html-container {
+  color: #475569 !important;
+  line-height: 1.6 !important;
+}
+
+.swal2-confirm,
+.swal2-cancel {
+  border-radius: 14px !important;
+  font-weight: 900 !important;
+  padding: 11px 18px !important;
+}
+
+/* =====================================================
+   TABLAS GLOBALES
+===================================================== */
+
+table {
+  border-spacing: 0;
+}
+
+th {
+  font-weight: 950;
+}
+
+/* =====================================================
+   PLACEHOLDER GLOBAL
+===================================================== */
+
+::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+/* =====================================================
+   CLASE PARA OCULTAR EN IMPRESIÓN
+===================================================== */
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+}
+
+/* =====================================================
+   RESPONSIVE GENERAL
+===================================================== */
+
+@media (max-width: 768px) {
+  html,
+  body {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  html,
+  body {
+    font-size: 14px;
+  }
+}
+
+/* =====================================================
+   ACCESIBILIDAD: REDUCIR ANIMACIONES SI EL USUARIO LO PIDE
+===================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -35,9 +35,7 @@
       </a>
     </nav>
 
-    <button class="logout" type="button" (click)="logout()">
-      Cerrar sesión
-    </button>
+   
   </aside>
 
   <main class="content">
@@ -52,10 +50,17 @@
         </p>
       </div>
 
-      <div class="user-card">
-        <strong>{{ usuario?.nombres }} {{ usuario?.apellidos }}</strong>
-        <span>{{ usuario?.rol }}</span>
-      </div>
+      <div class="user-actions">
+  <div class="user-card">
+    <strong>{{ usuario?.nombres }} {{ usuario?.apellidos }}</strong>
+    <span>{{ usuario?.rol }}</span>
+  </div>
+
+  <button type="button" class="logout-top-btn" (click)="logout()">
+    <i class="bi bi-box-arrow-right"></i>
+    Cerrar sesión
+  </button>
+</div>
     </header>
 
     <section class="summary-card autoridad">

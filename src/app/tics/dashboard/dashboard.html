@@ -53,14 +53,18 @@
         </p>
       </div>
 
-      <button
-        type="button"
-        class="refresh-btn"
-        (click)="cargarSolicitudesTics()"
-        [disabled]="cargando"
-      >
-        {{ cargando ? 'Cargando...' : 'Actualizar' }}
-      </button>
+     
+      <div class="user-actions">
+  <div class="user-card">
+
+    
+  </div>
+
+  <button type="button" class="logout-top-btn" (click)="logout()">
+    <i class="bi bi-box-arrow-right"></i>
+    Cerrar sesión
+  </button>
+</div>
     </header>
 
     <section class="stats-grid">

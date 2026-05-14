@@ -326,8 +326,7 @@ export class SolicitudDetalle implements OnInit {
       }
     });
   }
-
-  // =====================================================
+    // =====================================================
   // SELECCIÓN Y VALIDACIÓN DE ARCHIVOS
   // =====================================================
 
@@ -361,18 +360,14 @@ export class SolicitudDetalle implements OnInit {
       return;
     }
 
-    const archivo = input.files[0];
+    const imagenFirma = input.files[0];
 
-    if (!this.validarArchivoPdf(archivo)) {
+    if (!this.validarImagenFirma(imagenFirma)) {
       input.value = '';
       return;
     }
 
-    this.subirDocumentoFirmado(
-      archivo,
-      'pdf_firmado_electronico',
-      'PDF firmado electrónicamente y cargado al sistema.'
-    );
+    this.subirFirmaElectronica(imagenFirma);
 
     input.value = '';
   }
@@ -395,8 +390,53 @@ export class SolicitudDetalle implements OnInit {
     return true;
   }
 
+  validarImagenFirma(archivo: File): boolean {
+    const maxSizeMb = 5;
+    const maxSizeBytes = maxSizeMb * 1024 * 1024;
+
+    const nombreArchivo = archivo.name || '';
+    const extension = nombreArchivo.toLowerCase();
+
+    const extensionesValidas = [
+      '.png',
+      '.jpg',
+      '.jpeg'
+    ];
+
+    const tiposMimeValidos = [
+      'image/png',
+      'image/jpeg'
+    ];
+
+    const extensionValida = extensionesValidas.some((ext) =>
+      extension.endsWith(ext)
+    );
+
+    const mimeValido = tiposMimeValidos.includes(archivo.type);
+
+    if (!extensionValida || !mimeValido) {
+      this.mostrarError(
+        'Imagen inválida',
+        'La firma electrónica debe ser una imagen PNG, JPG o JPEG.'
+      );
+
+      return false;
+    }
+
+    if (archivo.size > maxSizeBytes) {
+      this.mostrarError(
+        'Imagen demasiado grande',
+        `La imagen de firma no puede superar ${maxSizeMb} MB.`
+      );
+
+      return false;
+    }
+
+    return true;
+  }
+
   // =====================================================
-  // SUBIR DOCUMENTO FIRMADO
+  // SUBIR PDF FIRMADO MANUALMENTE
   // =====================================================
 
   subirDocumentoFirmado(
@@ -457,6 +497,64 @@ export class SolicitudDetalle implements OnInit {
   }
 
   // =====================================================
+  // SUBIR FIRMA ELECTRÓNICA COMO IMAGEN
+  // =====================================================
+
+  subirFirmaElectronica(imagenFirma: File): void {
+    if (!this.solicitud?.id) {
+      this.mostrarError(
+        'Solicitud no encontrada',
+        'No se encontró la solicitud.'
+      );
+      return;
+    }
+
+    this.procesando = true;
+    this.error = '';
+    this.mensajeOk = '';
+
+    this.solicitudesService.subirFirmaElectronica(
+      this.solicitud.id,
+      imagenFirma
+    ).subscribe({
+      next: (response) => {
+        this.procesando = false;
+
+        this.documentoFirmadoCargado = true;
+        this.guardarDocumentoFirmadoLocal();
+
+        Swal.fire({
+          title: 'Firma electrónica colocada',
+          text: response?.mensaje || 'La firma electrónica fue colocada correctamente en el PDF.',
+          icon: 'success',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#1d4ed8',
+          background: '#ffffff',
+          color: '#0f172a'
+        }).then(() => {
+          this.documentoFirmadoCargado = true;
+          this.guardarDocumentoFirmadoLocal();
+          this.cargarDetalle();
+        });
+      },
+      error: (err: any) => {
+        this.procesando = false;
+
+        if (err.status === 401 || err.status === 403) {
+          this.authService.logout();
+          this.router.navigate(['/auth/login']);
+          return;
+        }
+
+        this.mostrarError(
+          'No se pudo colocar la firma electrónica',
+          err.error?.mensaje || 'Error al subir la imagen de firma electrónica.'
+        );
+      }
+    });
+  }
+
+  // =====================================================
   // APROBACIÓN GENERAL ADMIN / JEFE / AUTORIDAD
   // =====================================================
 
@@ -468,7 +566,7 @@ export class SolicitudDetalle implements OnInit {
     if (!this.documentoFirmadoCargado) {
       Swal.fire({
         title: 'Documento firmado requerido',
-        text: 'Antes de aprobar debe subir un PDF firmado manualmente o electrónicamente.',
+        text: 'Antes de aprobar debe subir un PDF firmado manualmente o colocar una firma electrónica.',
         icon: 'warning',
         confirmButtonText: 'Entendido',
         confirmButtonColor: '#d97706',
@@ -486,9 +584,11 @@ export class SolicitudDetalle implements OnInit {
           <p style="margin: 0 0 10px; color:#475569;">
             ¿Está seguro de continuar con esta acción?
           </p>
+
           <strong style="display:inline-block; color:#1d4ed8; font-size:17px; margin-bottom:10px;">
             ${this.solicitud.codigo_solicitud}
           </strong>
+
           <div style="
             margin-top:14px;
             padding:12px;
@@ -539,7 +639,7 @@ export class SolicitudDetalle implements OnInit {
     if (!this.documentoFirmadoCargado) {
       Swal.fire({
         title: 'Documento firmado requerido',
-        text: 'Para aprobar la validación TICS debe subir un PDF firmado.',
+        text: 'Para aprobar la validación TICS debe subir un PDF firmado o colocar una firma electrónica.',
         icon: 'warning',
         confirmButtonText: 'Entendido',
         confirmButtonColor: '#d97706',
@@ -556,9 +656,11 @@ export class SolicitudDetalle implements OnInit {
           <p style="margin: 0 0 10px; color:#475569;">
             Esta acción aprobará la validación técnica y habilitará la etapa de finalización.
           </p>
+
           <strong style="display:inline-block; color:#1d4ed8; font-size:17px; margin-bottom:10px;">
             ${this.solicitud.codigo_solicitud}
           </strong>
+
           <div style="
             margin-top:14px;
             padding:12px;
@@ -588,8 +690,7 @@ export class SolicitudDetalle implements OnInit {
       this.aprobar('validacion_tics');
     }
   }
-
-  // =====================================================
+    // =====================================================
   // TICS: FINALIZAR PROCESO
   // =====================================================
 
@@ -626,9 +727,11 @@ export class SolicitudDetalle implements OnInit {
           <p style="margin: 0 0 10px; color:#475569;">
             Esta acción marcará la solicitud como finalizada y notificará al solicitante.
           </p>
+
           <strong style="display:inline-block; color:#1d4ed8; font-size:17px; margin-bottom:10px;">
             ${this.solicitud.codigo_solicitud}
           </strong>
+
           <div style="
             margin-top:14px;
             padding:12px;
@@ -658,6 +761,7 @@ export class SolicitudDetalle implements OnInit {
       this.aprobar('finalizacion_tics');
     }
   }
+
   // =====================================================
   // APROBAR / AVANZAR FLUJO
   // =====================================================

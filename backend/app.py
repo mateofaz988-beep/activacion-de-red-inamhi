@@ -1,5 +1,6 @@
 from io import BytesIO
 import json
+
 import smtplib
 import html
 from email.mime.text import MIMEText
@@ -18,6 +19,8 @@ from functools import wraps
 from urllib.parse import urlparse
 
 from flask import Flask, jsonify, request, send_file
+import fitz
+
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -104,8 +107,11 @@ CORS(app, resources={
     r"/api/*": {
         "origins": [
             "http://localhost:4300",
-            "http://127.0.0.1:4300"
-        ]
+            "http://127.0.0.1:4300",
+            "http://10.0.5.120:4300"
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
     }
 })
 
@@ -2564,7 +2570,332 @@ def archivo_pdf_valido(archivo):
 
     return nombre_archivo.lower().endswith(".pdf")
 
+# =====================================================
+# colocar firma electrónica en PDF
+# =====================================================
 
+def colocar_firma_en_pdf(pdf_entrada, imagen_firma, pdf_salida):
+    """
+    Coloca una imagen de firma en una posición fija del PDF.
+
+    Coordenadas PyMuPDF:
+    - x aumenta hacia la derecha
+    - y aumenta hacia abajo
+    - se trabaja en puntos PDF
+    """
+
+    documento = fitz.open(pdf_entrada)
+
+    # Última página del PDF
+    pagina = documento[-1]
+
+    # =====================================================
+    # POSICIÓN DE LA FIRMA
+    # =====================================================
+    # Ajusta estos valores según tu plantilla.
+    # Esta posición coloca la firma en la parte inferior derecha.
+    x = 360
+    y = 680
+    ancho = 170
+    alto = 70
+
+    rectangulo_firma = fitz.Rect(
+        x,
+        y,
+        x + ancho,
+        y + alto
+    )
+
+    pagina.insert_image(
+        rectangulo_firma,
+        filename=imagen_firma,
+        keep_proportion=True
+    )
+
+    documento.save(pdf_salida)
+    documento.close()
+
+ 
+
+    # =====================================================
+    # POSICIÓN DE LA FIRMA
+    # =====================================================
+    # x = izquierda / derecha
+    # y = arriba / abajo
+    # ancho y alto = tamaño de la firma
+
+    x = 360
+    y = 680
+    ancho = 170
+    alto = 70
+
+    rectangulo_firma = fitz.Rect(
+        x,
+        y,
+        x + ancho,
+        y + alto
+    )
+
+    pagina.insert_image(
+        rectangulo_firma,
+        filename=imagen_firma,
+        keep_proportion=True
+    )
+
+    documento.save(pdf_salida)
+    documento.close()
+
+
+# =====================================================
+# firma electrónica automática
+# =====================================================
+
+@app.route("/api/admin/solicitudes/<int:solicitud_id>/firma-electronica", methods=["POST"])
+@token_requerido
+@roles_permitidos("administrador", "jefe_inmediato", "maxima_autoridad", "analista_tics")
+def subir_firma_electronica_y_generar_pdf(solicitud_id):
+    usuario_actual = request.usuario_actual
+    rol_actual = usuario_actual["rol"]
+
+    if "firma" not in request.files:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "debe seleccionar una imagen de firma."
+        }), 400
+
+    firma = request.files["firma"]
+
+    if firma is None or not firma.filename:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "debe seleccionar una imagen válida."
+        }), 400
+
+    nombre_firma = secure_filename(firma.filename)
+    extension = os.path.splitext(nombre_firma)[1].lower()
+
+    extensiones_validas = [".png", ".jpg", ".jpeg"]
+
+    if extension not in extensiones_validas:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "solo se permiten firmas en formato PNG, JPG o JPEG."
+        }), 400
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select
+                id,
+                codigo_solicitud,
+                estado,
+                etapa_actual,
+                bloqueada
+            from solicitudes
+            where id = %s
+            limit 1;
+        """, (solicitud_id,))
+
+        solicitud = cursor.fetchone()
+
+        if solicitud is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "solicitud no encontrada."
+            }), 404
+
+        if solicitud["bloqueada"]:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "la solicitud se encuentra bloqueada."
+            }), 409
+
+                # =====================================================
+        # Crear nombres y rutas
+        # =====================================================
+
+        nombre_base = f"{solicitud['codigo_solicitud']}_{rol_actual}_firma_electronica"
+
+        nombre_imagen_firma = f"{nombre_base}{extension}"
+        ruta_imagen_firma = os.path.join(FIRMADOS_FOLDER, nombre_imagen_firma)
+
+        nombre_pdf_firmado = f"{nombre_base}.pdf"
+        ruta_pdf_firmado = os.path.join(FIRMADOS_FOLDER, nombre_pdf_firmado)
+
+        # =====================================================
+        # Generar PDF base temporal desde la misma función del sistema
+        # =====================================================
+        # Tu endpoint normal /pdf genera el archivo en memoria con BytesIO,
+        # por eso aquí se genera nuevamente el PDF base y se guarda temporalmente
+        # en DOCUMENTOS_FOLDER para poder insertar la imagen de firma con PyMuPDF.
+        # =====================================================
+
+        solicitud_pdf, paginas_web, error_pdf = obtener_solicitud_completa_para_pdf(solicitud_id)
+
+        if error_pdf:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": error_pdf
+            }), 404
+
+        incluir_seccion_tics = rol_actual == "analista_tics"
+
+        pdf_buffer = generar_pdf_solicitud_a4(
+            solicitud_pdf,
+            paginas_web,
+            incluir_seccion_tics=incluir_seccion_tics
+        )
+
+        nombre_pdf_generado = f"{solicitud['codigo_solicitud']}_base.pdf"
+        ruta_pdf_generado = os.path.join(DOCUMENTOS_FOLDER, nombre_pdf_generado)
+
+        with open(ruta_pdf_generado, "wb") as archivo_pdf_base:
+            archivo_pdf_base.write(pdf_buffer.getvalue())
+
+        # =====================================================
+        # Guardar imagen de firma
+        # =====================================================
+
+        firma.save(ruta_imagen_firma)
+
+        # =====================================================
+        # Colocar firma en el PDF generado
+        # =====================================================
+
+        colocar_firma_en_pdf(
+            pdf_entrada=ruta_pdf_generado,
+            imagen_firma=ruta_imagen_firma,
+            pdf_salida=ruta_pdf_firmado
+        )
+
+        # =====================================================
+        # Validar que el PDF firmado realmente se haya creado
+        # =====================================================
+
+        if not os.path.exists(ruta_pdf_firmado):
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "no se pudo generar el PDF firmado electrónicamente."
+            }), 500
+
+        # =====================================================
+        # Registrar PDF firmado electrónicamente
+        # =====================================================
+
+        cursor.execute("""
+            insert into solicitud_documentos (
+                solicitud_id,
+                etapa,
+                rol_firmante,
+                usuario_id,
+                tipo_documento,
+                nombre_archivo,
+                ruta_archivo,
+                mime_type,
+                firmado,
+                firma_validada,
+                observacion
+            ) values (
+                %s, %s, %s, %s, %s, %s, %s, %s, 1, 1, %s
+            );
+        """, (
+            solicitud_id,
+            solicitud["etapa_actual"],
+            rol_actual,
+            usuario_actual["id"],
+            "pdf_firmado_electronico",
+            nombre_pdf_firmado,
+            ruta_pdf_firmado,
+            "application/pdf",
+            "PDF generado por el sistema con firma electrónica colocada automáticamente."
+        ))
+
+        documento_id = cursor.lastrowid
+
+        conexion.commit()
+
+        cursor.close()
+        conexion.close()
+
+        registrar_auditoria(
+            usuario_id=usuario_actual["id"],
+            solicitud_id=solicitud_id,
+            modulo="documentos",
+            accion="generar_pdf_firmado_electronico",
+            descripcion=f"firma electrónica colocada automáticamente por rol {rol_actual}",
+            datos_anteriores=None,
+            datos_nuevos={
+                "documento_id": documento_id,
+                "tipo_documento": "pdf_firmado_electronico",
+                "nombre_archivo": nombre_pdf_firmado,
+                "rol_firmante": rol_actual,
+                "etapa": solicitud["etapa_actual"],
+                "pdf_base": nombre_pdf_generado,
+                "imagen_firma": nombre_imagen_firma
+            }
+        )
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "firma electrónica colocada correctamente en el PDF.",
+            "documento": {
+                "id": documento_id,
+                "solicitud_id": solicitud_id,
+                "tipo_documento": "pdf_firmado_electronico",
+                "nombre_archivo": nombre_pdf_firmado,
+                "rol_firmante": rol_actual,
+                "etapa": solicitud["etapa_actual"],
+                "firmado": True,
+                "firma_validada": True
+            }
+        }), 201
+
+    except Error as error:
+        try:
+            conexion.rollback()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al registrar la firma electrónica.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        try:
+            conexion.rollback()
+            conexion.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al colocar la firma electrónica.",
+            "error": str(error)
+        }), 500
 # =====================================================
 # carga de documentos firmados
 # =====================================================
@@ -4609,17 +4940,38 @@ def cambiar_estado_usuario_admin(usuario_id):
 # =====================================================
 
 if __name__ == "__main__":
+    IP_RED = "10.0.5.120"
+
     print("======================================")
     print(" backend inamhi liberación web iniciado correctamente ")
-    print(f" url test: http://{BACKEND_HOST}:{BACKEND_PORT}/api/test ")
-    print(f" url mysql: http://{BACKEND_HOST}:{BACKEND_PORT}/api/test-db ")
-    print(f" url reset passwords: http://{BACKEND_HOST}:{BACKEND_PORT}/api/dev/reset-passwords ")
-    print(f" url registrar solicitud: http://{BACKEND_HOST}:{BACKEND_PORT}/api/public/solicitudes ")
-    print(" frontend permitido: http://localhost:4300 ")
+    print("======================================")
+    print(f" host backend: 0.0.0.0")
+    print(f" puerto backend: {BACKEND_PORT}")
+    print("--------------------------------------")
+    print(" URLS LOCALES - SOLO EN TU PC")
+    print(f" url test local: http://127.0.0.1:{BACKEND_PORT}/api/test")
+    print(f" url mysql local: http://127.0.0.1:{BACKEND_PORT}/api/test-db")
+    print(f" url reset passwords local: http://127.0.0.1:{BACKEND_PORT}/api/dev/reset-passwords")
+    print(f" url registrar solicitud local: http://127.0.0.1:{BACKEND_PORT}/api/public/solicitudes")
+    print("--------------------------------------")
+    print(" URLS PARA VER DESDE OTRA PC EN LA MISMA RED")
+    print(f" url test red: http://{IP_RED}:{BACKEND_PORT}/api/test")
+    print(f" url mysql red: http://{IP_RED}:{BACKEND_PORT}/api/test-db")
+    print(f" url registrar solicitud red: http://{IP_RED}:{BACKEND_PORT}/api/public/solicitudes")
+    print("--------------------------------------")
+    print(" FRONTEND ANGULAR")
+    print(" frontend local: http://localhost:4300")
+    print(f" frontend en red: http://{IP_RED}:4300")
+    print("--------------------------------------")
+    print(" IMPORTANTE")
+    print(" para que otra pc pueda ver el sistema, ejecuta angular así:")
+    print(" ng serve --host 0.0.0.0 --port 4300")
+    print("--------------------------------------")
+    print(" si no abre desde otra pc, habilita firewall para los puertos 4300 y 5050")
     print("======================================")
 
     app.run(
-        host=BACKEND_HOST,
+        host="0.0.0.0",
         port=BACKEND_PORT,
         debug=True
     )

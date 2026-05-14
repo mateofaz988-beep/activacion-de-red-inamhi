@@ -33,7 +33,7 @@ export interface LoginResponse {
 })
 export class AuthService {
 
-  private readonly API_URL = 'http://127.0.0.1:5050/api';
+  private readonly API_URL = 'http://10.0.5.120:5050/api';
 
   private readonly TOKEN_KEY = 'auth_token_liberacion_web';
   private readonly USUARIO_KEY = 'usuario_liberacion_web';

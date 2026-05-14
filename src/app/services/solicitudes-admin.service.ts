@@ -36,7 +36,6 @@ export interface SolicitudAdmin {
   updated_at: string;
   total_paginas: number;
 
-  // Campos opcionales usados para control documental
   documento_actual_id?: number | null;
   requiere_firma?: boolean | number;
   firma_actual_validada?: boolean | number;
@@ -70,11 +69,7 @@ export interface SolicitudDetalleResponse {
   estado: string;
   solicitud: SolicitudAdmin;
   paginas_web: PaginaWebAdmin[];
-
-  // Documentos cargados en el flujo
   documentos?: DocumentoSolicitud[];
-
-  // Indicador enviado por backend si ya hay documento firmado
   documento_firmado_cargado?: boolean;
 }
 
@@ -82,7 +77,6 @@ export interface FlujoSolicitudResponse {
   estado: string;
   mensaje: string;
 
-  // Correos de rechazo o finalización
   correo_enviado?: boolean;
   error_correo?: string | null;
 
@@ -128,7 +122,7 @@ export interface SubirDocumentoResponse {
 })
 export class SolicitudesAdminService {
 
-  private readonly API_BASE = 'http://127.0.0.1:5050/api';
+  private readonly API_BASE = 'http://10.0.5.120:5050/api';
   private readonly API_URL = `${this.API_BASE}/admin/solicitudes`;
 
   constructor(private http: HttpClient) {}
@@ -211,20 +205,10 @@ export class SolicitudesAdminService {
     );
   }
 
-  /*
-    Alias semántico para TICS.
-    Backend:
-    pendiente_tics -> pendiente_ejecucion_tics
-  */
   aprobarValidacionTics(id: number): Observable<FlujoSolicitudResponse> {
     return this.aprobarSolicitud(id);
   }
 
-  /*
-    Alias semántico para TICS.
-    Backend:
-    pendiente_ejecucion_tics -> finalizada
-  */
   finalizarProcesoTics(id: number): Observable<FlujoSolicitudResponse> {
     return this.aprobarSolicitud(id);
   }
@@ -281,7 +265,7 @@ export class SolicitudesAdminService {
   }
 
   /* =====================================================
-     SUBIDA DE DOCUMENTO FIRMADO
+     SUBIDA DE PDF FIRMADO MANUALMENTE
   ===================================================== */
 
   subirDocumentoFirmado(
@@ -298,6 +282,35 @@ export class SolicitudesAdminService {
 
     return this.http.post<SubirDocumentoResponse>(
       `${this.API_URL}/${solicitudId}/documentos`,
+      formData,
+      {
+        headers: this.getHeaders()
+      }
+    );
+  }
+
+  /* =====================================================
+     FIRMA ELECTRÓNICA AUTOMÁTICA
+     Envía imagen PNG/JPG/JPEG al backend.
+     El backend coloca la firma dentro del PDF.
+  ===================================================== */
+
+  subirFirmaElectronica(
+    solicitudId: number,
+    imagenFirma: File
+  ): Observable<SubirDocumentoResponse> {
+    const formData = new FormData();
+
+    /*
+      IMPORTANTE:
+      El nombre del campo debe ser exactamente "firma",
+      porque así lo espera el endpoint Flask:
+      request.files["firma"]
+    */
+    formData.append('firma', imagenFirma);
+
+    return this.http.post<SubirDocumentoResponse>(
+      `${this.API_URL}/${solicitudId}/firma-electronica`,
       formData,
       {
         headers: this.getHeaders()

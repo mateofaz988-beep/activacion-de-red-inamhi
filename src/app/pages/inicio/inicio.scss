@@ -1,6 +1,14 @@
 :host {
   display: block;
-  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  background: #071827;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 /* =====================================================
@@ -9,33 +17,43 @@
 
 .inicio-page {
   position: relative;
-  min-height: 100vh;
+  width: 100%;
+  min-height: 100dvh;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top left, rgba(0, 117, 191, 0.36), transparent 36%),
-    radial-gradient(circle at bottom right, rgba(250, 190, 35, 0.26), transparent 34%),
-    linear-gradient(135deg, #071827 0%, #0b2740 46%, #06121f 100%);
-  color: #ffffff;
   padding: 32px;
-}
-.icon {
-  width: 54px;
-  height: 54px;
-  min-width: 54px;
-  border-radius: 18px;
-  display: grid;
-  place-items: center;
-  font-size: 24px;
   color: #ffffff;
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.18);
+
+  background:
+    radial-gradient(circle at 8% 10%, rgba(0, 117, 191, 0.36), transparent 35%),
+    radial-gradient(circle at 92% 82%, rgba(250, 190, 35, 0.28), transparent 34%),
+    radial-gradient(circle at 55% 42%, rgba(59, 130, 246, 0.12), transparent 42%),
+    linear-gradient(135deg, #071827 0%, #0b2740 46%, #06121f 100%);
 }
 
-.public-card .icon {
-  background: linear-gradient(135deg, #2563eb, #06b6d4);
+.inicio-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.13;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
 }
 
-.admin-card .icon {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+.inicio-page::after {
+  content: "";
+  position: absolute;
+  right: -18%;
+  bottom: -30%;
+  width: 720px;
+  height: 720px;
+  border-radius: 999px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle, rgba(247, 201, 72, 0.34), transparent 62%);
+  filter: blur(8px);
 }
 
 /* =====================================================
@@ -45,25 +63,37 @@
 .background-glow {
   position: absolute;
   border-radius: 999px;
-  filter: blur(48px);
+  filter: blur(54px);
   opacity: 0.62;
   pointer-events: none;
+  animation: inicioFloat 7s ease-in-out infinite alternate;
 }
 
 .glow-one {
-  width: 290px;
-  height: 290px;
+  width: 300px;
+  height: 300px;
   background: #00a3ff;
   top: 80px;
-  left: -95px;
+  left: -105px;
 }
 
 .glow-two {
-  width: 350px;
-  height: 350px;
+  width: 360px;
+  height: 360px;
   background: #f7c948;
-  right: -120px;
+  right: -130px;
   bottom: 70px;
+  animation-delay: 1.1s;
+}
+
+@keyframes inicioFloat {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  to {
+    transform: translate3d(16px, -14px, 0) scale(1.04);
+  }
 }
 
 /* =====================================================
@@ -73,56 +103,47 @@
 .top-header {
   position: relative;
   z-index: 2;
+
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 24px;
+
   max-width: 1240px;
   margin: 0 auto;
 }
 
 /* =====================================================
-   LOGO PRINCIPAL DEL HERO
+   LOGO PRINCIPAL
 ===================================================== */
 
 .hero-logo-inamhi {
   /*
-    AJUSTE DE TAMAÑO DEL LOGO:
-    - Para hacerlo más grande, sube estos valores.
-    - Ejemplo: width: 220px; height: 220px;
-    - Para hacerlo más pequeño, baja estos valores.
-    - Ejemplo: width: 140px; height: 140px;
+    AQUÍ CONTROLAS EL TAMAÑO DEL LOGO EN ESCRITORIO
+    mínimo: 300px
+    adaptable: 34vw
+    máximo: 520px
   */
-  width: 500px;
-  height: 500px;
+  width: clamp(300px, 34vw, 520px);
+  height: auto;
 
-  /*
-    object-fit: contain mantiene la imagen completa sin deformarla.
-  */
   object-fit: contain;
-
-  /*
-    Si tu imagen PNG tiene fondo transparente, se verá sin fondo.
-    Si se ve blanco, significa que el fondo blanco viene dentro de la imagen.
-  */
   background: transparent;
   border: none;
   padding: 0;
 
   display: block;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 
-  /*
-    Sombra para que el logo destaque sobre el fondo oscuro.
-    Puedes reducirla si quieres un logo más limpio.
-  */
-  filter: drop-shadow(0 20px 32px rgba(0, 0, 0, 0.42));
-  transition: transform 0.25s ease, filter 0.25s ease;
+  filter: drop-shadow(0 22px 36px rgba(0, 0, 0, 0.44));
+  transition:
+    transform 0.25s ease,
+    filter 0.25s ease;
 }
 
 .hero-logo-inamhi:hover {
-  transform: translateY(-3px) scale(1.03);
-  filter: drop-shadow(0 26px 42px rgba(0, 0, 0, 0.52));
+  transform: translateY(-4px) scale(1.025);
+  filter: drop-shadow(0 30px 46px rgba(0, 0, 0, 0.54));
 }
 
 /* =====================================================
@@ -138,13 +159,17 @@
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(14px);
   font-weight: 850;
-  transition: 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease,
+    border-color 0.25s ease;
   box-shadow: 0 14px 28px rgba(0, 0, 0, 0.12);
+}
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.16);
-    transform: translateY(-2px);
-  }
+.admin-link:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-2px);
 }
 
 /* =====================================================
@@ -154,54 +179,71 @@
 .hero {
   position: relative;
   z-index: 2;
+
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+  grid-template-columns: minmax(0, 1.14fr) minmax(360px, 0.86fr);
   align-items: center;
-  gap: 48px;
-  min-height: calc(100vh - 150px);
+  gap: 56px;
+
+  min-height: calc(100dvh - 150px);
   max-width: 1240px;
   margin: 0 auto;
 }
 
-.hero-content {
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 9px 14px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
-    color: #d9efff;
-    font-size: 13px;
-    font-weight: 850;
-    letter-spacing: 0.4px;
-    margin-bottom: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-  }
+.hero-content .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 
-  h2 {
-    margin: 0;
-    font-size: clamp(42px, 6vw, 74px);
-    line-height: 0.95;
-    letter-spacing: -2.6px;
-    font-weight: 950;
-    max-width: 760px;
+  padding: 9px 14px;
+  border-radius: 999px;
 
-    strong {
-      display: block;
-      color: #f7c948;
-      text-shadow: 0 14px 34px rgba(247, 201, 72, 0.20);
-    }
-  }
+  background: rgba(255, 255, 255, 0.12);
+  color: #d9efff;
 
-  p {
-    max-width: 650px;
-    margin: 26px 0 0;
-    color: #c3d9e9;
-    font-size: 18px;
-    line-height: 1.75;
-  }
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: 0.4px;
+
+  margin-bottom: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+.hero-content .badge::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.9);
+}
+
+.hero-content h2 {
+  margin: 0;
+  max-width: 760px;
+
+  font-size: clamp(42px, 6vw, 74px);
+  line-height: 0.95;
+  letter-spacing: -2.6px;
+  font-weight: 950;
+
+  color: #ffffff;
+  text-wrap: balance;
+}
+
+.hero-content h2 strong {
+  display: block;
+  color: #f7c948;
+  text-shadow: 0 14px 34px rgba(247, 201, 72, 0.2);
+}
+
+.hero-content p {
+  max-width: 650px;
+  margin: 26px 0 0;
+  color: #c3d9e9;
+  font-size: 18px;
+  line-height: 1.75;
+}
 /* =====================================================
    BOTONES HERO
 ===================================================== */
@@ -211,36 +253,39 @@
   flex-wrap: wrap;
   gap: 14px;
   margin-top: 34px;
+}
 
-  a {
-    text-decoration: none;
-    font-weight: 900;
-    border-radius: 16px;
-    padding: 15px 22px;
-    transition: 0.25s ease;
-  }
+.hero-actions a {
+  text-decoration: none;
+  font-weight: 900;
+  border-radius: 16px;
+  padding: 15px 22px;
+  transition:
+    transform 0.25s ease,
+    filter 0.25s ease,
+    background 0.25s ease;
 }
 
 .btn-primary {
   background: linear-gradient(135deg, #f7c948, #ffde76);
   color: #102236;
   box-shadow: 0 18px 35px rgba(247, 201, 72, 0.24);
+}
 
-  &:hover {
-    transform: translateY(-3px);
-    filter: brightness(1.04);
-  }
+.btn-primary:hover {
+  transform: translateY(-3px);
+  filter: brightness(1.04);
 }
 
 .btn-secondary {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.10);
   border: 1px solid rgba(255, 255, 255, 0.20);
+}
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.17);
-    transform: translateY(-3px);
-  }
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.17);
+  transform: translateY(-3px);
 }
 
 /* =====================================================
@@ -248,6 +293,9 @@
 ===================================================== */
 
 .access-panel {
+  position: relative;
+  overflow: hidden;
+
   border: 1px solid rgba(255, 255, 255, 0.18);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.08));
@@ -257,72 +305,100 @@
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.30);
 }
 
+.access-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: linear-gradient(90deg, #38bdf8, #f7c948, #22c55e);
+}
+
 .panel-header {
   display: flex;
   align-items: center;
   gap: 10px;
+
   color: #dcefff;
   font-weight: 900;
   margin-bottom: 18px;
+}
 
-  .dot {
-    width: 11px;
-    height: 11px;
-    border-radius: 999px;
-    background: #29e49d;
-    box-shadow: 0 0 18px rgba(41, 228, 157, 0.9);
-  }
+.panel-header .dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: #29e49d;
+  box-shadow: 0 0 18px rgba(41, 228, 157, 0.9);
 }
 
 .option-card {
   cursor: pointer;
+
   display: flex;
   gap: 16px;
+
   padding: 20px;
   border-radius: 22px;
   margin-bottom: 14px;
+
   background: rgba(255, 255, 255, 0.11);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  transition: 0.25s ease;
 
-  &:hover {
-    transform: translateY(-4px);
-    background: rgba(255, 255, 255, 0.17);
-    border-color: rgba(255, 255, 255, 0.22);
-  }
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
 
-  .icon {
-    min-width: 50px;
-    height: 50px;
-    border-radius: 17px;
-    display: grid;
-    place-items: center;
-    font-weight: 950;
-    background: rgba(255, 255, 255, 0.16);
-    color: #f7c948;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-  }
+.option-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.17);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.16);
+}
 
-  h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 900;
-  }
+.icon {
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  border-radius: 18px;
 
-  p {
-    margin: 7px 0 0;
-    color: #bfd6e7;
-    font-size: 14px;
-    line-height: 1.6;
-  }
+  display: grid;
+  place-items: center;
+
+  font-size: 24px;
+  color: #ffffff;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.18);
+}
+
+.public-card .icon {
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+}
+
+.admin-card .icon {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+.option-card h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.option-card p {
+  margin: 7px 0 0;
+  color: #bfd6e7;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .public-card:hover .icon {
-  background: rgba(247, 201, 72, 0.18);
+  filter: brightness(1.1);
 }
 
 .admin-card:hover .icon {
-  background: rgba(0, 163, 255, 0.18);
+  filter: brightness(1.1);
 }
 
 /* =====================================================
@@ -333,14 +409,15 @@
   margin-top: 18px;
   padding: 16px;
   border-radius: 18px;
+
   color: #d9eefe;
   background: rgba(0, 0, 0, 0.18);
   line-height: 1.6;
   border: 1px solid rgba(255, 255, 255, 0.10);
+}
 
-  strong {
-    color: #ffffff;
-  }
+.info-box strong {
+  color: #ffffff;
 }
 
 /* =====================================================
@@ -350,11 +427,14 @@
 footer {
   position: relative;
   z-index: 2;
+
   max-width: 1240px;
   margin: 0 auto;
+
   display: flex;
   justify-content: space-between;
   gap: 16px;
+
   color: #9fb9cb;
   font-size: 13px;
 }
@@ -366,6 +446,7 @@ footer {
 @media (max-width: 920px) {
   .inicio-page {
     padding: 22px;
+    overflow-y: auto;
   }
 
   .top-header {
@@ -380,38 +461,45 @@ footer {
   .hero {
     grid-template-columns: 1fr;
     padding: 52px 0;
-    gap: 30px;
+    gap: 34px;
+    min-height: auto;
   }
 
   .hero-logo-inamhi {
-    /*
-      TAMAÑO DEL LOGO EN TABLET:
-      Ajusta aquí si lo ves muy grande o muy pequeño.
-    */
-    width: 500px;
-    height: 500px;
+    width: clamp(260px, 60vw, 430px);
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .hero-content {
-    h2 {
-      font-size: clamp(38px, 12vw, 58px);
-      letter-spacing: -1.8px;
-    }
+    text-align: center;
+  }
 
-    p {
-      font-size: 16px;
-    }
+  .hero-content h2 {
+    font-size: clamp(38px, 12vw, 58px);
+    letter-spacing: -1.8px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-content p {
+    font-size: 16px;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .hero-actions {
-    a {
-      width: 100%;
-      text-align: center;
-    }
+    justify-content: center;
+  }
+
+  .hero-actions a {
+    width: 100%;
+    text-align: center;
   }
 
   footer {
     flex-direction: column;
+    text-align: center;
   }
 }
 
@@ -420,28 +508,64 @@ footer {
     padding: 18px;
   }
 
+  .hero {
+    padding: 36px 0;
+  }
+
   .hero-logo-inamhi {
-    /*
-      TAMAÑO DEL LOGO EN CELULAR:
-      Ajusta aquí si lo ves muy grande o muy pequeño.
-    */
-    width: 125px;
-    height: 125px;
+    width: clamp(185px, 72vw, 280px);
+    height: auto;
     margin-bottom: 20px;
   }
 
+  .hero-content .badge {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  .hero-content h2 {
+    font-size: clamp(34px, 12vw, 48px);
+    letter-spacing: -1.3px;
+  }
+
+  .hero-content p {
+    font-size: 15.5px;
+    line-height: 1.65;
+  }
+
   .access-panel {
-    padding: 18px;
-    border-radius: 24px;
+    padding: 20px;
+    border-radius: 26px;
   }
 
   .option-card {
     flex-direction: column;
+    padding: 18px;
+  }
 
-    .icon {
-      min-width: 46px;
-      width: 46px;
-      height: 46px;
-    }
+  .option-card .icon,
+  .icon {
+    min-width: 48px;
+    width: 48px;
+    height: 48px;
+    font-size: 21px;
+  }
+}
+
+@media (max-width: 380px) {
+  .inicio-page {
+    padding: 14px;
+  }
+
+  .hero-logo-inamhi {
+    width: 175px;
+  }
+
+  .hero-content h2 {
+    font-size: 32px;
+  }
+
+  .access-panel {
+    padding: 18px;
   }
 }
