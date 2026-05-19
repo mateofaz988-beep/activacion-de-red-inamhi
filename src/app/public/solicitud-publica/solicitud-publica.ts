@@ -11,6 +11,29 @@ import {
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+interface PrepararFirmaResponse {
+  estado: string;
+  mensaje: string;
+  codigo_solicitud?: string;
+  solicitud?: {
+    id?: number;
+    codigo_solicitud: string;
+    estado?: string;
+    etapa_actual?: string;
+  };
+  url_descarga?: string;
+}
+
+interface SubidaFirmaResponse {
+  estado: string;
+  mensaje: string;
+  solicitud?: {
+    codigo_solicitud: string;
+    estado: string;
+    etapa_actual: string;
+  };
+}
+
 @Component({
   selector: 'app-solicitud-publica',
   standalone: true,
@@ -25,7 +48,17 @@ import { RouterLink } from '@angular/router';
 })
 export class SolicitudPublica implements OnInit {
 
-  private readonly API_URL = 'http://10.0.5.120:5050/api/public/solicitudes';
+  /*
+    LOCAL:
+    http://localhost:5050/api
+
+    SERVIDOR CON NGINX:
+    /api
+  */
+  private readonly API_BASE = 'http://localhost:5050/api';
+
+  private readonly API_PREPARAR_ELECTRONICO =
+    `${this.API_BASE}/public/electronico/preparar`;
 
   formulario!: FormGroup;
 
@@ -34,8 +67,23 @@ export class SolicitudPublica implements OnInit {
   errorGeneral = '';
   codigoGenerado = '';
 
-  // Modal de ayuda para IP
   mostrarModalIp = false;
+
+  mostrarModalFirmaEc = false;
+  preparandoFirmaEc = false;
+  subiendoFirmaEc = false;
+
+  codigoFirmaEc = '';
+  urlDescargaFirmaEc = '';
+
+  archivoFirmado: File | null = null;
+  nombreArchivoFirmado = '';
+  urlVistaPreviaFirmado = '';
+
+  errorFirmaEc = '';
+  exitoFirmaEc = '';
+
+  pasoFirmaEc: 'generando' | 'descarga' | 'subida' | 'finalizado' = 'generando';
 
   constructor(
     private fb: FormBuilder,
@@ -114,7 +162,6 @@ export class SolicitudPublica implements OnInit {
           Validators.required
         ]
       ],
-
       tipo_usuario: [
         'funcionario_inamhi',
         [
@@ -150,7 +197,6 @@ export class SolicitudPublica implements OnInit {
           Validators.maxLength(2000)
         ]
       ],
-
       paginas_web: this.fb.array([
         this.crearPaginaWeb()
       ])
@@ -194,6 +240,300 @@ export class SolicitudPublica implements OnInit {
 
   cerrarModalIp(): void {
     this.mostrarModalIp = false;
+  }
+
+  // =====================================================
+  // URL BACKEND
+  // =====================================================
+
+  normalizarUrlBackend(url: string): string {
+    if (!url) {
+      return '';
+    }
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+
+    const baseSinApi = this.API_BASE.replace('/api', '');
+
+    if (url.startsWith('/api')) {
+      return `${baseSinApi}${url}`;
+    }
+
+    if (url.startsWith('/')) {
+      return `${baseSinApi}${url}`;
+    }
+
+    return `${this.API_BASE}/${url}`;
+  }
+
+  // =====================================================
+  // MODAL FIRMAEC ASISTIDO
+  // =====================================================
+
+  abrirModalFirmaEc(): void {
+    this.errorGeneral = '';
+    this.errorFirmaEc = '';
+    this.exitoFirmaEc = '';
+
+    if (this.formulario.invalid) {
+      this.marcarFormularioComoTocado();
+      this.errorGeneral = 'Revise los campos marcados antes de generar el formato para FirmaEC.';
+      return;
+    }
+
+    if (this.paginasWeb.length < 1) {
+      this.errorGeneral = 'Debe ingresar al menos una página web.';
+      return;
+    }
+
+    this.mostrarModalFirmaEc = true;
+
+    if (!this.codigoFirmaEc) {
+      this.generarFormatoAutomaticoFirmaEc();
+    }
+  }
+
+  cerrarModalFirmaEc(): void {
+    if (this.preparandoFirmaEc || this.subiendoFirmaEc) {
+      return;
+    }
+
+    this.mostrarModalFirmaEc = false;
+    this.errorFirmaEc = '';
+    this.exitoFirmaEc = '';
+  }
+
+  generarFormatoAutomaticoFirmaEc(): void {
+    this.errorFirmaEc = '';
+    this.exitoFirmaEc = '';
+    this.pasoFirmaEc = 'generando';
+
+    const payload = this.construirPayload();
+
+    this.preparandoFirmaEc = true;
+
+    this.http.post<PrepararFirmaResponse>(this.API_PREPARAR_ELECTRONICO, payload)
+      .subscribe({
+        next: (response) => {
+          this.preparandoFirmaEc = false;
+
+          if (response.estado !== 'ok') {
+            this.errorFirmaEc = response.mensaje || 'No se pudo generar el formato.';
+            return;
+          }
+
+          this.codigoFirmaEc =
+            response.codigo_solicitud ||
+            response.solicitud?.codigo_solicitud ||
+            '';
+
+          if (!this.codigoFirmaEc) {
+            this.errorFirmaEc = 'El servidor no devolvió el código de solicitud.';
+            return;
+          }
+
+          const urlBackend =
+            response.url_descarga ||
+            `/api/public/electronico/${this.codigoFirmaEc}/pdf`;
+
+          this.urlDescargaFirmaEc = this.normalizarUrlBackend(urlBackend);
+          this.codigoGenerado = this.codigoFirmaEc;
+          this.pasoFirmaEc = 'descarga';
+
+          this.exitoFirmaEc =
+            'ID y formato generados correctamente. Descargue el PDF, fírmelo externamente con FirmaEC y suba el PDF firmado.';
+        },
+        error: (err) => {
+          this.preparandoFirmaEc = false;
+
+          if (err.status === 0) {
+            this.errorFirmaEc = 'No se pudo conectar con el servidor.';
+            return;
+          }
+
+          this.errorFirmaEc =
+            err.error?.mensaje ||
+            err.error?.error ||
+            'No se pudo generar automáticamente el formato para FirmaEC.';
+        }
+      });
+  }
+
+  descargarFormatoFirmaEc(): void {
+    this.errorFirmaEc = '';
+
+    if (!this.codigoFirmaEc) {
+      this.errorFirmaEc = 'Espere a que el sistema genere el ID único de la solicitud.';
+      return;
+    }
+
+    const url = this.urlDescargaFirmaEc ||
+      `${this.API_BASE}/public/electronico/${this.codigoFirmaEc}/pdf`;
+
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.target = '_blank';
+    enlace.rel = 'noopener noreferrer';
+    enlace.download = `${this.codigoFirmaEc}.pdf`;
+
+    document.body.appendChild(enlace);
+    enlace.click();
+    document.body.removeChild(enlace);
+
+    this.pasoFirmaEc = 'descarga';
+    this.exitoFirmaEc =
+      'Formato PDF descargado. Ahora abra FirmaEC externamente, firme el documento y suba aquí el PDF firmado.';
+  }
+
+  seleccionarArchivoFirmado(event: Event): void {
+    this.errorFirmaEc = '';
+    this.exitoFirmaEc = '';
+    this.archivoFirmado = null;
+    this.nombreArchivoFirmado = '';
+
+    this.liberarVistaPreviaFirmado();
+
+    const input = event.target as HTMLInputElement;
+
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+
+    const archivo = input.files[0];
+
+    const nombre = archivo.name.toLowerCase();
+    const extensionPdf = nombre.endsWith('.pdf');
+    const mimePdf = archivo.type === 'application/pdf' || archivo.type === '';
+
+    if (!extensionPdf || !mimePdf) {
+      this.errorFirmaEc = 'Solo se permite subir un archivo PDF firmado electrónicamente.';
+      input.value = '';
+      return;
+    }
+
+    const maxMb = 15;
+    const maxBytes = maxMb * 1024 * 1024;
+
+    if (archivo.size > maxBytes) {
+      this.errorFirmaEc = `El PDF firmado no puede superar ${maxMb} MB.`;
+      input.value = '';
+      return;
+    }
+
+    this.archivoFirmado = archivo;
+    this.nombreArchivoFirmado = archivo.name;
+    this.urlVistaPreviaFirmado = URL.createObjectURL(archivo);
+    this.pasoFirmaEc = 'subida';
+
+    this.exitoFirmaEc =
+      'PDF seleccionado correctamente. Revise el archivo antes de enviarlo al jefe inmediato.';
+  }
+
+  verPdfSubido(): void {
+    this.errorFirmaEc = '';
+
+    if (!this.urlVistaPreviaFirmado) {
+      this.errorFirmaEc = 'Primero debe seleccionar un PDF firmado para poder visualizarlo.';
+      return;
+    }
+
+    window.open(this.urlVistaPreviaFirmado, '_blank', 'noopener,noreferrer');
+  }
+
+  quitarPdfFirmado(): void {
+    this.archivoFirmado = null;
+    this.nombreArchivoFirmado = '';
+    this.liberarVistaPreviaFirmado();
+    this.pasoFirmaEc = 'descarga';
+    this.exitoFirmaEc = 'Archivo retirado. Puede seleccionar nuevamente el PDF firmado correcto.';
+  }
+
+  liberarVistaPreviaFirmado(): void {
+    if (this.urlVistaPreviaFirmado) {
+      URL.revokeObjectURL(this.urlVistaPreviaFirmado);
+      this.urlVistaPreviaFirmado = '';
+    }
+  }
+
+  subirPdfFirmadoFirmaEc(): void {
+    this.errorFirmaEc = '';
+    this.exitoFirmaEc = '';
+
+    if (!this.codigoFirmaEc) {
+      this.errorFirmaEc = 'Espere a que el sistema genere el ID único de la solicitud.';
+      return;
+    }
+
+    if (!this.archivoFirmado) {
+      this.errorFirmaEc = 'Seleccione el PDF firmado electrónicamente con FirmaEC.';
+      return;
+    }
+
+    const confirmar = window.confirm(
+      'Verifique que el PDF seleccionado sea el documento correcto y que esté firmado electrónicamente con FirmaEC.\n\nAl enviarlo, la solicitud pasará al jefe inmediato.'
+    );
+
+    if (!confirmar) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('archivo', this.archivoFirmado);
+
+    this.subiendoFirmaEc = true;
+
+    this.http.post<SubidaFirmaResponse>(
+      `${this.API_BASE}/public/electronico/${this.codigoFirmaEc}/subir-firmado`,
+      formData
+    ).subscribe({
+      next: (response) => {
+        this.subiendoFirmaEc = false;
+
+        if (response.estado !== 'ok') {
+          this.errorFirmaEc = response.mensaje || 'No se pudo subir el PDF firmado.';
+          return;
+        }
+
+        this.pasoFirmaEc = 'finalizado';
+        this.enviado = true;
+        this.codigoGenerado = this.codigoFirmaEc;
+
+        this.exitoFirmaEc =
+          'PDF firmado subido correctamente. La solicitud fue enviada al jefe inmediato.';
+
+        this.formulario.reset();
+        this.crearFormulario();
+        this.archivoFirmado = null;
+        this.nombreArchivoFirmado = '';
+        this.liberarVistaPreviaFirmado();
+      },
+      error: (err) => {
+        this.subiendoFirmaEc = false;
+
+        if (err.status === 0) {
+          this.errorFirmaEc = 'No se pudo conectar con el servidor.';
+          return;
+        }
+
+        this.errorFirmaEc =
+          err.error?.mensaje ||
+          err.error?.error ||
+          'No se pudo subir el PDF firmado con FirmaEC.';
+      }
+    });
+  }
+
+  reiniciarFlujoFirmaEc(): void {
+    this.codigoFirmaEc = '';
+    this.urlDescargaFirmaEc = '';
+    this.archivoFirmado = null;
+    this.nombreArchivoFirmado = '';
+    this.errorFirmaEc = '';
+    this.exitoFirmaEc = '';
+    this.pasoFirmaEc = 'generando';
+    this.liberarVistaPreviaFirmado();
   }
 
   // =====================================================
@@ -453,48 +793,7 @@ export class SolicitudPublica implements OnInit {
   // =====================================================
 
   enviarSolicitud(): void {
-    this.errorGeneral = '';
-
-    if (this.formulario.invalid) {
-      this.marcarFormularioComoTocado();
-      this.errorGeneral = 'Revise los campos marcados antes de enviar la solicitud.';
-      return;
-    }
-
-    if (this.paginasWeb.length < 1) {
-      this.errorGeneral = 'Debe ingresar al menos una página web.';
-      return;
-    }
-
-    const payload = this.construirPayload();
-
-    this.cargando = true;
-
-    this.http.post<any>(this.API_URL, payload).subscribe({
-      next: (response) => {
-        this.cargando = false;
-
-        this.codigoGenerado =
-          response?.codigo_solicitud ||
-          response?.solicitud?.codigo_solicitud ||
-          response?.codigo ||
-          'Código no disponible';
-
-        this.enviado = true;
-        this.errorGeneral = '';
-
-        this.formulario.reset();
-        this.crearFormulario();
-      },
-      error: (err) => {
-        this.cargando = false;
-
-        this.errorGeneral =
-          err.error?.mensaje ||
-          err.error?.error ||
-          'No se pudo registrar la solicitud. Intente nuevamente.';
-      }
-    });
+    this.abrirModalFirmaEc();
   }
 
   construirPayload(): any {

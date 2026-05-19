@@ -19,7 +19,7 @@
       </div>
 
       <div class="status-pill">
-        Registro público
+        Proceso electrónico
       </div>
     </div>
   </header>
@@ -28,25 +28,33 @@
     <section class="summary-card">
       <div>
         <span class="eyebrow">Acceso Superior a Internet</span>
+
         <h2>Solicitud de Liberación Web Institucional</h2>
+
         <p>
-          Complete la información requerida para generar su solicitud. Los datos serán
-          validados antes de enviarse al flujo institucional de revisión y aprobación.
+          Complete la información requerida. El sistema generará automáticamente
+          el ID único y el formato PDF. Luego deberá firmar el documento
+          externamente con FirmaEC y subir el PDF firmado.
         </p>
       </div>
 
       <div class="process-box">
-        <span>Flujo</span>
-        <strong>Solicitud → Firma → Jefe inmediato → Máxima autoridad → TICS</strong>
+        <span>Flujo electrónico</span>
+        <strong>
+          Formulario → ID automático → Descargar PDF → Firmar externamente en FirmaEC → Subir PDF firmado → Enviar al jefe
+        </strong>
       </div>
     </section>
 
     <section class="success-card" *ngIf="enviado">
       <div class="success-icon">✓</div>
 
-      <h3>Solicitud registrada correctamente</h3>
+      <h3>Solicitud enviada al jefe inmediato</h3>
 
-      <p>Guarde este código para consultar el estado de su solicitud:</p>
+      <p>
+        El PDF firmado electrónicamente fue recibido correctamente.
+        Guarde este código para consultar el estado de su solicitud:
+      </p>
 
       <strong>{{ codigoGenerado }}</strong>
 
@@ -55,7 +63,7 @@
           Consultar estado
         </a>
 
-        <button type="button" (click)="enviado = false">
+        <button type="button" (click)="enviado = false; reiniciarFlujoFirmaEc()">
           Registrar otra solicitud
         </button>
       </div>
@@ -74,7 +82,23 @@
         </div>
 
         <div class="form-code">
-          Código generado automáticamente
+          Firma electrónica con FirmaEC
+        </div>
+      </div>
+
+      <div class="firmaec-info-card">
+        <div class="firmaec-info-icon">
+          <i class="bi bi-shield-check"></i>
+        </div>
+
+        <div>
+          <h4>Proceso con FirmaEC</h4>
+          <p>
+            Al continuar, el sistema generará automáticamente el ID único y el
+            formato PDF institucional. Usted deberá descargarlo, firmarlo desde
+            la aplicación FirmaEC instalada en su equipo y luego subir aquí el
+            PDF firmado.
+          </p>
         </div>
       </div>
 
@@ -272,10 +296,6 @@
           </small>
         </label>
 
-        <!-- =====================================================
-             DIRECCIÓN IP CON BOTÓN DE AYUDA
-        ====================================================== -->
-
         <div class="ip-field">
           <label>
             Dirección IP
@@ -379,7 +399,6 @@
               formControlName="descripcion"
               placeholder="Descripción opcional"
               maxlength="255"
-              (input)="limpiarTextoSimple('descripcion')"
             />
 
             <small *ngIf="paginaInvalida(i, 'descripcion')">
@@ -408,21 +427,190 @@
         </a>
 
         <button
-          type="submit"
-          class="submit-btn"
-          [disabled]="cargando"
+          type="button"
+          class="download-format-btn"
+          [disabled]="preparandoFirmaEc || cargando"
+          (click)="abrirModalFirmaEc()"
         >
-          <span *ngIf="!cargando">
-            Enviar solicitud
-          </span>
-
-          <span *ngIf="cargando">
-            Registrando solicitud...
-          </span>
+          Continuar con firma electrónica
         </button>
       </div>
     </form>
   </main>
+
+  <!-- =====================================================
+       MODAL FIRMAEC ASISTIDO
+  ====================================================== -->
+
+  <div class="modal-backdrop-firmaec" *ngIf="mostrarModalFirmaEc">
+    <section class="modal-firmaec-card">
+      <button
+        type="button"
+        class="close-modal-firmaec"
+        (click)="cerrarModalFirmaEc()"
+        [disabled]="preparandoFirmaEc || subiendoFirmaEc"
+        aria-label="Cerrar ventana FirmaEC"
+      >
+        ×
+      </button>
+
+      <div class="firmaec-modal-header">
+        <div class="firmaec-modal-icon">
+          <i class="bi bi-shield-lock-fill"></i>
+        </div>
+
+        <div>
+          <span>Firma electrónica asistida</span>
+          <h3>Descargar, firmar y subir documento</h3>
+          <p>
+            El sistema genera automáticamente el ID único y el formato PDF.
+            La firma se realiza externamente desde la aplicación FirmaEC.
+          </p>
+        </div>
+      </div>
+
+      <div class="firmaec-steps">
+        <div
+          class="firmaec-step"
+          [class.active]="pasoFirmaEc === 'generando' || pasoFirmaEc === 'descarga' || pasoFirmaEc === 'subida' || pasoFirmaEc === 'finalizado'"
+        >
+          <span>1</span>
+          <p>ID automático</p>
+        </div>
+
+        <div class="firmaec-line"></div>
+
+        <div
+          class="firmaec-step"
+          [class.active]="pasoFirmaEc === 'descarga' || pasoFirmaEc === 'subida' || pasoFirmaEc === 'finalizado'"
+        >
+          <span>2</span>
+          <p>Descargar PDF</p>
+        </div>
+
+        <div class="firmaec-line"></div>
+
+        <div
+          class="firmaec-step"
+          [class.active]="pasoFirmaEc === 'subida' || pasoFirmaEc === 'finalizado'"
+        >
+          <span>3</span>
+          <p>Subir firmado</p>
+        </div>
+
+        <div class="firmaec-line"></div>
+
+        <div
+          class="firmaec-step"
+          [class.active]="pasoFirmaEc === 'finalizado'"
+        >
+          <span>4</span>
+          <p>Enviar al jefe</p>
+        </div>
+      </div>
+
+      <div class="firmaec-warning">
+        <i class="bi bi-info-circle-fill"></i>
+
+        <div>
+          <h4>Guía para firmar externamente con FirmaEC</h4>
+          <p>
+            1. Descargue el formato PDF generado por el sistema.<br />
+            2. Abra la aplicación FirmaEC instalada en su equipo.<br />
+            3. Seleccione el PDF descargado y realice la firma electrónica.<br />
+            4. Guarde el PDF firmado en su computadora.<br />
+            5. Regrese a esta ventana, seleccione el PDF firmado, verifíquelo y envíelo al jefe inmediato.
+          </p>
+        </div>
+      </div>
+
+      <div class="firmaec-generated" *ngIf="codigoFirmaEc">
+        <span>Código generado automáticamente</span>
+        <strong>{{ codigoFirmaEc }}</strong>
+      </div>
+
+      <div class="firmaec-generated loading-code" *ngIf="preparandoFirmaEc">
+        <span>Generando automáticamente</span>
+        <strong>Preparando ID y formato PDF...</strong>
+      </div>
+
+      <div class="firmaec-actions-grid one-action">
+        <button
+          type="button"
+          class="firmaec-secondary-btn"
+          (click)="descargarFormatoFirmaEc()"
+          [disabled]="!codigoFirmaEc || preparandoFirmaEc"
+        >
+          Descargar formato PDF
+        </button>
+      </div>
+
+      <label
+        class="firmaec-upload-zone"
+        [class.disabled]="!codigoFirmaEc"
+      >
+        <input
+          type="file"
+          accept=".pdf,application/pdf"
+          [disabled]="!codigoFirmaEc || subiendoFirmaEc"
+          (change)="seleccionarArchivoFirmado($event)"
+        />
+
+        <i class="bi bi-cloud-arrow-up-fill"></i>
+
+        <strong *ngIf="!nombreArchivoFirmado">
+          Seleccionar PDF firmado electrónicamente
+        </strong>
+
+        <strong *ngIf="nombreArchivoFirmado">
+          {{ nombreArchivoFirmado }}
+        </strong>
+
+        <span *ngIf="codigoFirmaEc">
+          Solo PDF · Máximo 15 MB
+        </span>
+
+        <span *ngIf="!codigoFirmaEc">
+          Espere a que se genere automáticamente el ID único
+        </span>
+      </label>
+
+      <div class="preview-actions" *ngIf="archivoFirmado">
+        <button type="button" class="preview-btn" (click)="verPdfSubido()">
+          Ver PDF seleccionado
+        </button>
+
+        <button type="button" class="remove-selected-btn" (click)="quitarPdfFirmado()">
+          Quitar y seleccionar otro
+        </button>
+      </div>
+
+      <div class="firmaec-error" *ngIf="errorFirmaEc">
+        {{ errorFirmaEc }}
+      </div>
+
+      <div class="firmaec-success" *ngIf="exitoFirmaEc">
+        {{ exitoFirmaEc }}
+      </div>
+
+      <div class="firmaec-final-actions">
+        <button
+          type="button"
+          class="send-firmaec-btn"
+          [disabled]="!archivoFirmado || !codigoFirmaEc || subiendoFirmaEc"
+          (click)="subirPdfFirmadoFirmaEc()"
+        >
+          <span *ngIf="!subiendoFirmaEc">
+            Enviar PDF firmado al jefe inmediato
+          </span>
+
+          <span *ngIf="subiendoFirmaEc">
+            Enviando PDF firmado...
+          </span>
+        </button>
+      </div>
+    </section>
+  </div>
 
   <!-- =====================================================
        MODAL TUTORIAL PARA DIRECCIÓN IP
@@ -473,29 +661,12 @@
           <h4>Ver IP usando comandos de Windows</h4>
 
           <ol>
-            <li>
-              Presione las teclas <strong>Windows + R</strong>.
-            </li>
-
-            <li>
-              Escriba <strong>cmd</strong> y presione <strong>Enter</strong>.
-            </li>
-
-            <li>
-              En la ventana negra escriba <strong>ipconfig</strong>.
-            </li>
-
-            <li>
-              Presione <strong>Enter</strong>.
-            </li>
-
-            <li>
-              Busque el dato llamado <strong>Dirección IPv4</strong>.
-            </li>
-
-            <li>
-              Copie ese número en el campo <strong>Dirección IP</strong> del formulario.
-            </li>
+            <li>Presione las teclas <strong>Windows + R</strong>.</li>
+            <li>Escriba <strong>cmd</strong> y presione <strong>Enter</strong>.</li>
+            <li>En la ventana negra escriba <strong>ipconfig</strong>.</li>
+            <li>Presione <strong>Enter</strong>.</li>
+            <li>Busque el dato llamado <strong>Dirección IPv4</strong>.</li>
+            <li>Copie ese número en el campo <strong>Dirección IP</strong> del formulario.</li>
           </ol>
         </article>
 
@@ -505,36 +676,19 @@
           <h4>Ver IP desde Configuración</h4>
 
           <ol>
-            <li>
-              Abra la <strong>Configuración</strong> de Windows.
-            </li>
-
-            <li>
-              Ingrese a <strong>Red e Internet</strong>.
-            </li>
-
-            <li>
-              Seleccione <strong>Wi-Fi</strong> o <strong>Ethernet</strong>, según su conexión.
-            </li>
-
-            <li>
-              Abra las <strong>Propiedades</strong> de la red conectada.
-            </li>
-
-            <li>
-              Busque el campo <strong>Dirección IPv4</strong>.
-            </li>
-
-            <li>
-              Copie ese número en el formulario.
-            </li>
+            <li>Abra la <strong>Configuración</strong> de Windows.</li>
+            <li>Ingrese a <strong>Red e Internet</strong>.</li>
+            <li>Seleccione <strong>Wi-Fi</strong> o <strong>Ethernet</strong>, según su conexión.</li>
+            <li>Abra las <strong>Propiedades</strong> de la red conectada.</li>
+            <li>Busque el campo <strong>Dirección IPv4</strong>.</li>
+            <li>Copie ese número en el formulario.</li>
           </ol>
         </article>
       </div>
 
       <div class="ip-note">
         <strong>Importante:</strong>
-        Si no conoce este dato, puede solicitar apoyo al área de TICS. 
+        Si no conoce este dato, puede solicitar apoyo al área de TICS.
       </div>
 
       <div class="modal-ip-actions">

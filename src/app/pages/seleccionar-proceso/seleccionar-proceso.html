@@ -1,0 +1,349 @@
+<section class="process-page">
+  <div class="background-glow glow-one"></div>
+  <div class="background-glow glow-two"></div>
+
+  <header class="process-header">
+    <a routerLink="/" class="back-link">
+      ← Volver al inicio
+    </a>
+
+    <div class="brand">
+      <img
+        src="/logo_inamhi.png"
+        alt="Logo INAMHI"
+        class="brand-logo"
+      />
+
+      <div>
+        <span>Sistema institucional</span>
+        <h1>Selección de proceso</h1>
+        <p>
+          Elija la modalidad con la que desea registrar y gestionar su solicitud
+          de liberación web institucional.
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <main class="process-content">
+    <section class="intro-card">
+      <span class="eyebrow">Registro de solicitud</span>
+
+      <h2>¿Cómo desea realizar su trámite?</h2>
+
+      <p>
+        Antes de iniciar, seleccione si el proceso se realizará de forma manual
+        sobre papel o de forma electrónica mediante PDF firmado digitalmente.
+      </p>
+    </section>
+
+    <section class="options-grid">
+      <!-- =====================================================
+           PROCESO MANUAL
+      ====================================================== -->
+      <article class="process-card manual-card">
+        <div class="card-top">
+          <div class="icon manual-icon">
+            <i class="bi bi-file-earmark-text-fill"></i>
+          </div>
+
+          <span class="tag manual-tag">Proceso físico</span>
+        </div>
+
+        <h3>Proceso Manual</h3>
+
+        <p class="description">
+          Registre sus datos básicos, obtenga un ID único, descargue el documento
+          vacío en PDF y complete todo el trámite de forma física.
+        </p>
+
+        <div class="important-note">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+
+          <div>
+            <strong>Nota importante</strong>
+            <p>
+              Si elige la opción manual, todo el proceso subsiguiente,
+              incluyendo llenado, firmas y rúbricas, deberá realizarse
+              estrictamente de forma física/manual sobre papel.
+            </p>
+          </div>
+        </div>
+
+        <div class="steps-box">
+          <h4>Indicaciones del proceso manual</h4>
+
+          <ol>
+            <li>Llene un formulario corto con nombre, apellido y correo.</li>
+            <li>El sistema generará un ID único de solicitud.</li>
+            <li>Descargue el documento vacío en formato PDF.</li>
+            <li>Imprima el documento y complételo manualmente.</li>
+            <li>Firme y rubrique físicamente el documento.</li>
+            <li>Escanee el documento finalizado.</li>
+            <li>Ingrese a seguimiento con su ID y suba el PDF escaneado.</li>
+          </ol>
+        </div>
+
+        <button
+          type="button"
+          class="process-btn manual-btn"
+          (click)="abrirModalManual()"
+        >
+          Iniciar proceso manual
+          <i class="bi bi-arrow-right"></i>
+        </button>
+      </article>
+
+      <!-- =====================================================
+           PROCESO ELECTRÓNICO
+      ====================================================== -->
+      <article class="process-card electronic-card">
+        <div class="card-top">
+          <div class="icon electronic-icon">
+            <i class="bi bi-shield-check"></i>
+          </div>
+
+          <span class="tag electronic-tag">Proceso digital</span>
+        </div>
+
+        <h3>Proceso Electrónico</h3>
+
+        <p class="description">
+          Complete el formulario institucional, genere o descargue el PDF,
+          fírmelo electrónicamente con FirmaEC y envíelo al flujo administrativo.
+        </p>
+
+        <div class="firmaec-box">
+          <i class="bi bi-pc-display-horizontal"></i>
+
+          <div>
+            <strong>Uso de FirmaEC</strong>
+            <p>
+              FirmaEC es una aplicación de escritorio. El sistema web no firma
+              directamente el documento; permite descargar el PDF y subir la
+              versión firmada electrónicamente.
+            </p>
+          </div>
+        </div>
+
+        <div class="steps-box">
+          <h4>Indicaciones del proceso electrónico</h4>
+
+          <ol>
+            <li>Llene el formulario institucional completo.</li>
+            <li>Genere o descargue el documento PDF correspondiente.</li>
+            <li>Abra el documento en FirmaEC desde su equipo.</li>
+            <li>Firme el PDF con certificado digital o token físico.</li>
+            <li>Suba el PDF firmado electrónicamente al sistema.</li>
+            <li>El administrador continuará el flujo de aprobación.</li>
+            <li>Al finalizar, recibirá la notificación institucional.</li>
+          </ol>
+        </div>
+
+        <button
+          type="button"
+          class="process-btn electronic-btn"
+          (click)="irProcesoElectronico()"
+        >
+          Iniciar proceso electrónico
+          <i class="bi bi-arrow-right"></i>
+        </button>
+      </article>
+    </section>
+
+    <section class="follow-card">
+      <div>
+        <span>¿Ya tiene un ID de solicitud?</span>
+        <h3>Consulte o continúe su trámite</h3>
+        <p>
+          Use la sección de seguimiento para consultar el estado de su solicitud
+          o subir el documento finalizado en el caso del proceso manual.
+        </p>
+      </div>
+
+      <button type="button" class="follow-btn" (click)="irSeguimiento()">
+        Ir a seguimiento
+      </button>
+    </section>
+  </main>
+
+  <!-- =====================================================
+       MODAL PROCESO MANUAL
+  ====================================================== -->
+  <div
+    class="modal-overlay"
+    *ngIf="modalManualAbierto"
+    (click)="cerrarModalManual()"
+  >
+    <section
+      class="manual-modal"
+      (click)="$event.stopPropagation()"
+    >
+      <button
+        type="button"
+        class="modal-close"
+        (click)="cerrarModalManual()"
+        [disabled]="cargandoManual"
+      >
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+      <div class="modal-header">
+        <div class="modal-icon">
+          <i class="bi bi-file-earmark-arrow-down-fill"></i>
+        </div>
+
+        <div>
+          <span>Proceso manual</span>
+          <h2>Registro para descarga del documento</h2>
+          <p>
+            Complete sus datos para generar automáticamente el ID de solicitud
+            y descargar el documento vacío en PDF.
+          </p>
+        </div>
+      </div>
+
+      <div class="modal-warning">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <p>
+          Recuerde: este proceso debe realizarse completamente de forma manual.
+          Imprima el documento, llénelo a mano, firme físicamente y luego súbalo
+          desde seguimiento usando el ID generado.
+        </p>
+      </div>
+
+      <form
+        class="manual-form"
+        #formManual="ngForm"
+        (ngSubmit)="generarSolicitudManual()"
+        *ngIf="!solicitudManualGenerada"
+      >
+        <div class="form-grid">
+          <label>
+            <span>Nombre</span>
+            <input
+              type="text"
+              name="nombres"
+              [(ngModel)]="manualForm.nombres"
+              (input)="limpiarSoloLetras('nombres')"
+              required
+              minlength="2"
+              maxlength="80"
+              placeholder="Ingrese su nombre"
+              autocomplete="off"
+            />
+          </label>
+
+          <label>
+            <span>Apellido</span>
+            <input
+              type="text"
+              name="apellidos"
+              [(ngModel)]="manualForm.apellidos"
+              (input)="limpiarSoloLetras('apellidos')"
+              required
+              minlength="2"
+              maxlength="80"
+              placeholder="Ingrese su apellido"
+              autocomplete="off"
+            />
+          </label>
+
+          <label class="full">
+            <span>Correo electrónico</span>
+            <input
+              type="email"
+              name="correo"
+              [(ngModel)]="manualForm.correo"
+              required
+              maxlength="150"
+              placeholder="usuario@correo.com"
+              autocomplete="off"
+            />
+          </label>
+        </div>
+
+        <div class="alert error-alert" *ngIf="errorManual">
+          {{ errorManual }}
+        </div>
+
+        <button
+          type="submit"
+          class="submit-manual-btn"
+          [disabled]="cargandoManual || !formularioManualValido()"
+        >
+          <ng-container *ngIf="!cargandoManual">
+            Generar ID y descargar documento
+            <i class="bi bi-download"></i>
+          </ng-container>
+
+          <ng-container *ngIf="cargandoManual">
+            Generando solicitud...
+          </ng-container>
+        </button>
+      </form>
+
+      <section class="manual-result" *ngIf="solicitudManualGenerada">
+        <div class="success-icon">
+          <i class="bi bi-check2-circle"></i>
+        </div>
+
+        <h3>Solicitud manual generada</h3>
+
+        <p>
+          Guarde este ID. Lo necesitará para consultar el seguimiento y subir
+          el documento manual escaneado.
+        </p>
+
+        <div class="id-box">
+          <span>ID único de solicitud</span>
+          <strong>{{ solicitudManualGenerada.uuid_solicitud }}</strong>
+
+          <button type="button" (click)="copiarId()">
+            <i class="bi bi-copy"></i>
+            Copiar ID
+          </button>
+        </div>
+
+        <div class="date-box">
+          <div>
+            <span>Fecha de registro</span>
+            <strong>{{ solicitudManualGenerada.fecha }}</strong>
+          </div>
+
+          <div>
+            <span>Hora de registro</span>
+            <strong>{{ solicitudManualGenerada.hora }}</strong>
+          </div>
+        </div>
+
+        <div class="alert success-alert" *ngIf="exitoManual">
+          {{ exitoManual }}
+        </div>
+
+        <div class="alert error-alert" *ngIf="errorManual">
+          {{ errorManual }}
+        </div>
+
+        <div class="result-actions">
+          <button
+            type="button"
+            class="download-again-btn"
+            (click)="descargarDocumentoManual()"
+          >
+            <i class="bi bi-download"></i>
+            Descargar nuevamente
+          </button>
+
+          <button
+            type="button"
+            class="tracking-btn"
+            (click)="irSeguimiento()"
+          >
+            Ir a seguimiento
+          </button>
+        </div>
+      </section>
+    </section>
+  </div>
+</section>

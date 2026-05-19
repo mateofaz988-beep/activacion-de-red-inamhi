@@ -2,8 +2,18 @@ import { Routes } from '@angular/router';
 
 import { Inicio } from './pages/inicio/inicio';
 import { Login } from './auth/login/login';
+
+/* =====================================================
+   RUTAS PÚBLICAS
+===================================================== */
+
+import { SeleccionarProceso } from './pages/seleccionar-proceso/seleccionar-proceso';
 import { SolicitudPublica } from './public/solicitud-publica/solicitud-publica';
 import { SeguimientoSolicitud } from './public/seguimiento-solicitud/seguimiento-solicitud';
+
+/* =====================================================
+   ADMIN
+===================================================== */
 
 import { AdminDashboard } from './admin/dashboard/dashboard';
 import { SolicitudDetalle } from './admin/solicitud-detalle/solicitud-detalle';
@@ -12,28 +22,62 @@ import { Usuarios } from './admin/usuarios/usuarios';
 import { Reportes } from './admin/reportes/reportes';
 import { Auditoria } from './admin/auditoria/auditoria';
 
+/* =====================================================
+   JEFE INMEDIATO
+===================================================== */
+
 import { Dashboard as JefeDashboard } from './jefe/dashboard/dashboard';
 import { Historial as JefeHistorial } from './jefe/historial/historial';
 import { Reportes as JefeReportes } from './jefe/reportes/reportes';
 
+/* =====================================================
+   MÁXIMA AUTORIDAD
+===================================================== */
+
+import { AutoridadDashboard } from './autoridad/dashboard/dashboard';
 import { Historial as AutoridadHistorial } from './autoridad/historial/historial';
 import { Reportes as AutoridadReportes } from './autoridad/reportes/reportes';
+
+/* =====================================================
+   TICS
+===================================================== */
 
 import { TicsDashboard } from './tics/dashboard/dashboard';
 import { Historial as TicsHistorial } from './tics/historial/historial';
 import { Reportes as TicsReportes } from './tics/reportes/reportes';
-import { roleGuard } from './guards/role-guard';
-import { AutoridadDashboard } from './autoridad/dashboard/dashboard';
 
+/* =====================================================
+   GUARDS
+===================================================== */
+
+import { roleGuard } from './guards/role-guard';
 
 export const routes: Routes = [
+  /* =====================================================
+     INICIO
+  ====================================================== */
+
   {
     path: '',
     component: Inicio
   },
+
+  /* =====================================================
+     AUTENTICACIÓN
+  ====================================================== */
+
   {
     path: 'auth/login',
     component: Login
+  },
+
+  /* =====================================================
+     PÚBLICO
+  ====================================================== */
+
+  {
+    path: 'seleccionar-proceso',
+    component: SeleccionarProceso
   },
   {
     path: 'public/solicitud',
@@ -44,9 +88,9 @@ export const routes: Routes = [
     component: SeguimientoSolicitud
   },
 
-  // =========================
-  // ADMIN
-  // =========================
+  /* =====================================================
+     ADMIN
+  ====================================================== */
 
   {
     path: 'admin/dashboard',
@@ -97,9 +141,9 @@ export const routes: Routes = [
     }
   },
 
-  // =========================
-  // JEFE INMEDIATO
-  // =========================
+  /* =====================================================
+     JEFE INMEDIATO
+  ====================================================== */
 
   {
     path: 'jefe/dashboard',
@@ -134,9 +178,9 @@ export const routes: Routes = [
     }
   },
 
-  // =========================
-  // MÁXIMA AUTORIDAD
-  // =========================
+  /* =====================================================
+     MÁXIMA AUTORIDAD
+  ====================================================== */
 
   {
     path: 'autoridad/dashboard',
@@ -171,9 +215,9 @@ export const routes: Routes = [
     }
   },
 
-  // =========================
-  // TICS
-  // =========================
+  /* =====================================================
+     TICS
+  ====================================================== */
 
   {
     path: 'tics/dashboard',
@@ -208,9 +252,9 @@ export const routes: Routes = [
     }
   },
 
-  // =========================
-  // RUTA NO ENCONTRADA
-  // =========================
+  /* =====================================================
+     RUTA NO ENCONTRADA
+  ====================================================== */
 
   {
     path: '**',

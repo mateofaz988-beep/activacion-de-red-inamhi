@@ -4,7 +4,10 @@
 
     <div>
       <h1>Seguimiento de Solicitud</h1>
-      <p>Consulte el estado de su solicitud de liberación web.</p>
+      <p>
+        Consulte solicitudes electrónicas o continúe el proceso manual subiendo
+        el documento firmado.
+      </p>
     </div>
   </header>
 
@@ -12,11 +15,28 @@
     <section class="search-card">
       <div class="search-info">
         <span class="badge">Consulta pública</span>
+
         <h2>Ingrese su código de solicitud</h2>
+
         <p>
-          El código fue generado al registrar el formulario público.
-          Ejemplo: <strong>INAMHI-WEB-2026-0001</strong>
+          Puede consultar un proceso electrónico o manual.
+          Ejemplos:
+          <strong>INAMHI-WEB-2026-0001</strong>
+          o
+          <strong>MAN-65CA1D9A</strong>.
         </p>
+
+        <div class="code-types">
+          <div>
+            <strong>Electrónico</strong>
+            <span>INAMHI-WEB-2026-0001</span>
+          </div>
+
+          <div>
+            <strong>Manual</strong>
+            <span>MAN-65CA1D9A</span>
+          </div>
+        </div>
       </div>
 
       <form class="search-form" (ngSubmit)="consultar()">
@@ -26,14 +46,14 @@
             type="text"
             name="codigo"
             [(ngModel)]="codigo"
-            placeholder="INAMHI-WEB-2026-0001"
-            maxlength="30"
+            placeholder="MAN-65CA1D9A o INAMHI-WEB-2026-0001"
+            maxlength="35"
             (input)="limpiarCodigo()"
           />
         </label>
 
         <button type="submit" [disabled]="cargando">
-          <span *ngIf="!cargando">Consultar estado</span>
+          <span *ngIf="!cargando">Consultar solicitud</span>
           <span *ngIf="cargando">Consultando...</span>
         </button>
       </form>
@@ -43,6 +63,185 @@
       </div>
     </section>
 
+    <!-- =====================================================
+         RESULTADO MANUAL
+    ====================================================== -->
+    <section class="result-card manual-result-card" *ngIf="resultadoManual">
+      <div class="result-header">
+        <div>
+          <span class="label">ID de solicitud manual</span>
+          <h3>{{ resultadoManual.uuid_solicitud }}</h3>
+        </div>
+
+        <span
+          class="status"
+          [ngClass]="getEstadoManualClase(resultadoManual.estado)"
+        >
+          {{ getEstadoManualTexto(resultadoManual.estado) }}
+        </span>
+      </div>
+
+      <div class="manual-flow-box">
+        <div class="manual-step active">
+          <span>1</span>
+          <p>Documento descargado</p>
+        </div>
+
+        <div class="manual-line"></div>
+
+        <div
+          class="manual-step"
+          [class.active]="resultadoManual.estado === 'PENDIENTE_SUBIDA' || resultadoManual.estado === 'FINALIZADO'"
+        >
+          <span>2</span>
+          <p>Subida del PDF firmado</p>
+        </div>
+
+        <div class="manual-line"></div>
+
+        <div
+          class="manual-step"
+          [class.active]="resultadoManual.estado === 'FINALIZADO'"
+        >
+          <span>3</span>
+          <p>Finalizado</p>
+        </div>
+      </div>
+
+      <div class="details-grid manual-details">
+        <div>
+          <span>Solicitante</span>
+          <strong>{{ resultadoManual.nombres }} {{ resultadoManual.apellidos }}</strong>
+        </div>
+
+        <div>
+          <span>Correo registrado</span>
+          <strong>{{ resultadoManual.correo }}</strong>
+        </div>
+
+        <div>
+          <span>Tipo de proceso</span>
+          <strong>Manual / físico</strong>
+        </div>
+
+        <div>
+          <span>Estado actual</span>
+          <strong>{{ getEstadoManualTexto(resultadoManual.estado) }}</strong>
+        </div>
+      </div>
+
+      <div class="manual-warning">
+        <div class="warning-icon">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+
+        <div>
+          <h4>Advertencia importante antes de subir el documento</h4>
+
+          <p>
+            El documento que suba debe estar completamente lleno y firmado
+            físicamente por todas las autoridades correspondientes:
+            solicitante, jefe inmediato, máxima autoridad y TICS.
+          </p>
+
+          <p>
+            Al subir el PDF firmado, el proceso manual quedará marcado como
+            <strong>FINALIZADO</strong>. Verifique el archivo antes de enviarlo.
+          </p>
+        </div>
+      </div>
+
+      <div class="tics-recommendation">
+        <div class="recommendation-icon">
+          <i class="bi bi-info-circle-fill"></i>
+        </div>
+
+        <div>
+          <h4>Recomendación institucional</h4>
+          <p>
+            Después de completar las firmas físicas, comuníquese con el área de
+            TICS para coordinar la activación del acceso solicitado y la firma
+            correspondiente dentro del documento.
+          </p>
+        </div>
+      </div>
+
+      <section
+        class="upload-card"
+        *ngIf="resultadoManual.estado !== 'FINALIZADO'"
+      >
+        <h4>Subir documento manual finalizado</h4>
+
+        <p>
+          Seleccione el PDF escaneado, lleno y firmado. Solo se permite formato
+          <strong>.pdf</strong>.
+        </p>
+
+        <label class="file-zone">
+          <input
+            type="file"
+            accept=".pdf,application/pdf"
+            (change)="seleccionarArchivoManual($event)"
+          />
+
+          <i class="bi bi-cloud-arrow-up-fill"></i>
+
+          <strong *ngIf="!nombreArchivoManual">
+            Seleccionar PDF firmado
+          </strong>
+
+          <strong *ngIf="nombreArchivoManual">
+            {{ nombreArchivoManual }}
+          </strong>
+
+          <span>
+            Tamaño máximo permitido: 10 MB
+          </span>
+        </label>
+
+        <div class="error-box upload-error" *ngIf="errorArchivoManual">
+          {{ errorArchivoManual }}
+        </div>
+
+        <div class="success-box" *ngIf="exitoManual">
+          {{ exitoManual }}
+        </div>
+
+        <button
+          type="button"
+          class="upload-btn"
+          [disabled]="!archivoManual || subiendoManual"
+          (click)="subirDocumentoManual()"
+        >
+          <span *ngIf="!subiendoManual">
+            Subir PDF y finalizar proceso manual
+          </span>
+
+          <span *ngIf="subiendoManual">
+            Subiendo documento...
+          </span>
+        </button>
+      </section>
+
+      <section
+        class="final-card"
+        *ngIf="resultadoManual.estado === 'FINALIZADO'"
+      >
+        <i class="bi bi-check-circle-fill"></i>
+
+        <div>
+          <h4>Proceso manual finalizado</h4>
+          <p>
+            El documento manual fue recibido correctamente. El archivo quedará
+            disponible para revisión administrativa en los paneles internos.
+          </p>
+        </div>
+      </section>
+    </section>
+
+    <!-- =====================================================
+         RESULTADO ELECTRÓNICO / NORMAL
+    ====================================================== -->
     <section class="result-card" *ngIf="resultado">
       <div class="result-header">
         <div>
@@ -50,7 +249,10 @@
           <h3>{{ resultado.solicitud.codigo_solicitud }}</h3>
         </div>
 
-        <span class="status" [ngClass]="getEstadoClase(resultado.solicitud.estado)">
+        <span
+          class="status"
+          [ngClass]="getEstadoClase(resultado.solicitud.estado)"
+        >
           {{ getEstadoTexto(resultado.solicitud.estado) }}
         </span>
       </div>
@@ -63,28 +265,40 @@
 
         <div class="line"></div>
 
-        <div class="step" [class.active]="resultado.solicitud.etapa_actual !== 'registro_publico'">
+        <div
+          class="step"
+          [class.active]="resultado.solicitud.etapa_actual !== 'registro_publico'"
+        >
           <span>2</span>
           <p>Firma</p>
         </div>
 
         <div class="line"></div>
 
-        <div class="step" [class.active]="['jefe_inmediato', 'maxima_autoridad', 'tics', 'ejecucion_tics', 'finalizado'].includes(resultado.solicitud.etapa_actual)">
+        <div
+          class="step"
+          [class.active]="['jefe_inmediato', 'maxima_autoridad', 'tics', 'ejecucion_tics', 'finalizado'].includes(resultado.solicitud.etapa_actual)"
+        >
           <span>3</span>
           <p>Aprobación</p>
         </div>
 
         <div class="line"></div>
 
-        <div class="step" [class.active]="['tics', 'ejecucion_tics', 'finalizado'].includes(resultado.solicitud.etapa_actual)">
+        <div
+          class="step"
+          [class.active]="['tics', 'ejecucion_tics', 'finalizado'].includes(resultado.solicitud.etapa_actual)"
+        >
           <span>4</span>
           <p>TICS</p>
         </div>
 
         <div class="line"></div>
 
-        <div class="step" [class.active]="resultado.solicitud.etapa_actual === 'finalizado'">
+        <div
+          class="step"
+          [class.active]="resultado.solicitud.etapa_actual === 'finalizado'"
+        >
           <span>5</span>
           <p>Finalizado</p>
         </div>
@@ -135,7 +349,10 @@
       <div class="websites">
         <h4>Páginas web solicitadas</h4>
 
-        <div class="website-item" *ngFor="let pagina of resultado.paginas_web">
+        <div
+          class="website-item"
+          *ngFor="let pagina of resultado.paginas_web"
+        >
           <span>{{ pagina.url_pagina }}</span>
           <p>{{ pagina.descripcion || 'Sin descripción' }}</p>
         </div>

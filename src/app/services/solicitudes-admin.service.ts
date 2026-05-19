@@ -122,7 +122,7 @@ export interface SubirDocumentoResponse {
 })
 export class SolicitudesAdminService {
 
-  private readonly API_BASE = 'http://10.0.5.120:5050/api';
+  private readonly API_BASE = 'http://localhost:5050/api';
   private readonly API_URL = `${this.API_BASE}/admin/solicitudes`;
 
   constructor(private http: HttpClient) {}

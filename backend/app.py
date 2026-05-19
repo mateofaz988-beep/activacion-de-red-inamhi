@@ -1,6 +1,6 @@
 from io import BytesIO
 import json
-
+import uuid 
 import smtplib
 import html
 from email.mime.text import MIMEText
@@ -1674,7 +1674,8 @@ def estado_legible_pdf(estado):
         "rechazada_tics": "Rechazada TICS",
         "pendiente_ejecucion_tics": "Pendiente ejecución TICS",
         "finalizada": "Finalizada",
-        "anulada": "Anulada"
+        "anulada": "Anulada",
+        "pendiente_subida_manual": "Pendiente subida manual"
     }
 
     return estados.get(estado, estado)
@@ -1688,7 +1689,8 @@ def etapa_legible_pdf(etapa):
         "maxima_autoridad": "Máxima autoridad",
         "tics": "Validación TICS",
         "ejecucion_tics": "Ejecución TICS",
-        "finalizado": "Finalizado"
+        "finalizado": "Finalizado",
+        "proceso_manual": "Proceso manual"
     }
 
     return etapas.get(etapa, etapa)
@@ -2255,28 +2257,6 @@ def descargar_pdf_solicitud(solicitud_id):
         rol_actual = request.usuario_actual["rol"]
         incluir_seccion_tics = rol_actual == "analista_tics"
 
-        # =====================================================
-        # Depuración temporal para verificar páginas del PDF
-        # =====================================================
-
-        print("==============================================")
-        print("GENERANDO PDF DE SOLICITUD")
-        print("ID SOLICITUD:", solicitud_id)
-        print("CÓDIGO:", solicitud.get("codigo_solicitud"))
-        print("ROL ACTUAL:", rol_actual)
-        print("INCLUIR SECCIÓN TICS:", incluir_seccion_tics)
-        print("TOTAL PÁGINAS WEB RECIBIDAS:", len(paginas_web or []))
-
-        for pagina in paginas_web or []:
-            print(
-                "PÁGINA:",
-                pagina.get("numero"),
-                pagina.get("url_pagina"),
-                pagina.get("descripcion")
-            )
-
-        print("==============================================")
-
         pdf_buffer = generar_pdf_solicitud_a4(
             solicitud,
             paginas_web,
@@ -2308,6 +2288,1372 @@ def descargar_pdf_solicitud(solicitud_id):
             "error": str(error)
         }), 500
 
+# =====================================================
+# flujo electrónico público con FirmaEC
+# =====================================================
+
+def validar_archivo_pdf(archivo):
+    """
+    Valida que el archivo recibido sea realmente un PDF.
+    Revisa extensión y cabecera interna %PDF-.
+    """
+
+    if archivo is None:
+        return False, "debe seleccionar un archivo PDF."
+
+    if archivo.filename is None or archivo.filename.strip() == "":
+        return False, "el archivo PDF es obligatorio."
+
+    nombre_original = secure_filename(archivo.filename)
+
+    if not nombre_original.lower().endswith(".pdf"):
+        return False, "solo se permite subir archivos PDF."
+
+    try:
+        inicio_archivo = archivo.stream.read(5)
+        archivo.stream.seek(0)
+
+        if inicio_archivo != b"%PDF-":
+            return False, "el archivo seleccionado no parece ser un PDF válido."
+
+    except Exception:
+        return False, "no se pudo validar el archivo PDF."
+
+    return True, None
+
+
+def registrar_documento_firmaec_si_existe(solicitud_id, codigo_solicitud, nombre_archivo):
+    """
+    Registra el PDF firmado en solicitud_documentos si la tabla existe.
+    Si la tabla no existe o tiene otra estructura, no rompe el flujo.
+    """
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return False
+
+    try:
+        cursor = conexion.cursor()
+
+        cursor.execute("""
+            insert into solicitud_documentos (
+                solicitud_id,
+                etapa,
+                rol_firmante,
+                usuario_id,
+                tipo_documento,
+                nombre_archivo,
+                ruta_archivo,
+                mime_type,
+                firmado,
+                firma_validada,
+                observacion
+            ) values (
+                %s,
+                'firma_solicitante',
+                'solicitante',
+                null,
+                'pdf_firmado_electronico',
+                %s,
+                %s,
+                'application/pdf',
+                1,
+                0,
+                %s
+            );
+        """, (
+            solicitud_id,
+            nombre_archivo,
+            os.path.join(FIRMADOS_FOLDER, nombre_archivo),
+            f"PDF firmado electrónicamente por el solicitante para {codigo_solicitud}."
+        ))
+
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+
+        return True
+
+    except Exception as error:
+        print("advertencia: no se pudo registrar en solicitud_documentos:", error)
+
+        try:
+            cursor.close()
+            conexion.close()
+        except Exception:
+            pass
+
+        return False
+
+
+@app.route("/api/public/electronico/preparar", methods=["POST", "OPTIONS"])
+def preparar_solicitud_electronica_firmaec():
+    """
+    Crea la solicitud electrónica en estado inicial,
+    guarda las páginas solicitadas y permite descargar el PDF institucional.
+    """
+
+    if request.method == "OPTIONS":
+        return jsonify({"estado": "ok"}), 200
+
+    data = request.get_json()
+
+    if not data:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se recibieron datos para preparar la solicitud electrónica."
+        }), 400
+
+    errores, datos = validar_solicitud_publica(data)
+
+    if errores:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "existen errores de validación en el formulario.",
+            "errores": errores
+        }), 400
+
+    codigo_solicitud = generar_codigo_solicitud()
+
+    if codigo_solicitud is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo generar el código de solicitud."
+        }), 500
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor()
+
+        cursor.execute("""
+            insert into solicitudes (
+                codigo_solicitud,
+                nombres_completos,
+                cedula,
+                correo_institucional,
+                telefono_ext,
+                dependencia,
+                area_unidad,
+                cargo,
+                fecha_solicitud,
+                tipo_usuario,
+                nombre_usuario_externo,
+                direccion_ip,
+                tiempo_vigencia_acceso,
+                justificacion_necesidad_institucional,
+                estado,
+                etapa_actual,
+                bloqueada
+            ) values (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                'pendiente_firma_solicitante',
+                'firma_solicitante',
+                false
+            );
+        """, (
+            codigo_solicitud,
+            datos["nombres_completos"],
+            datos["cedula"],
+            datos["correo_institucional"],
+            datos["telefono_ext"],
+            datos["dependencia"],
+            datos["area_unidad"],
+            datos["cargo"],
+            convertir_fecha(datos["fecha_solicitud"]),
+            datos["tipo_usuario"],
+            datos["nombre_usuario_externo"],
+            datos["direccion_ip"],
+            datos["tiempo_vigencia_acceso"],
+            datos["justificacion_necesidad_institucional"]
+        ))
+
+        solicitud_id = cursor.lastrowid
+
+        for index, pagina in enumerate(datos["paginas_web"], start=1):
+            cursor.execute("""
+                insert into solicitud_paginas_web (
+                    solicitud_id,
+                    numero,
+                    url_pagina,
+                    descripcion
+                ) values (
+                    %s, %s, %s, %s
+                );
+            """, (
+                solicitud_id,
+                index,
+                pagina["url_pagina"],
+                pagina["descripcion"]
+            ))
+
+        conexion.commit()
+
+        cursor.close()
+        conexion.close()
+
+        try:
+            registrar_auditoria(
+                usuario_id=None,
+                solicitud_id=solicitud_id,
+                modulo="firmaec_publico",
+                accion="preparar_solicitud_firmaec",
+                descripcion=f"Solicitud electrónica preparada para FirmaEC con código {codigo_solicitud}.",
+                datos_anteriores=None,
+                datos_nuevos={
+                    "codigo_solicitud": codigo_solicitud,
+                    "estado": "pendiente_firma_solicitante",
+                    "etapa_actual": "firma_solicitante"
+                }
+            )
+        except Exception as error_auditoria:
+            print("advertencia: no se pudo registrar auditoría firmaec:", error_auditoria)
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "formato electrónico generado correctamente.",
+            "codigo_solicitud": codigo_solicitud,
+            "url_descarga": f"/api/public/electronico/{codigo_solicitud}/pdf",
+            "solicitud": {
+                "id": solicitud_id,
+                "codigo_solicitud": codigo_solicitud,
+                "estado": "pendiente_firma_solicitante",
+                "etapa_actual": "firma_solicitante",
+                "nombres_completos": datos["nombres_completos"],
+                "correo_institucional": datos["correo_institucional"]
+            }
+        }), 201
+
+    except Error as error:
+        conexion.rollback()
+
+        print("error al preparar solicitud electrónica:", error)
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al preparar la solicitud electrónica.",
+            "error": str(error)
+        }), 500
+
+
+@app.route("/api/public/electronico/<codigo_solicitud>/pdf", methods=["GET"])
+def descargar_pdf_publico_firmaec(codigo_solicitud):
+    """
+    Descarga el formato PDF institucional para que el usuario
+    lo firme electrónicamente con FirmaEC.
+    """
+
+    codigo_solicitud = limpiar_texto(codigo_solicitud).upper()
+
+    if not codigo_solicitud:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el código de solicitud es obligatorio."
+        }), 400
+
+    if not re.match(r"^INAMHI-WEB-\d{4}-\d{4}$", codigo_solicitud):
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el código de solicitud no tiene un formato válido."
+        }), 400
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select
+                id,
+                codigo_solicitud,
+                nombres_completos,
+                cedula,
+                correo_institucional,
+                telefono_ext,
+                dependencia,
+                area_unidad,
+                cargo,
+                fecha_solicitud,
+                tipo_usuario,
+                nombre_usuario_externo,
+                direccion_ip,
+                tiempo_vigencia_acceso,
+                justificacion_necesidad_institucional,
+                estado,
+                etapa_actual,
+                bloqueada,
+                created_at,
+                updated_at
+            from solicitudes
+            where codigo_solicitud = %s
+            limit 1;
+        """, (codigo_solicitud,))
+
+        solicitud = cursor.fetchone()
+
+        if solicitud is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "no se encontró una solicitud con ese código."
+            }), 404
+
+        cursor.execute("""
+            select
+                numero,
+                url_pagina,
+                descripcion
+            from solicitud_paginas_web
+            where solicitud_id = %s
+            order by numero asc;
+        """, (solicitud["id"],))
+
+        paginas_web = cursor.fetchall()
+
+        cursor.close()
+        conexion.close()
+
+        pdf_buffer = generar_pdf_solicitud_a4(
+            solicitud,
+            paginas_web,
+            incluir_seccion_tics=False
+        )
+
+        respuesta = send_file(
+            pdf_buffer,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"{codigo_solicitud}.pdf",
+            max_age=0
+        )
+
+        respuesta.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        respuesta.headers["Pragma"] = "no-cache"
+        respuesta.headers["Expires"] = "0"
+
+        return respuesta
+
+    except Error as error:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al descargar el formato PDF.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        print("error al generar pdf público firmaec:", error)
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al generar el PDF para FirmaEC.",
+            "error": str(error)
+        }), 500
+
+
+@app.route("/api/public/electronico/<codigo_solicitud>/subir-firmado", methods=["POST", "OPTIONS"])
+def subir_pdf_firmado_firmaec(codigo_solicitud):
+    """
+    Recibe el PDF firmado electrónicamente por el solicitante.
+    Al subirlo correctamente, la solicitud pasa a jefe inmediato.
+    """
+
+    if request.method == "OPTIONS":
+        return jsonify({"estado": "ok"}), 200
+
+    codigo_solicitud = limpiar_texto(codigo_solicitud).upper()
+
+    if not codigo_solicitud:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el código de solicitud es obligatorio."
+        }), 400
+
+    if not re.match(r"^INAMHI-WEB-\d{4}-\d{4}$", codigo_solicitud):
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el código de solicitud no tiene un formato válido."
+        }), 400
+
+    if "archivo" not in request.files:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "debe seleccionar el PDF firmado electrónicamente."
+        }), 400
+
+    archivo = request.files["archivo"]
+
+    archivo_valido, mensaje_archivo = validar_archivo_pdf(archivo)
+
+    if not archivo_valido:
+        return jsonify({
+            "estado": "error",
+            "mensaje": mensaje_archivo
+        }), 400
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select
+                id,
+                codigo_solicitud,
+                nombres_completos,
+                correo_institucional,
+                estado,
+                etapa_actual
+            from solicitudes
+            where codigo_solicitud = %s
+            limit 1;
+        """, (codigo_solicitud,))
+
+        solicitud = cursor.fetchone()
+
+        if solicitud is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "no se encontró una solicitud con ese código."
+            }), 404
+
+        if solicitud["estado"] != "pendiente_firma_solicitante":
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "la solicitud ya no está pendiente de firma del solicitante.",
+                "estado_actual": solicitud["estado"],
+                "etapa_actual": solicitud["etapa_actual"]
+            }), 400
+
+        nombre_archivo = f"pdf_firmado_solicitante_{codigo_solicitud}.pdf"
+        ruta_archivo = os.path.join(FIRMADOS_FOLDER, nombre_archivo)
+
+        archivo.save(ruta_archivo)
+
+        cursor.execute("""
+            update solicitudes
+            set
+                estado = 'pendiente_jefe_inmediato',
+                etapa_actual = 'jefe_inmediato',
+                bloqueada = false
+            where codigo_solicitud = %s;
+        """, (codigo_solicitud,))
+
+        conexion.commit()
+
+        cursor.close()
+        conexion.close()
+
+        registrar_documento_firmaec_si_existe(
+            solicitud_id=solicitud["id"],
+            codigo_solicitud=codigo_solicitud,
+            nombre_archivo=nombre_archivo
+        )
+
+        try:
+            registrar_auditoria(
+                usuario_id=None,
+                solicitud_id=solicitud["id"],
+                modulo="firmaec_publico",
+                accion="subir_pdf_firmado_solicitante",
+                descripcion=(
+                    f"El solicitante subió el PDF firmado electrónicamente. "
+                    f"La solicitud {codigo_solicitud} fue enviada al jefe inmediato."
+                ),
+                datos_anteriores={
+                    "estado": solicitud["estado"],
+                    "etapa_actual": solicitud["etapa_actual"]
+                },
+                datos_nuevos={
+                    "estado": "pendiente_jefe_inmediato",
+                    "etapa_actual": "jefe_inmediato",
+                    "archivo": nombre_archivo
+                }
+            )
+        except Exception as error_auditoria:
+            print("advertencia: no se pudo registrar auditoría de PDF firmado:", error_auditoria)
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "PDF firmado subido correctamente. La solicitud fue enviada al jefe inmediato.",
+            "solicitud": {
+                "id": solicitud["id"],
+                "codigo_solicitud": codigo_solicitud,
+                "estado": "pendiente_jefe_inmediato",
+                "etapa_actual": "jefe_inmediato",
+                "archivo_firmado": nombre_archivo
+            }
+        }), 200
+
+    except Error as error:
+        conexion.rollback()
+
+        print("error al subir pdf firmado:", error)
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al subir el PDF firmado.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        conexion.rollback()
+
+        print("error inesperado al subir pdf firmado:", error)
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al subir el PDF firmado.",
+            "error": str(error)
+        }), 500
+# =====================================================
+# flujo manual público
+# =====================================================
+
+def generar_uuid_manual():
+    return f"MAN-{uuid.uuid4().hex[:8].upper()}"
+
+
+def generar_pdf_manual_vacio(uuid_solicitud, nombres, apellidos, correo):
+    """
+    Genera el PDF manual usando el MISMO FORMATO institucional
+    que ya utiliza el sistema en generar_pdf_solicitud_a4().
+    No crea un formato nuevo.
+    """
+
+    fecha_actual = datetime.datetime.now().date()
+
+    solicitud_manual = {
+        "id": None,
+        "codigo_solicitud": uuid_solicitud,
+
+        "nombres_completos": f"{nombres} {apellidos}",
+        "correo_institucional": correo,
+
+        "cedula": "",
+        "telefono_ext": "",
+        "dependencia": "",
+        "area_unidad": "",
+        "cargo": "",
+        "fecha_solicitud": fecha_actual,
+
+        "tipo_usuario": "",
+        "nombre_usuario_externo": "",
+        "direccion_ip": "",
+        "tiempo_vigencia_acceso": "",
+
+        "justificacion_necesidad_institucional": (
+            " "
+            " "
+            " "
+            ""
+        ),
+
+        "estado": "pendiente_subida_manual",
+        "etapa_actual": "proceso_manual",
+
+        "bloqueada": False,
+        "created_at": datetime.datetime.now(),
+        "updated_at": datetime.datetime.now()
+    }
+
+    paginas_manual = [
+        {
+            "numero": 1,
+            "url_pagina": "",
+            "descripcion": ""
+        },
+        {
+            "numero": 2,
+            "url_pagina": "",
+            "descripcion": ""
+        },
+        {
+            "numero": 3,
+            "url_pagina": "",
+            "descripcion": ""
+        },
+        {
+            "numero": 4,
+            "url_pagina": "",
+            "descripcion": ""
+        }
+    ]
+
+    return generar_pdf_solicitud_a4(
+        solicitud_manual,
+        paginas_manual,
+        incluir_seccion_tics=False
+    )
+
+
+@app.route("/api/manual/registrar", methods=["POST", "OPTIONS"])
+def registrar_solicitud_manual():
+    if request.method == "OPTIONS":
+        return jsonify({"estado": "ok"}), 200
+
+    data = request.get_json()
+
+    if not data:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se recibieron datos para registrar la solicitud manual."
+        }), 400
+
+    nombres = normalizar_espacios(data.get("nombres"))
+    apellidos = normalizar_espacios(data.get("apellidos"))
+    correo = limpiar_texto(data.get("correo")).lower()
+
+    errores = {}
+
+    if not nombres:
+        errores["nombres"] = "el nombre es obligatorio."
+    elif len(nombres) < 2:
+        errores["nombres"] = "el nombre debe tener mínimo 2 caracteres."
+    elif not validar_solo_letras_espacios(nombres):
+        errores["nombres"] = "el nombre solo puede contener letras y espacios."
+
+    if not apellidos:
+        errores["apellidos"] = "el apellido es obligatorio."
+    elif len(apellidos) < 2:
+        errores["apellidos"] = "el apellido debe tener mínimo 2 caracteres."
+    elif not validar_solo_letras_espacios(apellidos):
+        errores["apellidos"] = "el apellido solo puede contener letras y espacios."
+
+    if not correo:
+        errores["correo"] = "el correo electrónico es obligatorio."
+    elif not validar_correo_general(correo):
+        errores["correo"] = "ingrese un correo electrónico válido."
+
+    if errores:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "existen errores de validación en el formulario manual.",
+            "errores": errores
+        }), 400
+
+    uuid_solicitud = generar_uuid_manual()
+    fecha_hora = datetime.datetime.now()
+    fecha_registro = fecha_hora.date()
+    hora_registro = fecha_hora.time().replace(microsecond=0)
+
+    nombre_pdf = f"documento_manual_vacio_{uuid_solicitud}.pdf"
+    ruta_pdf = os.path.join(DOCUMENTOS_FOLDER, nombre_pdf)
+
+    try:
+        pdf_buffer = generar_pdf_manual_vacio(
+            uuid_solicitud=uuid_solicitud,
+            nombres=nombres,
+            apellidos=apellidos,
+            correo=correo
+        )
+
+        with open(ruta_pdf, "wb") as archivo_pdf:
+            archivo_pdf.write(pdf_buffer.getvalue())
+
+    except Exception as error:
+        print("error al generar pdf manual:", error)
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo generar el documento PDF manual.",
+            "error": str(error)
+        }), 500
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor()
+
+        cursor.execute("""
+            insert into solicitudes_manual (
+                uuid_solicitud,
+                nombres,
+                apellidos,
+                correo,
+                estado,
+                documento_vacio,
+                documento_escaneado,
+                fecha_registro,
+                hora_registro
+            ) values (
+                %s, %s, %s, %s,
+                'PENDIENTE_SUBIDA',
+                %s,
+                null,
+                %s,
+                %s
+            );
+        """, (
+            uuid_solicitud,
+            nombres,
+            apellidos,
+            correo,
+            nombre_pdf,
+            fecha_registro,
+            hora_registro
+        ))
+
+        conexion.commit()
+        solicitud_manual_id = cursor.lastrowid
+
+        cursor.close()
+        conexion.close()
+
+        try:
+            registrar_auditoria(
+                usuario_id=None,
+                solicitud_id=None,
+                modulo="flujo_manual",
+                accion="registrar_descarga_manual",
+                descripcion=(
+                    f"Solicitud manual descargada por: {nombres} {apellidos} "
+                    f"con correo {correo} el {fecha_registro} a las {hora_registro}."
+                ),
+                datos_anteriores=None,
+                datos_nuevos={
+                    "solicitud_manual_id": solicitud_manual_id,
+                    "uuid_solicitud": uuid_solicitud,
+                    "nombres": nombres,
+                    "apellidos": apellidos,
+                    "correo": correo,
+                    "estado": "PENDIENTE_SUBIDA",
+                    "documento_vacio": nombre_pdf
+                }
+            )
+        except Exception as error_auditoria:
+            print("advertencia: no se pudo registrar auditoría manual:", error_auditoria)
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "solicitud manual registrada correctamente.",
+            "uuid_solicitud": uuid_solicitud,
+            "fecha": str(fecha_registro),
+            "hora": str(hora_registro),
+            "url_descarga": f"/api/manual/{uuid_solicitud}/descargar",
+            "solicitud": {
+                "id": solicitud_manual_id,
+                "uuid_solicitud": uuid_solicitud,
+                "nombres": nombres,
+                "apellidos": apellidos,
+                "correo": correo,
+                "estado": "PENDIENTE_SUBIDA"
+            }
+        }), 201
+
+    except Error as error:
+        conexion.rollback()
+
+        print("error al registrar solicitud manual:", error)
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al registrar la solicitud manual.",
+            "error": str(error)
+        }), 500
+
+# =====================================================
+# validar solicitud manual por ID
+# =====================================================
+
+@app.route("/api/manual/validar/<uuid_solicitud>", methods=["GET"])
+def validar_solicitud_manual(uuid_solicitud):
+    uuid_solicitud = limpiar_texto(uuid_solicitud).upper()
+
+    if not uuid_solicitud:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el ID de solicitud manual es obligatorio."
+        }), 400
+
+    if not re.match(r"^MAN-[A-Z0-9]{8}$", uuid_solicitud):
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el ID manual no tiene un formato válido. ejemplo: MAN-65CA1D9A."
+        }), 400
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select
+                id,
+                uuid_solicitud,
+                nombres,
+                apellidos,
+                correo,
+                estado,
+                documento_vacio,
+                documento_escaneado,
+                fecha_registro,
+                hora_registro,
+                created_at,
+                updated_at
+            from solicitudes_manual
+            where uuid_solicitud = %s
+            limit 1;
+        """, (uuid_solicitud,))
+
+        solicitud = cursor.fetchone()
+
+        cursor.close()
+        conexion.close()
+
+        if solicitud is None:
+            return jsonify({
+                "estado": "error",
+                "mensaje": "no se encontró una solicitud manual con ese ID."
+            }), 404
+
+        habilitar_subida = solicitud["estado"] != "FINALIZADO"
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "solicitud manual encontrada correctamente.",
+            "habilitar_subida": habilitar_subida,
+            "solicitud": {
+                "id": solicitud["id"],
+                "uuid_solicitud": solicitud["uuid_solicitud"],
+                "nombres": solicitud["nombres"],
+                "apellidos": solicitud["apellidos"],
+                "correo": solicitud["correo"],
+                "estado": solicitud["estado"],
+                "documento_vacio": solicitud["documento_vacio"],
+                "documento_escaneado": solicitud["documento_escaneado"],
+                "fecha_registro": str(solicitud["fecha_registro"]) if solicitud["fecha_registro"] else None,
+                "hora_registro": str(solicitud["hora_registro"]) if solicitud["hora_registro"] else None,
+                "created_at": serializar_fecha(solicitud["created_at"]),
+                "updated_at": serializar_fecha(solicitud["updated_at"])
+            }
+        }), 200
+
+    except Error as error:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al validar la solicitud manual.",
+            "error": str(error)
+        }), 500
+
+
+# =====================================================
+# subir documento manual firmado y finalizar proceso
+# =====================================================
+
+@app.route("/api/manual/<uuid_solicitud>/subir", methods=["POST", "OPTIONS"])
+def subir_documento_manual_firmado(uuid_solicitud):
+    if request.method == "OPTIONS":
+        return jsonify({"estado": "ok"}), 200
+
+    uuid_solicitud = limpiar_texto(uuid_solicitud).upper()
+
+    if not uuid_solicitud:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el ID de solicitud manual es obligatorio."
+        }), 400
+
+    if not re.match(r"^MAN-[A-Z0-9]{8}$", uuid_solicitud):
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el ID manual no tiene un formato válido. ejemplo: MAN-65CA1D9A."
+        }), 400
+
+    if "archivo" not in request.files:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "debe seleccionar un documento PDF."
+        }), 400
+
+    archivo = request.files["archivo"]
+
+    if archivo.filename is None or archivo.filename.strip() == "":
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el archivo PDF es obligatorio."
+        }), 400
+
+    nombre_original = secure_filename(archivo.filename)
+
+    if not nombre_original.lower().endswith(".pdf"):
+        return jsonify({
+            "estado": "error",
+            "mensaje": "solo se permite subir archivos PDF."
+        }), 400
+
+    # Validación básica de firma PDF: el archivo debe iniciar con %PDF-
+    try:
+        inicio_archivo = archivo.stream.read(5)
+        archivo.stream.seek(0)
+
+        if inicio_archivo != b"%PDF-":
+            return jsonify({
+                "estado": "error",
+                "mensaje": "el archivo seleccionado no parece ser un PDF válido."
+            }), 400
+
+    except Exception:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo validar el archivo PDF."
+        }), 400
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select
+                id,
+                uuid_solicitud,
+                nombres,
+                apellidos,
+                correo,
+                estado,
+                documento_escaneado
+            from solicitudes_manual
+            where uuid_solicitud = %s
+            limit 1;
+        """, (uuid_solicitud,))
+
+        solicitud = cursor.fetchone()
+
+        if solicitud is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "no se encontró una solicitud manual con ese ID."
+            }), 404
+
+        if solicitud["estado"] == "FINALIZADO":
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "esta solicitud manual ya fue finalizada anteriormente."
+            }), 400
+
+        nombre_archivo_final = f"documento_manual_firmado_{uuid_solicitud}.pdf"
+        ruta_archivo_final = os.path.join(ESCANEADOS_FOLDER, nombre_archivo_final)
+
+        archivo.save(ruta_archivo_final)
+
+        cursor.execute("""
+            update solicitudes_manual
+            set
+                documento_escaneado = %s,
+                estado = 'FINALIZADO'
+            where uuid_solicitud = %s;
+        """, (
+            nombre_archivo_final,
+            uuid_solicitud
+        ))
+
+        conexion.commit()
+
+        cursor.close()
+        conexion.close()
+
+        try:
+            registrar_auditoria(
+                usuario_id=None,
+                solicitud_id=None,
+                modulo="flujo_manual",
+                accion="subir_documento_manual_finalizado",
+                descripcion=(
+                    f"El usuario subió el documento manual firmado para la solicitud {uuid_solicitud}. "
+                    f"El proceso manual quedó FINALIZADO."
+                ),
+                datos_anteriores={
+                    "uuid_solicitud": uuid_solicitud,
+                    "estado": solicitud["estado"],
+                    "documento_escaneado": solicitud["documento_escaneado"]
+                },
+                datos_nuevos={
+                    "uuid_solicitud": uuid_solicitud,
+                    "estado": "FINALIZADO",
+                    "documento_escaneado": nombre_archivo_final
+                }
+            )
+        except Exception as error_auditoria:
+            print("advertencia: no se pudo registrar auditoría de subida manual:", error_auditoria)
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "documento manual subido correctamente. el proceso manual quedó finalizado.",
+            "solicitud": {
+                "uuid_solicitud": uuid_solicitud,
+                "estado": "FINALIZADO",
+                "documento_escaneado": nombre_archivo_final
+            }
+        }), 200
+
+    except Error as error:
+        conexion.rollback()
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al subir el documento manual.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        conexion.rollback()
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al guardar el documento manual.",
+            "error": str(error)
+        }), 500
+
+
+
+
+@app.route("/api/manual/<uuid_solicitud>/descargar", methods=["GET"])
+def descargar_documento_manual_vacio(uuid_solicitud):
+    uuid_solicitud = limpiar_texto(uuid_solicitud).upper()
+
+    if not uuid_solicitud:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el ID de solicitud es obligatorio."
+        }), 400
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select
+                uuid_solicitud,
+                documento_vacio
+            from solicitudes_manual
+            where uuid_solicitud = %s
+            limit 1;
+        """, (uuid_solicitud,))
+
+        solicitud = cursor.fetchone()
+
+        cursor.close()
+        conexion.close()
+
+        if solicitud is None:
+            return jsonify({
+                "estado": "error",
+                "mensaje": "no se encontró una solicitud manual con ese ID."
+            }), 404
+
+        if not solicitud["documento_vacio"]:
+            return jsonify({
+                "estado": "error",
+                "mensaje": "la solicitud no tiene documento generado."
+            }), 404
+
+        ruta_pdf = os.path.join(DOCUMENTOS_FOLDER, solicitud["documento_vacio"])
+
+        if not os.path.exists(ruta_pdf):
+            return jsonify({
+                "estado": "error",
+                "mensaje": "el archivo PDF no existe en el servidor."
+            }), 404
+
+        return send_file(
+            ruta_pdf,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"documento_manual_{uuid_solicitud}.pdf",
+            max_age=0
+        )
+
+    except Error as error:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al descargar el documento manual.",
+            "error": str(error)
+        }), 500
+
+      # =====================================================
+# procesos manuales - administrador
+# =====================================================
+
+@app.route("/api/admin/manuales", methods=["GET"])
+@token_requerido
+@roles_permitidos("administrador", "jefe_inmediato", "maxima_autoridad", "analista_tics")
+def listar_solicitudes_manuales_admin():
+    busqueda = limpiar_texto(request.args.get("q"))
+    estado = limpiar_texto(request.args.get("estado")).upper()
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        condiciones = []
+        parametros = []
+
+        if busqueda:
+            condiciones.append("""
+                (
+                    uuid_solicitud like %s or
+                    nombres like %s or
+                    apellidos like %s or
+                    correo like %s
+                )
+            """)
+
+            valor_busqueda = f"%{busqueda}%"
+
+            parametros.extend([
+                valor_busqueda,
+                valor_busqueda,
+                valor_busqueda,
+                valor_busqueda
+            ])
+
+        if estado:
+            estados_validos = ["DESCARGADO", "PENDIENTE_SUBIDA", "FINALIZADO"]
+
+            if estado not in estados_validos:
+                cursor.close()
+                conexion.close()
+
+                return jsonify({
+                    "estado": "error",
+                    "mensaje": "estado manual inválido.",
+                    "estados_validos": estados_validos
+                }), 400
+
+            condiciones.append("estado = %s")
+            parametros.append(estado)
+
+        where_sql = ""
+
+        if condiciones:
+            where_sql = "where " + " and ".join(condiciones)
+
+        sql = f"""
+            select
+                id,
+                uuid_solicitud,
+                nombres,
+                apellidos,
+                correo,
+                estado,
+                documento_vacio,
+                documento_escaneado,
+                fecha_registro,
+                hora_registro,
+                created_at,
+                updated_at
+            from solicitudes_manual
+            {where_sql}
+            order by id desc;
+        """
+
+        cursor.execute(sql, tuple(parametros))
+        solicitudes = cursor.fetchall()
+
+        for item in solicitudes:
+            item["fecha_registro"] = str(item["fecha_registro"]) if item["fecha_registro"] else None
+            item["hora_registro"] = str(item["hora_registro"]) if item["hora_registro"] else None
+            item["created_at"] = serializar_fecha(item["created_at"])
+            item["updated_at"] = serializar_fecha(item["updated_at"])
+
+            item["log_auditoria"] = (
+                f"Solicitud manual descargada por: {item['nombres']} {item['apellidos']} "
+                f"con correo {item['correo']} el {item['fecha_registro']} "
+                f"a las {item['hora_registro']}."
+            )
+
+            item["tiene_documento_firmado"] = item["documento_escaneado"] is not None
+
+        cursor.close()
+        conexion.close()
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "solicitudes manuales obtenidas correctamente.",
+            "total": len(solicitudes),
+            "solicitudes": solicitudes
+        }), 200
+
+    except Error as error:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al obtener las solicitudes manuales.",
+            "error": str(error)
+        }), 500
+
+
+@app.route("/api/admin/manuales/<uuid_solicitud>/descargar-firmado", methods=["GET"])
+@token_requerido
+@roles_permitidos("administrador", "jefe_inmediato", "maxima_autoridad", "analista_tics")
+def descargar_documento_manual_firmado_admin(uuid_solicitud):
+    uuid_solicitud = limpiar_texto(uuid_solicitud).upper()
+
+    if not uuid_solicitud:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el ID de solicitud manual es obligatorio."
+        }), 400
+
+    if not re.match(r"^MAN-[A-Z0-9]{8}$", uuid_solicitud):
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el ID manual no tiene un formato válido. ejemplo: MAN-65CA1D9A."
+        }), 400
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select
+                id,
+                uuid_solicitud,
+                nombres,
+                apellidos,
+                correo,
+                estado,
+                documento_escaneado
+            from solicitudes_manual
+            where uuid_solicitud = %s
+            limit 1;
+        """, (uuid_solicitud,))
+
+        solicitud = cursor.fetchone()
+
+        cursor.close()
+        conexion.close()
+
+        if solicitud is None:
+            return jsonify({
+                "estado": "error",
+                "mensaje": "no se encontró una solicitud manual con ese ID."
+            }), 404
+
+        if solicitud["estado"] != "FINALIZADO":
+            return jsonify({
+                "estado": "error",
+                "mensaje": "la solicitud manual aún no está finalizada."
+            }), 400
+
+        if not solicitud["documento_escaneado"]:
+            return jsonify({
+                "estado": "error",
+                "mensaje": "la solicitud manual no tiene documento firmado subido."
+            }), 404
+
+        ruta_archivo = os.path.join(ESCANEADOS_FOLDER, solicitud["documento_escaneado"])
+
+        if not os.path.exists(ruta_archivo):
+            return jsonify({
+                "estado": "error",
+                "mensaje": "el archivo firmado no existe en el servidor."
+            }), 404
+
+        try:
+            registrar_auditoria(
+                usuario_id=request.usuario_actual["id"],
+                solicitud_id=None,
+                modulo="flujo_manual",
+                accion="descargar_documento_manual_firmado",
+                descripcion=(
+                    f"El usuario {request.usuario_actual['usuario']} descargó el documento manual firmado "
+                    f"de la solicitud {uuid_solicitud}."
+                ),
+                datos_anteriores=None,
+                datos_nuevos={
+                    "uuid_solicitud": uuid_solicitud,
+                    "documento_escaneado": solicitud["documento_escaneado"]
+                }
+            )
+        except Exception as error_auditoria:
+            print("advertencia: no se pudo registrar auditoría de descarga manual:", error_auditoria)
+
+        return send_file(
+            ruta_archivo,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"documento_manual_firmado_{uuid_solicitud}.pdf",
+            max_age=0
+        )
+
+    except Error as error:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al descargar el documento manual firmado.",
+            "error": str(error)
+        }), 500
 # =====================================================
 # detalle administrativo de solicitud
 # =====================================================
@@ -4935,6 +6281,10 @@ def cambiar_estado_usuario_admin(usuario_id):
             "mensaje": "error inesperado al cambiar el estado del usuario.",
             "error": str(error)
         }), 500
+    
+
+
+
 # =====================================================
 # iniciar servidor
 # =====================================================

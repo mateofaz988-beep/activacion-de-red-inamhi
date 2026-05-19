@@ -55,7 +55,7 @@ export interface UsuarioFormulario {
 })
 export class Usuarios implements OnInit {
 
-  private readonly API_BASE = 'http://10.0.5.120:5050/api';
+  private readonly API_BASE = 'http://10.0.153.69/api';
   private readonly API_URL = `${this.API_BASE}/admin/usuarios`;
 
   usuarios: UsuarioSistema[] = [];

@@ -2,15 +2,9 @@
   <div class="background-glow glow-one"></div>
   <div class="background-glow glow-two"></div>
 
-
   <main class="hero">
     <section class="hero-content">
-      <!-- LOGO PRINCIPAL INAMHI -->
-      <img
-        src="/logo_inamhi.png"
-        alt="Logo INAMHI"
-        class="hero-logo-inamhi"
-      />
+      <img src="/logo_inamhi.png" alt="Logo INAMHI" class="hero-logo-inamhi" />
 
       <span class="badge">Sistema institucional</span>
 
@@ -23,16 +17,6 @@
         Plataforma digital para registrar, aprobar, validar y dar seguimiento
         a solicitudes de acceso superior a Internet institucional del INAMHI.
       </p>
-
-      <div class="hero-actions">
-        <a routerLink="/public/solicitud" class="btn-primary">
-          Registrar solicitud
-        </a>
-
-        <a routerLink="/public/seguimiento" class="btn-secondary">
-          Consultar estado
-        </a>
-      </div>
     </section>
 
     <section class="access-panel">
@@ -41,31 +25,44 @@
         <span>Seleccione una opción</span>
       </div>
 
-      <div class="option-card public-card" routerLink="/public/solicitud">
-  <div class="icon">
-    <i class="bi bi-file-earmark-text-fill"></i>
-  </div>
+      <div class="option-card public-card" routerLink="/seleccionar-proceso">
+        <div class="icon">
+          <i class="bi bi-file-earmark-text-fill"></i>
+        </div>
 
-  <div>
-    <h3>Acceso Público</h3>
-    <p>
-      Permite llenar la solicitud de liberación web sin iniciar sesión.
-    </p>
-  </div>
-</div>
+        <div>
+          <h3>Acceso Público</h3>
+          <p>
+            Permite llenar la solicitud de liberación web sin iniciar sesión.
+          </p>
+        </div>
+      </div>
 
-<div class="option-card admin-card" routerLink="/auth/login">
-  <div class="icon">
-    <i class="bi bi-shield-lock-fill"></i>
-  </div>
+      <div class="option-card admin-card" routerLink="/auth/login">
+        <div class="icon">
+          <i class="bi bi-shield-lock-fill"></i>
+        </div>
 
-  <div>
-    <h3>Acceso Administrativo</h3>
-    <p>
-      Ingreso para administrador, jefe inmediato, máxima autoridad y TICS.
-    </p>
-  </div>
-</div>
+        <div>
+          <h3>Acceso Administrativo</h3>
+          <p>
+            Ingreso para administrador, jefe inmediato, máxima autoridad y TICS.
+          </p>
+        </div>
+      </div>
+
+      <div class="option-card tracking-card" routerLink="/public/seguimiento">
+        <div class="icon">
+          <i class="bi bi-radar"></i>
+        </div>
+
+        <div>
+          <h3>Consultar Estado</h3>
+          <p>
+            Consulte en tiempo real el avance y las firmas de su solicitud registrada.
+          </p>
+        </div>
+      </div>
 
       <div class="info-box">
         <strong>Flujo institucional:</strong>
@@ -73,9 +70,10 @@
       </div>
     </section>
   </main>
-<br>
-<br>
-<br>
+
+  <br>
+  <br>
+  <br>
 
   <footer>
     <span>Sistema de Gestión de Solicitudes de Liberación Web</span>

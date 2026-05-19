@@ -66,7 +66,7 @@ export interface SeguimientoResponse {
 })
 export class SolicitudPublicaService {
 
-  private readonly API_URL = 'http://10.0.5.120:5050/api/public/solicitudes';
+  private readonly API_URL = 'http://localhost:5050/api/public/solicitudes';
 
   constructor(private http: HttpClient) {}
 
