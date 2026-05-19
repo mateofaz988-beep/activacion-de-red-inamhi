@@ -496,6 +496,32 @@ tbody tr:hover .actions-cell {
   line-height: 1;
 }
 
+
+.date-cell {
+  display: grid;
+  gap: 4px;
+  min-width: 120px;
+}
+
+.date-cell strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.date-cell span {
+  width: fit-content;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #0369a1;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
 /* =========================
    RESPONSIVE
 ========================= */

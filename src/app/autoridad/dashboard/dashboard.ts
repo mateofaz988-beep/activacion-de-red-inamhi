@@ -1,16 +1,37 @@
 import { CommonModule } from '@angular/common';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { AuthService, UsuarioLogin } from '../../services/auth.service';
-import {
-  SolicitudAdmin,
-  SolicitudesAdminService
-} from '../../services/solicitudes-admin.service';
+
+export interface SolicitudAutoridad {
+  id: number;
+  codigo_solicitud: string;
+  nombres_completos: string;
+  cedula: string;
+  correo_institucional: string;
+  telefono_ext: string;
+  dependencia: string;
+  area_unidad: string;
+  cargo: string;
+  fecha_solicitud: string;
+  tipo_usuario: string;
+  nombre_usuario_externo?: string | null;
+  direccion_ip?: string | null;
+  tiempo_vigencia_acceso: string;
+  justificacion_necesidad_institucional: string;
+  estado: string;
+  etapa_actual: string;
+  bloqueada: boolean;
+  created_at: string;
+  updated_at: string;
+  total_paginas: number;
+}
 
 @Component({
-  selector: 'app-dashboard-autoridad',
+  selector: 'app-autoridad-dashboard',
   standalone: true,
   imports: [
     CommonModule,
@@ -21,21 +42,30 @@ import {
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
-export class Dashboard implements OnInit {
+export class AutoridadDashboard implements OnInit {
 
-  usuario: UsuarioLogin | null = null;
+  private readonly API_URL = '/api';
 
-  solicitudes: SolicitudAdmin[] = [];
-  solicitudesOriginales: SolicitudAdmin[] = [];
+  solicitudes: SolicitudAutoridad[] = [];
+  solicitudesFiltradas: SolicitudAutoridad[] = [];
 
   cargando = false;
   error = '';
+
   busqueda = '';
+  filtroEstado = '';
+
+  totalSolicitudes = 0;
+  totalPendientes = 0;
+  totalFinalizadas = 0;
+  totalRechazadas = 0;
+
+  usuario: UsuarioLogin | null = null;
 
   constructor(
-    private router: Router,
+    private http: HttpClient,
     private authService: AuthService,
-    private solicitudesService: SolicitudesAdminService
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -43,25 +73,36 @@ export class Dashboard implements OnInit {
     this.cargarSolicitudes();
   }
 
+  private getHeaders(): HttpHeaders {
+    const token = this.authService.getToken();
+
+    return new HttpHeaders({
+      Authorization: `Bearer ${token || ''}`
+    });
+  }
+
   cargarSolicitudes(): void {
     this.cargando = true;
     this.error = '';
 
-    this.solicitudesService.listarSolicitudes().subscribe({
+    let params = new HttpParams();
+
+    const busquedaLimpia = this.busqueda.trim();
+
+    if (busquedaLimpia) {
+      params = params.set('q', busquedaLimpia);
+    }
+
+    this.http.get<any>(`${this.API_URL}/mis-solicitudes`, {
+      headers: this.getHeaders(),
+      params
+    }).subscribe({
       next: (response) => {
         this.cargando = false;
 
-        const solicitudes = response.solicitudes || [];
-
-        /*
-          Máxima autoridad solo debe ver solicitudes que están
-          pendientes de aprobación por máxima autoridad.
-        */
-        this.solicitudesOriginales = solicitudes.filter((solicitud) =>
-          solicitud.estado === 'pendiente_maxima_autoridad'
-        );
-
-        this.solicitudes = [...this.solicitudesOriginales];
+        this.solicitudes = response.solicitudes || [];
+        this.aplicarFiltroEstado();
+        this.calcularEstadisticas();
       },
       error: (err) => {
         this.cargando = false;
@@ -72,61 +113,142 @@ export class Dashboard implements OnInit {
           return;
         }
 
-        this.error = err.error?.mensaje || 'No se pudieron cargar las solicitudes de máxima autoridad.';
+        this.error = err.error?.mensaje || 'No se pudieron cargar las solicitudes asignadas.';
       }
     });
   }
 
-  buscar(): void {
-    const texto = this.busqueda.trim().toLowerCase();
-
-    if (!texto) {
-      this.solicitudes = [...this.solicitudesOriginales];
+  aplicarFiltroEstado(): void {
+    if (!this.filtroEstado) {
+      this.solicitudesFiltradas = [...this.solicitudes];
       return;
     }
 
-    this.solicitudes = this.solicitudesOriginales.filter((solicitud) =>
-      this.obtenerTextoBusqueda(solicitud).includes(texto)
+    this.solicitudesFiltradas = this.solicitudes.filter((solicitud) =>
+      solicitud.estado === this.filtroEstado
     );
   }
 
-  limpiar(): void {
+  calcularEstadisticas(): void {
+    this.totalSolicitudes = this.solicitudes.length;
+
+    this.totalPendientes = this.solicitudes.filter((solicitud) =>
+      solicitud.estado.includes('pendiente')
+    ).length;
+
+    this.totalFinalizadas = this.solicitudes.filter((solicitud) =>
+      solicitud.estado === 'finalizada'
+    ).length;
+
+    this.totalRechazadas = this.solicitudes.filter((solicitud) =>
+      solicitud.estado.includes('rechazada')
+    ).length;
+  }
+
+  buscar(): void {
+    this.cargarSolicitudes();
+  }
+
+  limpiarFiltros(): void {
     this.busqueda = '';
-    this.solicitudes = [...this.solicitudesOriginales];
+    this.filtroEstado = '';
+    this.cargarSolicitudes();
   }
 
-  obtenerTextoBusqueda(solicitud: SolicitudAdmin): string {
-    return `
-      ${solicitud.codigo_solicitud || ''}
-      ${solicitud.nombres_completos || ''}
-      ${solicitud.cedula || ''}
-      ${solicitud.correo_institucional || ''}
-      ${solicitud.dependencia || ''}
-      ${solicitud.area_unidad || ''}
-      ${solicitud.cargo || ''}
-      ${solicitud.estado || ''}
-      ${solicitud.etapa_actual || ''}
-    `.toLowerCase();
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/auth/login']);
   }
 
-  verDetalle(id: number): void {
-    /*
-      Importante:
-      Máxima autoridad NO debe ir a /admin/solicitudes/:id.
-      Usa su propia ruta protegida.
-    */
-    this.router.navigate(['/autoridad/solicitudes', id]);
+  obtenerFechaTabla(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return 'Sin fecha';
+    }
+
+    const valor = String(fecha).trim();
+
+    if (!valor) {
+      return 'Sin fecha';
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+      const [anio, mes, dia] = valor.split('-');
+      return `${dia}/${mes}/${anio}`;
+    }
+
+    const valorCompatible = valor.includes('T')
+      ? valor
+      : valor.replace(' ', 'T');
+
+    const fechaObj = new Date(valorCompatible);
+
+    if (Number.isNaN(fechaObj.getTime())) {
+      return valor;
+    }
+
+    return fechaObj.toLocaleDateString('es-EC', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  }
+
+  obtenerHoraTabla(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return 'Sin hora registrada';
+    }
+
+    const valor = String(fecha).trim();
+
+    if (!valor) {
+      return 'Sin hora registrada';
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+      return 'Sin hora registrada';
+    }
+
+    if (
+      valor.endsWith('00:00:00') ||
+      valor.includes('T00:00:00') ||
+      valor.includes(' 00:00:00')
+    ) {
+      return 'Sin hora registrada';
+    }
+
+    const valorCompatible = valor.includes('T')
+      ? valor
+      : valor.replace(' ', 'T');
+
+    const fechaObj = new Date(valorCompatible);
+
+    if (Number.isNaN(fechaObj.getTime())) {
+      return 'Sin hora registrada';
+    }
+
+    const hora = fechaObj.toLocaleTimeString('es-EC', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+
+    if (hora === '00:00:00') {
+      return 'Sin hora registrada';
+    }
+
+    return hora;
   }
 
   getEstadoTexto(estado: string): string {
     const estados: Record<string, string> = {
       pendiente_firma_solicitante: 'Pendiente firma solicitante',
       pendiente_jefe_inmediato: 'Pendiente jefe inmediato',
-      rechazada_jefe_inmediato: 'Rechazada por jefe inmediato',
+      rechazada_jefe_inmediato: 'Rechazada jefe inmediato',
       pendiente_maxima_autoridad: 'Pendiente máxima autoridad',
-      rechazada_maxima_autoridad: 'Rechazada por máxima autoridad',
+      rechazada_maxima_autoridad: 'Rechazada máxima autoridad',
       pendiente_tics: 'Pendiente TICS',
-      rechazada_tics: 'Rechazada por TICS',
+      rechazada_tics: 'Rechazada TICS',
       pendiente_ejecucion_tics: 'Pendiente ejecución TICS',
       finalizada: 'Finalizada',
       anulada: 'Anulada'
@@ -138,10 +260,6 @@ export class Dashboard implements OnInit {
   getEstadoClase(estado: string): string {
     if (!estado) {
       return 'normal';
-    }
-
-    if (estado === 'pendiente_maxima_autoridad') {
-      return 'autoridad-status';
     }
 
     if (estado.includes('rechazada')) {
@@ -157,10 +275,5 @@ export class Dashboard implements OnInit {
     }
 
     return 'normal';
-  }
-
-  logout(): void {
-    this.authService.logout();
-    this.router.navigate(['/auth/login']);
   }
 }

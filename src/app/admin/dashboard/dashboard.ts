@@ -108,6 +108,112 @@ export class AdminDashboard implements OnInit {
     this.router.navigate(['/auth/login']);
   }
 
+  // =====================================================
+  // FORMATO DE FECHA Y HORA PARA TABLA
+  // =====================================================
+
+  obtenerFechaTabla(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return 'Sin fecha';
+    }
+
+    const valor = String(fecha).trim();
+
+    if (!valor) {
+      return 'Sin fecha';
+    }
+
+    /*
+      Si viene solo como YYYY-MM-DD, separamos manualmente.
+      Esto evita problemas de zona horaria.
+    */
+    if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+      const [anio, mes, dia] = valor.split('-');
+      return `${dia}/${mes}/${anio}`;
+    }
+
+    /*
+      Si viene como YYYY-MM-DD HH:mm:ss, lo convertimos a formato compatible.
+    */
+    const valorCompatible = valor.includes('T')
+      ? valor
+      : valor.replace(' ', 'T');
+
+    const fechaObj = new Date(valorCompatible);
+
+    if (Number.isNaN(fechaObj.getTime())) {
+      return valor;
+    }
+
+    return fechaObj.toLocaleDateString('es-EC', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  }
+
+  obtenerHoraTabla(fecha: string | null | undefined): string {
+    if (!fecha) {
+      return 'Sin hora registrada';
+    }
+
+    const valor = String(fecha).trim();
+
+    if (!valor) {
+      return 'Sin hora registrada';
+    }
+
+    /*
+      Si solo viene fecha, no hay hora real.
+    */
+    if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+      return 'Sin hora registrada';
+    }
+
+    /*
+      Si viene con 00:00:00, significa que probablemente el backend
+      está enviando un campo DATE o una fecha sin hora real.
+    */
+    if (
+      valor.endsWith('00:00:00') ||
+      valor.includes('T00:00:00') ||
+      valor.includes(' 00:00:00')
+    ) {
+      return 'Sin hora registrada';
+    }
+
+    const valorCompatible = valor.includes('T')
+      ? valor
+      : valor.replace(' ', 'T');
+
+    const fechaObj = new Date(valorCompatible);
+
+    if (Number.isNaN(fechaObj.getTime())) {
+      return 'Sin hora registrada';
+    }
+
+    const hora = fechaObj.toLocaleTimeString('es-EC', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+
+    if (hora === '00:00:00') {
+      return 'Sin hora registrada';
+    }
+
+    return hora;
+  }
+
+  obtenerFechaHoraPrincipal(solicitud: SolicitudAdmin): string {
+    return solicitud.created_at || solicitud.fecha_solicitud || '';
+  }
+
+  // =====================================================
+  // ESTADOS
+  // =====================================================
+
   getEstadoTexto(estado: string): string {
     const estados: Record<string, string> = {
       pendiente_firma_solicitante: 'Pendiente firma solicitante',

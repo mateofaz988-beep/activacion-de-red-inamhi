@@ -1,9 +1,9 @@
 <section class="admin-layout">
   <aside class="sidebar">
     <div class="brand">
-   <div class="logo-box">
-  <i class="bi bi-speedometer2"></i>
-</div>
+      <div class="logo-box">
+        <i class="bi bi-speedometer2"></i>
+      </div>
 
       <div>
         <h2>INAMHI</h2>
@@ -48,8 +48,6 @@
         Auditoría
       </a>
     </nav>
-
-    
   </aside>
 
   <main class="content">
@@ -60,17 +58,17 @@
         <p>Control general de solicitudes de liberación web institucional.</p>
       </div>
 
-    <div class="user-actions">
-  <div class="user-card">
-    <strong>{{ usuario?.nombres }} {{ usuario?.apellidos }}</strong>
-    <span>{{ usuario?.rol }}</span>
-  </div>
+      <div class="user-actions">
+        <div class="user-card">
+          <strong>{{ usuario?.nombres }} {{ usuario?.apellidos }}</strong>
+          <span>{{ usuario?.rol }}</span>
+        </div>
 
-  <button type="button" class="logout-top-btn" (click)="logout()">
-    <i class="bi bi-box-arrow-right"></i>
-    Cerrar sesión
-  </button>
-</div>
+        <button type="button" class="logout-top-btn" (click)="logout()">
+          <i class="bi bi-box-arrow-right"></i>
+          Cerrar sesión
+        </button>
+      </div>
     </header>
 
     <section class="stats-grid">
@@ -162,7 +160,7 @@
               <th>Cédula</th>
               <th>Correo</th>
               <th>Área / Unidad</th>
-              <th>Fecha</th>
+              <th>Fecha y hora</th>
               <th>Estado</th>
               <th>Páginas</th>
               <th class="actions-header">Acciones</th>
@@ -177,11 +175,33 @@
                 </strong>
               </td>
 
-              <td>{{ solicitud.nombres_completos }}</td>
-              <td>{{ solicitud.cedula }}</td>
-              <td>{{ solicitud.correo_institucional }}</td>
-              <td>{{ solicitud.area_unidad }}</td>
-              <td>{{ solicitud.fecha_solicitud }}</td>
+              <td>
+                {{ solicitud.nombres_completos }}
+              </td>
+
+              <td>
+                {{ solicitud.cedula }}
+              </td>
+
+              <td>
+                {{ solicitud.correo_institucional }}
+              </td>
+
+              <td>
+                {{ solicitud.area_unidad }}
+              </td>
+
+              <td>
+                <div class="date-cell">
+                  <strong>
+                    {{ obtenerFechaTabla(solicitud.fecha_solicitud || solicitud.created_at) }}
+                  </strong>
+
+                  <span>
+                    {{ obtenerHoraTabla(solicitud.created_at || solicitud.fecha_solicitud) }}
+                  </span>
+                </div>
+              </td>
 
               <td>
                 <span
@@ -192,7 +212,9 @@
                 </span>
               </td>
 
-              <td>{{ solicitud.total_paginas }}</td>
+              <td>
+                {{ solicitud.total_paginas }}
+              </td>
 
               <td class="actions-cell">
                 <a

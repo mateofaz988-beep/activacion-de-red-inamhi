@@ -634,6 +634,108 @@ tbody td {
   }
 }
 
+
+/* =====================================================
+   BOTÓN CERRAR SESIÓN - TOPBAR
+===================================================== */
+
+.logout-top-btn {
+  border: none;
+  cursor: pointer;
+
+  min-height: 46px;
+  padding: 12px 17px;
+  border-radius: 16px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #991b1b 100%);
+
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+
+  box-shadow:
+    0 16px 32px rgba(220, 38, 38, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    filter 0.22s ease,
+    background 0.22s ease;
+}
+
+.logout-top-btn i {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.logout-top-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+  box-shadow:
+    0 22px 40px rgba(220, 38, 38, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.logout-top-btn:active {
+  transform: translateY(0);
+  box-shadow:
+    0 10px 22px rgba(220, 38, 38, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.logout-top-btn:focus-visible {
+  outline: 3px solid rgba(239, 68, 68, 0.28);
+  outline-offset: 3px;
+}
+
+/* =====================================================
+   CONTENEDOR DE BOTONES SUPERIORES
+===================================================== */
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 900px) {
+  .topbar-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .logout-top-btn {
+    width: fit-content;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .logout-top-btn {
+    width: 100%;
+  }
+}
+
 /* =====================================================
    RESPONSIVE
 ===================================================== */

@@ -16,7 +16,6 @@ import { Dashboard as JefeDashboard } from './jefe/dashboard/dashboard';
 import { Historial as JefeHistorial } from './jefe/historial/historial';
 import { Reportes as JefeReportes } from './jefe/reportes/reportes';
 
-import { Dashboard as AutoridadDashboard } from './autoridad/dashboard/dashboard';
 import { Historial as AutoridadHistorial } from './autoridad/historial/historial';
 import { Reportes as AutoridadReportes } from './autoridad/reportes/reportes';
 
@@ -24,6 +23,7 @@ import { TicsDashboard } from './tics/dashboard/dashboard';
 import { Historial as TicsHistorial } from './tics/historial/historial';
 import { Reportes as TicsReportes } from './tics/reportes/reportes';
 import { roleGuard } from './guards/role-guard';
+import { AutoridadDashboard } from './autoridad/dashboard/dashboard';
 
 
 export const routes: Routes = [

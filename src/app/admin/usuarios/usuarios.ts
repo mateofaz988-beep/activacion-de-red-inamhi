@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import Swal from 'sweetalert2';
 
 import { AuthService } from '../../services/auth.service';
@@ -44,13 +44,18 @@ export interface UsuarioFormulario {
 @Component({
   selector: 'app-usuarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    RouterLinkActive
+  ],
   templateUrl: './usuarios.html',
   styleUrl: './usuarios.scss'
 })
 export class Usuarios implements OnInit {
 
-  private readonly API_BASE = 'http://127.0.0.1:5050/api';
+  private readonly API_BASE = 'http://10.0.5.120:5050/api';
   private readonly API_URL = `${this.API_BASE}/admin/usuarios`;
 
   usuarios: UsuarioSistema[] = [];
@@ -245,10 +250,12 @@ export class Usuarios implements OnInit {
   }
 
   guardarUsuario(): void {
+    this.generarUsuarioAutomatico();
+
     const validacion = this.validarFormulario();
 
     if (validacion) {
-      this.mostrarError('Formulario incompleto', validacion);
+      this.mostrarError('Formulario inválido', validacion);
       return;
     }
 
@@ -354,9 +361,11 @@ export class Usuarios implements OnInit {
           <p style="margin:0 0 10px;color:#475569;">
             Usuario seleccionado:
           </p>
+
           <strong style="color:#1d4ed8;font-size:17px;">
             ${usuario.nombres} ${usuario.apellidos}
           </strong>
+
           <p style="margin:10px 0 0;color:#64748b;">
             Cuenta: ${usuario.usuario}
           </p>
@@ -411,6 +420,8 @@ export class Usuarios implements OnInit {
   }
 
   prepararPayload(): any {
+    this.generarUsuarioAutomatico();
+
     const payload: any = {
       nombres: this.normalizarTexto(this.formulario.nombres),
       apellidos: this.normalizarTexto(this.formulario.apellidos),
@@ -435,32 +446,59 @@ export class Usuarios implements OnInit {
   validarFormulario(): string {
     const f = this.formulario;
 
-    if (!f.nombres.trim()) {
+    const nombres = this.normalizarTexto(f.nombres);
+    const apellidos = this.normalizarTexto(f.apellidos);
+    const cedula = f.cedula.trim();
+    const correo = f.correo.trim().toLowerCase();
+    const usuario = f.usuario.trim().toLowerCase();
+    const password = f.password.trim();
+
+    if (!nombres || nombres.length < 2) {
       return 'Ingrese los nombres del usuario.';
     }
 
-    if (!f.apellidos.trim()) {
+    if (!this.validarSoloLetras(nombres)) {
+      return 'Los nombres solo deben contener letras y espacios.';
+    }
+
+    if (!apellidos || apellidos.length < 2) {
       return 'Ingrese los apellidos del usuario.';
     }
 
-    if (!/^\d{10}$/.test(f.cedula.trim())) {
+    if (!this.validarSoloLetras(apellidos)) {
+      return 'Los apellidos solo deben contener letras y espacios.';
+    }
+
+    if (!/^\d{10}$/.test(cedula)) {
       return 'La cédula debe tener exactamente 10 números.';
     }
 
-    if (!this.validarCorreo(f.correo)) {
+    if (this.cedulaDuplicada()) {
+      return 'Ya existe un usuario registrado con esta cédula.';
+    }
+
+    if (!this.validarCorreo(correo)) {
       return 'Ingrese un correo válido.';
     }
 
-    if (!f.usuario.trim()) {
-      return 'Ingrese el nombre de usuario.';
+    if (this.correoDuplicado()) {
+      return 'Ya existe un usuario registrado con este correo.';
     }
 
-    if (!this.usuarioEditando && !f.password.trim()) {
+    if (!usuario) {
+      return 'No se pudo generar el nombre de usuario. Verifique nombres y apellidos.';
+    }
+
+    if (this.usuarioDuplicado()) {
+      this.generarUsuarioAutomatico(true);
+    }
+
+    if (!this.usuarioEditando && !password) {
       return 'Ingrese una contraseña para el nuevo usuario.';
     }
 
-    if (f.password.trim() && f.password.trim().length < 6) {
-      return 'La contraseña debe tener mínimo 6 caracteres.';
+    if (password && password.length < 8) {
+      return 'La contraseña debe tener mínimo 8 caracteres.';
     }
 
     if (!f.rol) {
@@ -471,19 +509,197 @@ export class Usuarios implements OnInit {
       return 'Seleccione un estado.';
     }
 
-    if (!f.cargo.trim()) {
+    if (!f.cargo.trim() || f.cargo.trim().length < 3) {
       return 'Ingrese el cargo del usuario.';
     }
 
-    if (!f.area_unidad.trim()) {
+    if (!f.area_unidad.trim() || f.area_unidad.trim().length < 3) {
       return 'Ingrese el área o unidad del usuario.';
     }
 
-    if (!f.dependencia.trim()) {
+    if (!f.dependencia.trim() || f.dependencia.trim().length < 3) {
       return 'Ingrese la dependencia del usuario.';
     }
 
+    if (f.telefono_ext.trim() && !/^\d{1,10}$/.test(f.telefono_ext.trim())) {
+      return 'El teléfono o extensión solo debe contener números, máximo 10 dígitos.';
+    }
+
     return '';
+  }
+
+  // =====================================================
+  // AUTOGENERAR USUARIO Y DUPLICADOS
+  // =====================================================
+
+  generarUsuarioAutomatico(forzarUnico: boolean = false): void {
+    const nombres = this.normalizarTexto(this.formulario.nombres);
+    const apellidos = this.normalizarTexto(this.formulario.apellidos);
+
+    if (!nombres || !apellidos) {
+      this.formulario.usuario = '';
+      return;
+    }
+
+    const primerNombre = nombres.split(' ')[0] || '';
+    const primerApellido = apellidos.split(' ')[0] || '';
+
+    if (!primerNombre || !primerApellido) {
+      this.formulario.usuario = '';
+      return;
+    }
+
+    const baseUsuario = this.limpiarParaUsuario(
+      `${primerNombre.charAt(0)}${primerApellido}`
+    );
+
+    if (!baseUsuario) {
+      this.formulario.usuario = '';
+      return;
+    }
+
+    this.formulario.usuario = this.obtenerUsuarioUnico(baseUsuario, forzarUnico);
+  }
+
+  obtenerUsuarioUnico(baseUsuario: string, forzarUnico: boolean = true): string {
+    let usuarioGenerado = baseUsuario;
+    let contador = 2;
+
+    while (this.existeUsuario(usuarioGenerado)) {
+      usuarioGenerado = `${baseUsuario}${contador}`;
+      contador++;
+    }
+
+    return usuarioGenerado;
+  }
+
+  existeUsuario(usuario: string): boolean {
+    const usuarioNormalizado = usuario.trim().toLowerCase();
+    const idActual = this.formulario.id;
+
+    return this.usuarios.some((item) => {
+      if (idActual && item.id === idActual) {
+        return false;
+      }
+
+      return (item.usuario || '').trim().toLowerCase() === usuarioNormalizado;
+    });
+  }
+
+  cedulaDuplicada(): boolean {
+    const cedula = this.formulario.cedula.trim();
+    const idActual = this.formulario.id;
+
+    if (!cedula || cedula.length !== 10) {
+      return false;
+    }
+
+    return this.usuarios.some((item) => {
+      if (idActual && item.id === idActual) {
+        return false;
+      }
+
+      return (item.cedula || '').trim() === cedula;
+    });
+  }
+
+  correoDuplicado(): boolean {
+    const correo = this.formulario.correo.trim().toLowerCase();
+    const idActual = this.formulario.id;
+
+    if (!correo || !this.validarCorreo(correo)) {
+      return false;
+    }
+
+    return this.usuarios.some((item) => {
+      if (idActual && item.id === idActual) {
+        return false;
+      }
+
+      return (item.correo || '').trim().toLowerCase() === correo;
+    });
+  }
+
+  usuarioDuplicado(): boolean {
+    const usuario = this.formulario.usuario.trim().toLowerCase();
+    const idActual = this.formulario.id;
+
+    if (!usuario) {
+      return false;
+    }
+
+    return this.usuarios.some((item) => {
+      if (idActual && item.id === idActual) {
+        return false;
+      }
+
+      return (item.usuario || '').trim().toLowerCase() === usuario;
+    });
+  }
+
+  formularioTieneDuplicados(): boolean {
+    return this.cedulaDuplicada() || this.correoDuplicado();
+  }
+
+  // =====================================================
+  // LIMPIEZA Y VALIDACIÓN DE CAMPOS
+  // =====================================================
+
+  limpiarTextoCampo(campo: keyof UsuarioFormulario): void {
+    const valor = String(this.formulario[campo] || '');
+
+    const limpio = valor
+      .replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9.,()\/\- ]/g, '')
+      .replace(/\s{2,}/g, ' ');
+
+    (this.formulario[campo] as string) = limpio;
+  }
+
+  limpiarSoloNumeros(campo: keyof UsuarioFormulario, maximo: number): void {
+    const valor = String(this.formulario[campo] || '');
+    const limpio = valor.replace(/\D/g, '').slice(0, maximo);
+
+    (this.formulario[campo] as string) = limpio;
+  }
+
+  limpiarCorreo(): void {
+    this.formulario.correo = this.formulario.correo
+      .trim()
+      .toLowerCase()
+      .replace(/\s/g, '');
+  }
+
+  limpiarParaUsuario(texto: string): string {
+    return texto
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/ñ/g, 'n')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  soloNumeros(event: KeyboardEvent): void {
+    const teclasPermitidas = [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'ArrowLeft',
+      'ArrowRight',
+      'Home',
+      'End'
+    ];
+
+    if (teclasPermitidas.includes(event.key)) {
+      return;
+    }
+
+    if (!/^\d$/.test(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  validarSoloLetras(texto: string): boolean {
+    return /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü ]+$/.test(texto.trim());
   }
 
   validarCorreo(correo: string): boolean {

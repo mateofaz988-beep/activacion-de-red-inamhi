@@ -1,10 +1,10 @@
 <section class="usuarios-page">
   <aside class="sidebar">
     <div class="brand">
-     
-<div class="logo-box">
-  <i class="bi bi-people-fill"></i>
-</div>
+      <div class="logo-box">
+        <i class="bi bi-people-fill"></i>
+      </div>
+
       <div>
         <h2>INAMHI</h2>
         <span>Panel administrador</span>
@@ -32,17 +32,15 @@
         Auditoría
       </a>
     </nav>
-
-    <button type="button" class="logout" (click)="logout()">
-      Cerrar sesión
-    </button>
   </aside>
 
   <main class="content">
     <header class="topbar">
       <div>
         <span class="eyebrow">Administración de accesos</span>
+
         <h1>Gestión de Usuarios</h1>
+
         <p>
           Administre los usuarios internos que participan en el flujo de revisión,
           aprobación, validación TICS y ejecución técnica.
@@ -65,6 +63,11 @@
           (click)="abrirFormulario()"
         >
           + Nuevo usuario
+        </button>
+
+        <button type="button" class="logout-top-btn" (click)="logout()">
+          <i class="bi bi-box-arrow-right"></i>
+          Cerrar sesión
         </button>
       </div>
     </header>
@@ -98,6 +101,7 @@
     <section class="filters-card">
       <div>
         <h2>Filtros de búsqueda</h2>
+
         <p>
           Busque usuarios por nombres, apellidos, cédula, correo, usuario, cargo,
           área, dependencia o rol.
@@ -164,7 +168,8 @@
 
           <p>
             Complete la información del funcionario que tendrá acceso al sistema.
-            Los campos marcados con * son obligatorios.
+            El usuario se genera automáticamente con la primera letra del nombre
+            y el primer apellido completo.
           </p>
         </div>
 
@@ -177,19 +182,26 @@
         </button>
       </div>
 
-      <form (ngSubmit)="guardarUsuario()" #usuarioForm="ngForm">
+      <form (ngSubmit)="guardarUsuario()" #usuarioForm="ngForm" novalidate>
         <div class="form-grid">
           <label>
             Nombres *
             <input
               type="text"
               name="nombres"
+              #nombresCtrl="ngModel"
               [(ngModel)]="formulario.nombres"
               placeholder="Ejemplo: Juan Carlos"
               maxlength="120"
               autocomplete="given-name"
               required
+              pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü ]{2,120}$"
+              (input)="limpiarTextoCampo('nombres'); generarUsuarioAutomatico()"
             />
+
+            <small class="field-error" *ngIf="nombresCtrl.invalid && nombresCtrl.touched">
+              Ingrese nombres válidos. Solo letras y espacios, mínimo 2 caracteres.
+            </small>
           </label>
 
           <label>
@@ -197,12 +209,19 @@
             <input
               type="text"
               name="apellidos"
+              #apellidosCtrl="ngModel"
               [(ngModel)]="formulario.apellidos"
               placeholder="Ejemplo: Pérez López"
               maxlength="120"
               autocomplete="family-name"
               required
+              pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü ]{2,120}$"
+              (input)="limpiarTextoCampo('apellidos'); generarUsuarioAutomatico()"
             />
+
+            <small class="field-error" *ngIf="apellidosCtrl.invalid && apellidosCtrl.touched">
+              Ingrese apellidos válidos. Solo letras y espacios, mínimo 2 caracteres.
+            </small>
           </label>
 
           <label>
@@ -210,13 +229,25 @@
             <input
               type="text"
               name="cedula"
+              #cedulaCtrl="ngModel"
               [(ngModel)]="formulario.cedula"
               placeholder="Ingrese 10 números"
               maxlength="10"
               inputmode="numeric"
               autocomplete="off"
               required
+              pattern="^[0-9]{10}$"
+              (keydown)="soloNumeros($event)"
+              (input)="limpiarSoloNumeros('cedula', 10)"
             />
+
+            <small class="field-error" *ngIf="cedulaCtrl.invalid && cedulaCtrl.touched">
+              La cédula debe tener exactamente 10 números.
+            </small>
+
+            <small class="field-error" *ngIf="cedulaDuplicada()">
+              Ya existe un usuario registrado con esta cédula.
+            </small>
           </label>
 
           <label>
@@ -224,25 +255,47 @@
             <input
               type="email"
               name="correo"
+              #correoCtrl="ngModel"
               [(ngModel)]="formulario.correo"
               placeholder="usuario@correo.com"
               maxlength="150"
               autocomplete="email"
               required
+              pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+              (input)="limpiarCorreo()"
             />
+
+            <small class="field-error" *ngIf="correoCtrl.invalid && correoCtrl.touched">
+              Ingrese un correo válido.
+            </small>
+
+            <small class="field-error" *ngIf="correoDuplicado()">
+              Ya existe un usuario registrado con este correo.
+            </small>
           </label>
 
           <label>
-            Usuario *
+            Usuario generado *
             <input
               type="text"
               name="usuario"
+              #usuarioCtrl="ngModel"
               [(ngModel)]="formulario.usuario"
-              placeholder="Ejemplo: jperez"
+              placeholder="Se genera automáticamente"
               maxlength="80"
               autocomplete="username"
               required
+              readonly
             />
+
+            <small class="field-help">
+              Se genera con la primera letra del nombre y el primer apellido completo.
+              Ejemplo: Juan Pérez → jperez.
+            </small>
+
+            <small class="field-error" *ngIf="usuarioDuplicado()">
+              El usuario generado ya existe. El sistema agregará un número automáticamente.
+            </small>
           </label>
 
           <label>
@@ -250,9 +303,11 @@
             <input
               type="password"
               name="password"
+              #passwordCtrl="ngModel"
               [(ngModel)]="formulario.password"
-              placeholder="{{ usuarioEditando ? 'Dejar vacío para conservar la contraseña actual' : 'Mínimo 6 caracteres' }}"
+              placeholder="{{ usuarioEditando ? 'Dejar vacío para conservar la contraseña actual' : 'Mínimo 8 caracteres' }}"
               autocomplete="new-password"
+              minlength="8"
               [required]="!usuarioEditando"
             />
 
@@ -261,7 +316,11 @@
             </small>
 
             <small class="field-help" *ngIf="!usuarioEditando">
-              La contraseña será necesaria para que el usuario pueda iniciar sesión.
+              Mínimo 8 caracteres. Se recomienda combinar letras, números y símbolos.
+            </small>
+
+            <small class="field-error" *ngIf="passwordCtrl.invalid && passwordCtrl.touched">
+              La contraseña debe tener mínimo 8 caracteres.
             </small>
           </label>
 
@@ -269,6 +328,7 @@
             Rol *
             <select
               name="rol"
+              #rolCtrl="ngModel"
               [(ngModel)]="formulario.rol"
               required
             >
@@ -278,18 +338,27 @@
               <option value="maxima_autoridad">Máxima autoridad</option>
               <option value="analista_tics">Analista TICS</option>
             </select>
+
+            <small class="field-error" *ngIf="rolCtrl.invalid && rolCtrl.touched">
+              Seleccione un rol.
+            </small>
           </label>
 
           <label>
             Estado *
             <select
               name="estado"
+              #estadoCtrl="ngModel"
               [(ngModel)]="formulario.estado"
               required
             >
               <option value="activo">Activo</option>
               <option value="inactivo">Inactivo</option>
             </select>
+
+            <small class="field-error" *ngIf="estadoCtrl.invalid && estadoCtrl.touched">
+              Seleccione un estado.
+            </small>
           </label>
 
           <label>
@@ -297,11 +366,18 @@
             <input
               type="text"
               name="cargo"
+              #cargoCtrl="ngModel"
               [(ngModel)]="formulario.cargo"
               placeholder="Ejemplo: Analista Institucional"
               maxlength="150"
               required
+              pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9.,()\/\- ]{3,150}$"
+              (input)="limpiarTextoCampo('cargo')"
             />
+
+            <small class="field-error" *ngIf="cargoCtrl.invalid && cargoCtrl.touched">
+              Ingrese un cargo válido, mínimo 3 caracteres.
+            </small>
           </label>
 
           <label>
@@ -309,11 +385,18 @@
             <input
               type="text"
               name="area_unidad"
+              #areaCtrl="ngModel"
               [(ngModel)]="formulario.area_unidad"
               placeholder="Ejemplo: Unidad de TICS"
               maxlength="150"
               required
+              pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9.,()\/\- ]{3,150}$"
+              (input)="limpiarTextoCampo('area_unidad')"
             />
+
+            <small class="field-error" *ngIf="areaCtrl.invalid && areaCtrl.touched">
+              Ingrese un área o unidad válida, mínimo 3 caracteres.
+            </small>
           </label>
 
           <label>
@@ -321,11 +404,18 @@
             <input
               type="text"
               name="dependencia"
+              #dependenciaCtrl="ngModel"
               [(ngModel)]="formulario.dependencia"
               placeholder="Ejemplo: INAMHI"
               maxlength="150"
               required
+              pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9.,()\/\- ]{3,150}$"
+              (input)="limpiarTextoCampo('dependencia')"
             />
+
+            <small class="field-error" *ngIf="dependenciaCtrl.invalid && dependenciaCtrl.touched">
+              Ingrese una dependencia válida, mínimo 3 caracteres.
+            </small>
           </label>
 
           <label>
@@ -333,11 +423,19 @@
             <input
               type="text"
               name="telefono_ext"
+              #telefonoCtrl="ngModel"
               [(ngModel)]="formulario.telefono_ext"
-              placeholder="Ejemplo: 1001"
-              maxlength="20"
+              placeholder="Ejemplo: 1001 o 0991234567"
+              maxlength="10"
               inputmode="numeric"
+              pattern="^[0-9]{0,10}$"
+              (keydown)="soloNumeros($event)"
+              (input)="limpiarSoloNumeros('telefono_ext', 10)"
             />
+
+            <small class="field-error" *ngIf="telefonoCtrl.invalid && telefonoCtrl.touched">
+              El teléfono o extensión solo debe contener números, máximo 10 dígitos.
+            </small>
           </label>
         </div>
 
@@ -359,9 +457,15 @@
           <button
             type="submit"
             class="save-btn"
-            [disabled]="guardando || usuarioForm.invalid"
+            [disabled]="guardando || usuarioForm.invalid || formularioTieneDuplicados()"
           >
-            {{ guardando ? 'Guardando...' : usuarioEditando ? 'Actualizar usuario' : 'Guardar usuario' }}
+            {{
+              guardando
+                ? 'Guardando...'
+                : usuarioEditando
+                  ? 'Actualizar usuario'
+                  : 'Guardar usuario'
+            }}
           </button>
         </div>
       </form>
@@ -371,6 +475,7 @@
       <div class="table-header">
         <div>
           <h2>Usuarios registrados</h2>
+
           <p>
             Mostrando {{ usuariosFiltrados.length }} de {{ usuarios.length }} usuarios.
           </p>
