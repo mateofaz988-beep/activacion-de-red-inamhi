@@ -185,8 +185,7 @@ export class SolicitudPublica implements OnInit {
         '',
         [
           Validators.required,
-          Validators.minLength(3),
-          Validators.maxLength(100)
+          
         ]
       ],
       justificacion_necesidad_institucional: [

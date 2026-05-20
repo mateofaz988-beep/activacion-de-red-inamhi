@@ -35,13 +35,27 @@ export class SolicitudDetalle implements OnInit {
   procesandoAprobacion = false;
   procesandoFinalizacion = false;
   procesandoRechazo = false;
-  mostrarModalRechazo = false;
 
   error = '';
   mensajeOk = '';
   motivoRechazo = '';
 
   documentoFirmadoCargado = false;
+
+  // =====================================================
+  // MODALES
+  // =====================================================
+
+  mostrarModalRechazo = false;
+  mostrarModalFirmaElectronica = false;
+
+  // =====================================================
+  // PDF FIRMADO ELECTRÓNICAMENTE CON FIRMAEC
+  // =====================================================
+
+  archivoFirmadoElectronico: File | null = null;
+  nombreArchivoFirmadoElectronico = '';
+  urlVistaPreviaFirmadoElectronico = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -166,7 +180,7 @@ export class SolicitudDetalle implements OnInit {
 
   getTituloRol(): string {
     if (this.esAdmin()) {
-      return 'Liberación Web';
+      return 'Revisión administrativa';
     }
 
     if (this.esJefe()) {
@@ -186,7 +200,7 @@ export class SolicitudDetalle implements OnInit {
 
   getIconoRol(): string {
     if (this.esAdmin()) {
-      return 'bi bi-diagram-3-fill';
+      return 'bi bi-search';
     }
 
     if (this.esJefe()) {
@@ -206,7 +220,7 @@ export class SolicitudDetalle implements OnInit {
 
   getRutaVolver(): string {
     if (this.esAdmin()) {
-      return '/admin/solicitudes';
+      return '/admin/dashboard';
     }
 
     if (this.esJefe()) {
@@ -229,7 +243,9 @@ export class SolicitudDetalle implements OnInit {
   }
 
   // =====================================================
-  // DESCARGA DE PDF GENERADO
+  // DESCARGA DEL PDF GENERADO
+  // Queda disponible para compatibilidad, pero el nuevo HTML
+  // ya no muestra este botón a los roles operativos.
   // =====================================================
 
   descargarPdf(): void {
@@ -276,7 +292,7 @@ export class SolicitudDetalle implements OnInit {
   }
 
   // =====================================================
-  // DESCARGA DEL ÚLTIMO DOCUMENTO FIRMADO
+  // DESCARGA DEL ÚLTIMO PDF FIRMADO ACTUAL
   // =====================================================
 
   descargarDocumentoFirmadoActual(): void {
@@ -292,7 +308,9 @@ export class SolicitudDetalle implements OnInit {
       next: (blob: Blob) => {
         this.procesando = false;
 
-        const nombreArchivo = `${this.solicitud?.codigo_solicitud || 'solicitud'}_documento_firmado_actual.pdf`;
+        const nombreArchivo =
+          `${this.solicitud?.codigo_solicitud || 'solicitud'}_documento_firmado_actual.pdf`;
+
         this.solicitudesService.descargarBlob(blob, nombreArchivo);
 
         Swal.fire({
@@ -326,11 +344,59 @@ export class SolicitudDetalle implements OnInit {
       }
     });
   }
+
     // =====================================================
-  // SELECCIÓN Y VALIDACIÓN DE ARCHIVOS
+  // MODAL PDF FIRMADO ELECTRÓNICAMENTE
+  // JEFE / AUTORIDAD / TICS
   // =====================================================
 
-  seleccionarFirmaManual(event: Event): void {
+  abrirModalFirmaElectronica(): void {
+    if (this.esAdmin()) {
+      this.mostrarError(
+        'Acción no permitida',
+        'El administrador solo puede revisar y descargar documentos.'
+      );
+      return;
+    }
+
+    if (!this.solicitud) {
+      this.mostrarError(
+        'Solicitud no encontrada',
+        'No se encontró información de la solicitud.'
+      );
+      return;
+    }
+
+    if (this.estaFinalizada()) {
+      this.mostrarError(
+        'Proceso finalizado',
+        'Esta solicitud ya fue finalizada. No se pueden subir más documentos.'
+      );
+      return;
+    }
+
+    this.error = '';
+    this.mensajeOk = '';
+    this.limpiarPdfFirmadoElectronico();
+
+    this.mostrarModalFirmaElectronica = true;
+  }
+
+  cerrarModalFirmaElectronica(): void {
+    if (this.procesando) {
+      return;
+    }
+
+    this.mostrarModalFirmaElectronica = false;
+    this.error = '';
+    this.mensajeOk = '';
+    this.limpiarPdfFirmadoElectronico();
+  }
+
+  seleccionarPdfFirmadoElectronico(event: Event): void {
+    this.error = '';
+    this.mensajeOk = '';
+
     const input = event.target as HTMLInputElement;
 
     if (!input.files || input.files.length === 0) {
@@ -339,111 +405,216 @@ export class SolicitudDetalle implements OnInit {
 
     const archivo = input.files[0];
 
-    if (!this.validarArchivoPdf(archivo)) {
+    if (!this.validarPdfFirmadoElectronico(archivo)) {
       input.value = '';
       return;
     }
 
-    this.subirDocumentoFirmado(
-      archivo,
-      'pdf_firmado_manual',
-      'PDF firmado manualmente, escaneado y cargado al sistema.'
+    this.liberarVistaPreviaFirmadoElectronico();
+
+    this.archivoFirmadoElectronico = archivo;
+    this.nombreArchivoFirmadoElectronico = archivo.name;
+    this.urlVistaPreviaFirmadoElectronico = URL.createObjectURL(archivo);
+
+    this.mensajeOk =
+      'PDF seleccionado correctamente. Revise el documento antes de guardarlo en el sistema.';
+  }
+
+  validarPdfFirmadoElectronico(archivo: File): boolean {
+    const maxSizeMb = 10;
+    const maxSizeBytes = maxSizeMb * 1024 * 1024;
+
+    const nombreArchivo = archivo.name || '';
+    const extensionValida = nombreArchivo.toLowerCase().endsWith('.pdf');
+    const mimeValido = archivo.type === 'application/pdf' || archivo.type === '';
+
+    if (!extensionValida || !mimeValido) {
+      this.mostrarError(
+        'Archivo inválido',
+        'Solo se permite subir un archivo PDF firmado electrónicamente con FirmaEC.'
+      );
+      return false;
+    }
+
+    if (archivo.size > maxSizeBytes) {
+      this.mostrarError(
+        'Archivo demasiado grande',
+        `El PDF firmado electrónicamente no puede superar ${maxSizeMb} MB.`
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  verPdfFirmadoElectronico(): void {
+    if (!this.urlVistaPreviaFirmadoElectronico) {
+      this.mostrarError(
+        'PDF no seleccionado',
+        'Primero debe seleccionar un PDF firmado electrónicamente.'
+      );
+      return;
+    }
+
+    window.open(
+      this.urlVistaPreviaFirmadoElectronico,
+      '_blank',
+      'noopener,noreferrer'
+    );
+  }
+
+  quitarPdfFirmadoElectronico(): void {
+    this.limpiarPdfFirmadoElectronico();
+    this.mensajeOk = 'Archivo retirado. Puede seleccionar nuevamente el PDF correcto.';
+  }
+
+  private limpiarPdfFirmadoElectronico(): void {
+    this.archivoFirmadoElectronico = null;
+    this.nombreArchivoFirmadoElectronico = '';
+    this.liberarVistaPreviaFirmadoElectronico();
+  }
+
+  private liberarVistaPreviaFirmadoElectronico(): void {
+    if (this.urlVistaPreviaFirmadoElectronico) {
+      URL.revokeObjectURL(this.urlVistaPreviaFirmadoElectronico);
+      this.urlVistaPreviaFirmadoElectronico = '';
+    }
+  }
+
+  subirPdfFirmadoElectronico(): void {
+    if (this.esAdmin()) {
+      this.mostrarError(
+        'Acción no permitida',
+        'El administrador no puede subir documentos. Solo puede revisar y descargar.'
+      );
+      return;
+    }
+
+    if (!this.solicitud?.id) {
+      this.mostrarError(
+        'Solicitud no encontrada',
+        'No se encontró la solicitud.'
+      );
+      return;
+    }
+
+    if (!this.archivoFirmadoElectronico) {
+      this.mostrarError(
+        'PDF requerido',
+        'Debe seleccionar el PDF firmado electrónicamente con FirmaEC.'
+      );
+      return;
+    }
+
+    const confirmar = window.confirm(
+      'Verifique que el PDF seleccionado sea el documento correcto y que esté firmado electrónicamente con FirmaEC.\n\nAl guardarlo, podrá continuar con la aprobación correspondiente.'
     );
 
+    if (!confirmar) {
+      return;
+    }
+
+    this.procesando = true;
+    this.error = '';
+    this.mensajeOk = '';
+
+    this.solicitudesService.subirDocumentoFirmado(
+      this.solicitud.id,
+      this.archivoFirmadoElectronico,
+      'pdf_firmado_electronico',
+      'PDF firmado electrónicamente con FirmaEC por el rol correspondiente.'
+    ).subscribe({
+      next: (response) => {
+        this.procesando = false;
+
+        this.documentoFirmadoCargado = true;
+        this.guardarDocumentoFirmadoLocal();
+
+        this.mostrarModalFirmaElectronica = false;
+        this.limpiarPdfFirmadoElectronico();
+
+        Swal.fire({
+          title: 'PDF firmado guardado',
+          text: response?.mensaje || 'El PDF firmado electrónicamente fue guardado correctamente.',
+          icon: 'success',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#1d4ed8',
+          background: '#ffffff',
+          color: '#0f172a'
+        }).then(() => {
+          this.documentoFirmadoCargado = true;
+          this.guardarDocumentoFirmadoLocal();
+          this.cargarDetalle();
+        });
+      },
+      error: (err: any) => {
+        this.procesando = false;
+
+        if (err.status === 401 || err.status === 403) {
+          this.authService.logout();
+          this.router.navigate(['/auth/login']);
+          return;
+        }
+
+        this.mostrarError(
+          'No se pudo guardar el PDF firmado',
+          err.error?.mensaje || 'Error al subir el PDF firmado electrónicamente.'
+        );
+      }
+    });
+  }
+
+  // =====================================================
+  // FUNCIONES ANTIGUAS DE CARGA
+  // Se mantienen para compatibilidad, pero el nuevo HTML
+  // ya no muestra botones de PDF manual ni imagen de firma.
+  // =====================================================
+
+  seleccionarFirmaManual(event: Event): void {
+    const input = event.target as HTMLInputElement;
     input.value = '';
+
+    this.mostrarError(
+      'Acción no disponible',
+      'El flujo electrónico ya no permite subir PDF firmado manualmente. Debe subir un PDF firmado electrónicamente con FirmaEC.'
+    );
   }
 
   seleccionarFirmaElectronica(event: Event): void {
     const input = event.target as HTMLInputElement;
-
-    if (!input.files || input.files.length === 0) {
-      return;
-    }
-
-    const imagenFirma = input.files[0];
-
-    if (!this.validarImagenFirma(imagenFirma)) {
-      input.value = '';
-      return;
-    }
-
-    this.subirFirmaElectronica(imagenFirma);
-
     input.value = '';
+
+    this.mostrarError(
+      'Acción no disponible',
+      'Ya no se permite subir imágenes de firma. Debe subir el PDF completo firmado electrónicamente con FirmaEC.'
+    );
   }
 
   validarArchivoPdf(archivo: File): boolean {
-    const maxSizeMb = 10;
-    const maxSizeBytes = maxSizeMb * 1024 * 1024;
-    const nombreArchivo = archivo.name || '';
-
-    if (!nombreArchivo.toLowerCase().endsWith('.pdf')) {
-      this.mostrarError('Archivo inválido', 'Solo se permiten archivos con extensión .pdf.');
-      return false;
-    }
-
-    if (archivo.size > maxSizeBytes) {
-      this.mostrarError('Archivo demasiado grande', `El archivo no puede superar ${maxSizeMb} MB.`);
-      return false;
-    }
-
-    return true;
+    return this.validarPdfFirmadoElectronico(archivo);
   }
 
   validarImagenFirma(archivo: File): boolean {
-    const maxSizeMb = 5;
-    const maxSizeBytes = maxSizeMb * 1024 * 1024;
-
-    const nombreArchivo = archivo.name || '';
-    const extension = nombreArchivo.toLowerCase();
-
-    const extensionesValidas = [
-      '.png',
-      '.jpg',
-      '.jpeg'
-    ];
-
-    const tiposMimeValidos = [
-      'image/png',
-      'image/jpeg'
-    ];
-
-    const extensionValida = extensionesValidas.some((ext) =>
-      extension.endsWith(ext)
+    this.mostrarError(
+      'Acción no disponible',
+      'Ya no se permite subir imágenes de firma en este flujo.'
     );
-
-    const mimeValido = tiposMimeValidos.includes(archivo.type);
-
-    if (!extensionValida || !mimeValido) {
-      this.mostrarError(
-        'Imagen inválida',
-        'La firma electrónica debe ser una imagen PNG, JPG o JPEG.'
-      );
-
-      return false;
-    }
-
-    if (archivo.size > maxSizeBytes) {
-      this.mostrarError(
-        'Imagen demasiado grande',
-        `La imagen de firma no puede superar ${maxSizeMb} MB.`
-      );
-
-      return false;
-    }
-
-    return true;
+    return false;
   }
-
-  // =====================================================
-  // SUBIR PDF FIRMADO MANUALMENTE
-  // =====================================================
 
   subirDocumentoFirmado(
     archivo: File,
     tipoDocumento: string,
     observacion: string
   ): void {
+    if (this.esAdmin()) {
+      this.mostrarError(
+        'Acción no permitida',
+        'El administrador no puede subir documentos. Solo puede revisar y descargar.'
+      );
+      return;
+    }
+
     if (!this.solicitud?.id) {
       this.mostrarError('Solicitud no encontrada', 'No se encontró la solicitud.');
       return;
@@ -467,7 +638,7 @@ export class SolicitudDetalle implements OnInit {
 
         Swal.fire({
           title: 'Documento cargado',
-          text: response?.mensaje || 'El PDF firmado fue subido correctamente.',
+          text: response?.mensaje || 'El documento fue subido correctamente.',
           icon: 'success',
           confirmButtonText: 'Entendido',
           confirmButtonColor: '#1d4ed8',
@@ -490,83 +661,40 @@ export class SolicitudDetalle implements OnInit {
 
         this.mostrarError(
           'No se pudo subir el documento',
-          err.error?.mensaje || 'Error al subir el PDF firmado.'
+          err.error?.mensaje || 'Error al subir el documento.'
         );
       }
     });
   }
 
-  // =====================================================
-  // SUBIR FIRMA ELECTRÓNICA COMO IMAGEN
+  subirFirmaElectronica(imagenFirma: File): void {
+    this.mostrarError(
+      'Acción no disponible',
+      'Ya no se permite subir imágenes de firma. Debe subir el PDF firmado electrónicamente con FirmaEC.'
+    );
+  }
+
+    // =====================================================
+  // APROBACIÓN GENERAL JEFE / AUTORIDAD
   // =====================================================
 
-  subirFirmaElectronica(imagenFirma: File): void {
-    if (!this.solicitud?.id) {
+  async confirmarAprobacion(): Promise<void> {
+    if (this.esAdmin()) {
       this.mostrarError(
-        'Solicitud no encontrada',
-        'No se encontró la solicitud.'
+        'Acción no permitida',
+        'El administrador no aprueba solicitudes. Solo revisa el proceso.'
       );
       return;
     }
 
-    this.procesando = true;
-    this.error = '';
-    this.mensajeOk = '';
-
-    this.solicitudesService.subirFirmaElectronica(
-      this.solicitud.id,
-      imagenFirma
-    ).subscribe({
-      next: (response) => {
-        this.procesando = false;
-
-        this.documentoFirmadoCargado = true;
-        this.guardarDocumentoFirmadoLocal();
-
-        Swal.fire({
-          title: 'Firma electrónica colocada',
-          text: response?.mensaje || 'La firma electrónica fue colocada correctamente en el PDF.',
-          icon: 'success',
-          confirmButtonText: 'Entendido',
-          confirmButtonColor: '#1d4ed8',
-          background: '#ffffff',
-          color: '#0f172a'
-        }).then(() => {
-          this.documentoFirmadoCargado = true;
-          this.guardarDocumentoFirmadoLocal();
-          this.cargarDetalle();
-        });
-      },
-      error: (err: any) => {
-        this.procesando = false;
-
-        if (err.status === 401 || err.status === 403) {
-          this.authService.logout();
-          this.router.navigate(['/auth/login']);
-          return;
-        }
-
-        this.mostrarError(
-          'No se pudo colocar la firma electrónica',
-          err.error?.mensaje || 'Error al subir la imagen de firma electrónica.'
-        );
-      }
-    });
-  }
-
-  // =====================================================
-  // APROBACIÓN GENERAL ADMIN / JEFE / AUTORIDAD
-  // =====================================================
-
-  async confirmarAprobacion(): Promise<void> {
     if (!this.solicitud) {
       return;
     }
 
     if (!this.documentoFirmadoCargado) {
       Swal.fire({
-        title: 'Documento firmado requerido',
-        text: 'Antes de aprobar debe subir un PDF firmado manualmente o colocar una firma electrónica.',
+        title: 'PDF firmado requerido',
+        text: 'Antes de aprobar debe subir el PDF firmado electrónicamente con FirmaEC.',
         icon: 'warning',
         confirmButtonText: 'Entendido',
         confirmButtonColor: '#d97706',
@@ -624,6 +752,14 @@ export class SolicitudDetalle implements OnInit {
   // =====================================================
 
   async confirmarAprobacionTics(): Promise<void> {
+    if (this.esAdmin()) {
+      this.mostrarError(
+        'Acción no permitida',
+        'El administrador no aprueba validaciones TICS. Solo revisa el proceso.'
+      );
+      return;
+    }
+
     if (!this.solicitud) {
       return;
     }
@@ -638,8 +774,8 @@ export class SolicitudDetalle implements OnInit {
 
     if (!this.documentoFirmadoCargado) {
       Swal.fire({
-        title: 'Documento firmado requerido',
-        text: 'Para aprobar la validación TICS debe subir un PDF firmado o colocar una firma electrónica.',
+        title: 'PDF firmado requerido',
+        text: 'Para aprobar la validación TICS debe subir el PDF firmado electrónicamente con FirmaEC.',
         icon: 'warning',
         confirmButtonText: 'Entendido',
         confirmButtonColor: '#d97706',
@@ -690,11 +826,20 @@ export class SolicitudDetalle implements OnInit {
       this.aprobar('validacion_tics');
     }
   }
-    // =====================================================
+
+  // =====================================================
   // TICS: FINALIZAR PROCESO
   // =====================================================
 
   async confirmarFinalizacionTics(): Promise<void> {
+    if (this.esAdmin()) {
+      this.mostrarError(
+        'Acción no permitida',
+        'El administrador no finaliza procesos. Solo revisa información y documentos.'
+      );
+      return;
+    }
+
     if (!this.solicitud) {
       return;
     }
@@ -709,8 +854,8 @@ export class SolicitudDetalle implements OnInit {
 
     if (!this.documentoFirmadoCargado) {
       Swal.fire({
-        title: 'Documento firmado requerido',
-        text: 'Para finalizar el proceso TICS debe existir un PDF firmado cargado.',
+        title: 'PDF firmado requerido',
+        text: 'Para finalizar el proceso TICS debe existir un PDF firmado electrónicamente cargado.',
         icon: 'warning',
         confirmButtonText: 'Entendido',
         confirmButtonColor: '#d97706',
@@ -767,6 +912,14 @@ export class SolicitudDetalle implements OnInit {
   // =====================================================
 
   aprobar(tipoAccion: 'general' | 'validacion_tics' | 'finalizacion_tics' = 'general'): void {
+    if (this.esAdmin()) {
+      this.mostrarError(
+        'Acción no permitida',
+        'El administrador no puede avanzar el flujo. Solo revisa información y documentos.'
+      );
+      return;
+    }
+
     if (!this.solicitud) {
       return;
     }
@@ -861,6 +1014,14 @@ export class SolicitudDetalle implements OnInit {
   // =====================================================
 
   abrirModalRechazo(): void {
+    if (this.esAdmin()) {
+      this.mostrarError(
+        'Acción no permitida',
+        'El administrador no rechaza solicitudes. Solo revisa el proceso.'
+      );
+      return;
+    }
+
     this.error = '';
     this.mensajeOk = '';
     this.motivoRechazo = '';
@@ -873,6 +1034,14 @@ export class SolicitudDetalle implements OnInit {
   }
 
   rechazar(): void {
+    if (this.esAdmin()) {
+      this.mostrarError(
+        'Acción no permitida',
+        'El administrador no puede rechazar solicitudes.'
+      );
+      return;
+    }
+
     if (!this.solicitud) {
       return;
     }
@@ -953,7 +1122,7 @@ export class SolicitudDetalle implements OnInit {
     const estado = this.solicitud.estado;
 
     if (this.esAdmin()) {
-      return estado === 'pendiente_firma_solicitante';
+      return false;
     }
 
     if (this.esJefe()) {
@@ -962,10 +1131,6 @@ export class SolicitudDetalle implements OnInit {
 
     if (this.esAutoridad()) {
       return estado === 'pendiente_maxima_autoridad';
-    }
-
-    if (this.esTics()) {
-      return false;
     }
 
     return false;
@@ -994,6 +1159,10 @@ export class SolicitudDetalle implements OnInit {
 
     const estado = this.solicitud.estado;
 
+    if (this.esAdmin()) {
+      return false;
+    }
+
     if (this.esJefe()) {
       return estado === 'pendiente_jefe_inmediato';
     }
@@ -1014,8 +1183,11 @@ export class SolicitudDetalle implements OnInit {
       return 'Aprobar';
     }
 
+    if (this.esAdmin()) {
+      return 'Solo revisión';
+    }
+
     const textos: Record<string, string> = {
-      pendiente_firma_solicitante: 'Validar firma y enviar a jefe',
       pendiente_jefe_inmediato: 'Aprobar como jefe inmediato',
       pendiente_maxima_autoridad: 'Aprobar como máxima autoridad'
     };

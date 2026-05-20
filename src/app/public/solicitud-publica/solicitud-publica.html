@@ -248,7 +248,7 @@
 
         <div>
           <h4>Información de la solicitud</h4>
-          <p>Detalle técnico, vigencia y justificación del acceso requerido.</p>
+          <p>Detalle técnico, fecha de vigencia y justificación del acceso requerido.</p>
         </div>
       </div>
 
@@ -267,19 +267,17 @@
         </label>
 
         <label>
-          Tiempo de vigencia del acceso *
-          <input
-            type="text"
+         Fecha fin de vigencia del acceso *
+        <input
+           type="date"
             formControlName="tiempo_vigencia_acceso"
-            placeholder="Ejemplo: 6 meses"
-            maxlength="100"
-            (input)="limpiarTextoSimple('tiempo_vigencia_acceso')"
-          />
+            [min]="formulario.get('fecha_solicitud')?.value"
+            />
 
-          <small *ngIf="campoInvalido('tiempo_vigencia_acceso')">
-            {{ obtenerMensajeCampo('tiempo_vigencia_acceso') }}
-          </small>
-        </label>
+             <small *ngIf="campoInvalido('tiempo_vigencia_acceso')">
+                {{ obtenerMensajeCampo('tiempo_vigencia_acceso') }}
+               </small>
+              </label>
 
         <label *ngIf="formulario.get('tipo_usuario')?.value === 'externo'">
           Nombre del usuario externo *

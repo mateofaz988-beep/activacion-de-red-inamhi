@@ -215,7 +215,7 @@
               <th>Módulo</th>
               <th>Acción</th>
               <th>Descripción</th>
-              <th>IP origen</th>
+              
               <th class="actions-col no-print">Acción</th>
             </tr>
           </thead>
@@ -266,9 +266,6 @@
                 {{ registro.descripcion || 'Sin descripción' }}
               </td>
 
-              <td>
-                {{ registro.ip_origen || 'No registrada' }}
-              </td>
 
               <td class="actions-cell no-print">
                 <button
@@ -345,10 +342,7 @@
           <strong>{{ getSolicitudTexto(registroSeleccionado) }}</strong>
         </article>
 
-        <article class="summary-item">
-          <span>IP origen</span>
-          <strong>{{ getIpTexto(registroSeleccionado) }}</strong>
-        </article>
+        
       </section>
 
       <section class="audit-description">

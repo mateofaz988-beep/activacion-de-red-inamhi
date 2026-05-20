@@ -12,25 +12,29 @@
     </div>
 
     <nav class="menu">
-      <a
-        routerLink="/admin/dashboard"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
+      <button
+        type="button"
+        [class.active]="vistaActiva === 'electronicos'"
+        (click)="cambiarVista('electronicos')"
       >
-        Dashboard
-      </a>
+        <i class="bi bi-file-earmark-lock"></i>
+        Procesos electrónicos
+      </button>
 
-      <a
-        routerLink="/admin/solicitudes"
-        routerLinkActive="active"
+      <button
+        type="button"
+        [class.active]="vistaActiva === 'manuales'"
+        (click)="cambiarVista('manuales')"
       >
-        Solicitudes
-      </a>
+        <i class="bi bi-file-earmark-pdf"></i>
+        Procesos manuales
+      </button>
 
       <a
         routerLink="/admin/usuarios"
         routerLinkActive="active"
       >
+        <i class="bi bi-people"></i>
         Usuarios
       </a>
 
@@ -38,6 +42,7 @@
         routerLink="/admin/reportes"
         routerLinkActive="active"
       >
+        <i class="bi bi-bar-chart"></i>
         Reportes
       </a>
 
@@ -45,17 +50,25 @@
         routerLink="/admin/auditoria"
         routerLinkActive="active"
       >
+        <i class="bi bi-clock-history"></i>
         Auditoría
       </a>
     </nav>
+
+    <button type="button" class="logout" (click)="logout()">
+      <i class="bi bi-box-arrow-right"></i>
+      Cerrar sesión 
+    </button>
   </aside>
 
   <main class="content">
     <header class="topbar">
       <div>
         <span class="eyebrow">Panel administrativo</span>
-        <h1>Gestión de Solicitudes</h1>
-        <p>Control general de solicitudes de liberación web institucional.</p>
+
+        <h1>Revisión general de procesos</h1>
+
+       
       </div>
 
       <div class="user-actions">
@@ -71,47 +84,123 @@
       </div>
     </header>
 
-    <section class="stats-grid">
+    <!-- =====================================================
+         SELECTOR DE SECCIÓN
+    ====================================================== -->
+
+    <section class="review-tabs">
+      <button
+        type="button"
+        class="review-tab"
+        [class.active]="vistaActiva === 'electronicos'"
+        (click)="cambiarVista('electronicos')"
+      >
+        <span>FirmaEC / Digital</span>
+        <strong>Procesos electrónicos</strong>
+        <p>
+          Revisión de solicitudes con PDF firmado electrónicamente y flujo por
+          jefe, máxima autoridad y TICS.
+        </p>
+      </button>
+
+      <button
+        type="button"
+        class="review-tab"
+        [class.active]="vistaActiva === 'manuales'"
+        (click)="cambiarVista('manuales')"
+      >
+        <span>Físico / Escaneado</span>
+        <strong>Procesos manuales</strong>
+        <p>
+          Revisión de documentos descargados, firmados físicamente y subidos
+          como PDF final.
+        </p>
+      </button>
+    </section>
+
+    <!-- =====================================================
+         ESTADÍSTICAS ELECTRÓNICAS
+    ====================================================== -->
+
+    <section class="stats-grid" *ngIf="vistaActiva === 'electronicos'">
       <article class="stat-card">
-        <span>Total</span>
-        <strong>{{ totalSolicitudes }}</strong>
-        <p>Solicitudes registradas</p>
+        <span>Total electrónicos</span>
+        <strong>{{ totalElectronicos }}</strong>
+        <p>Solicitudes electrónicas registradas</p>
       </article>
 
       <article class="stat-card pendiente">
         <span>Pendientes</span>
-        <strong>{{ totalPendientes }}</strong>
-        <p>En flujo de revisión</p>
+        <strong>{{ totalElectronicosPendientes }}</strong>
+        <p>En flujo de revisión institucional</p>
       </article>
 
       <article class="stat-card rechazada">
         <span>Rechazadas</span>
-        <strong>{{ totalRechazadas }}</strong>
-        <p>Solicitudes denegadas</p>
+        <strong>{{ totalElectronicosRechazados }}</strong>
+        <p>Procesos rechazados por algún nivel</p>
       </article>
 
       <article class="stat-card finalizada">
         <span>Finalizadas</span>
-        <strong>{{ totalFinalizadas }}</strong>
-        <p>Proceso completado</p>
+        <strong>{{ totalElectronicosFinalizados }}</strong>
+        <p>Procesos electrónicos completados</p>
       </article>
     </section>
 
-    <section class="panel">
+    <!-- =====================================================
+         ESTADÍSTICAS MANUALES
+    ====================================================== -->
+
+    <section class="stats-grid" *ngIf="vistaActiva === 'manuales'">
+      <article class="stat-card manual">
+        <span>Total manuales</span>
+        <strong>{{ totalManuales }}</strong>
+        <p>Procesos manuales registrados</p>
+      </article>
+
+      <article class="stat-card pendiente">
+        <span>Pendientes</span>
+        <strong>{{ totalManualesPendientes }}</strong>
+        <p>Esperando documento firmado</p>
+      </article>
+
+      <article class="stat-card finalizada">
+        <span>Finalizados</span>
+        <strong>{{ totalManualesFinalizados }}</strong>
+        <p>Documento firmado recibido</p>
+      </article>
+
+  
+    </section>
+
+    <!-- =====================================================
+         PANEL ELECTRÓNICOS
+    ====================================================== -->
+
+    <section class="panel" *ngIf="vistaActiva === 'electronicos'">
       <div class="panel-header">
         <div>
-          <h2>Bandeja de solicitudes</h2>
-          <p>Consulta, filtra y revisa las solicitudes registradas.</p>
+          <h2>Procesos electrónicos</h2>
+          <p>
+            Consulta el avance de las solicitudes electrónicas y revisa en qué
+            etapa institucional se encuentran.
+          </p>
         </div>
 
         <button
           type="button"
-          (click)="cargarSolicitudes()"
+          (click)="cargarProcesosElectronicos()"
           [disabled]="cargando"
         >
           {{ cargando ? 'Cargando...' : 'Actualizar' }}
         </button>
       </div>
+
+      <p class="panel-note">
+        El administrador únicamente revisa la información. Las aprobaciones,
+        rechazos y firmas corresponden a jefe inmediato, máxima autoridad y TICS.
+      </p>
 
       <div class="filters">
         <input
@@ -134,6 +223,16 @@
           <option value="rechazada_tics">Rechazada TICS</option>
         </select>
 
+        <select [(ngModel)]="filtroEtapa">
+          <option value="">Todas las etapas</option>
+          <option value="firma_solicitante">Firma solicitante</option>
+          <option value="jefe_inmediato">Jefe inmediato</option>
+          <option value="maxima_autoridad">Máxima autoridad</option>
+          <option value="tics">TICS</option>
+          <option value="ejecucion_tics">Ejecución TICS</option>
+          <option value="finalizado">Finalizado</option>
+        </select>
+
         <button type="button" (click)="buscar()">
           Buscar
         </button>
@@ -148,7 +247,7 @@
       </div>
 
       <div class="loading" *ngIf="cargando">
-        Cargando solicitudes...
+        Cargando procesos electrónicos...
       </div>
 
       <div class="table-wrapper" *ngIf="!cargando">
@@ -162,13 +261,14 @@
               <th>Área / Unidad</th>
               <th>Fecha y hora</th>
               <th>Estado</th>
-              <th>Páginas</th>
+              <th>Etapa actual</th>
+              <th>Documentos</th>
               <th class="actions-header">Acciones</th>
             </tr>
           </thead>
 
           <tbody>
-            <tr *ngFor="let solicitud of solicitudesFiltradas">
+            <tr *ngFor="let solicitud of procesosElectronicos">
               <td>
                 <strong class="code">
                   {{ solicitud.codigo_solicitud }}
@@ -176,7 +276,10 @@
               </td>
 
               <td>
-                {{ solicitud.nombres_completos }}
+                <div class="person-cell">
+                  <strong>{{ solicitud.nombres_completos }}</strong>
+                  <span>{{ solicitud.dependencia }}</span>
+                </div>
               </td>
 
               <td>
@@ -194,7 +297,7 @@
               <td>
                 <div class="date-cell">
                   <strong>
-                    {{ obtenerFechaTabla(solicitud.fecha_solicitud || solicitud.created_at) }}
+                    {{ obtenerFechaTabla(obtenerFechaElectronica(solicitud)) }}
                   </strong>
 
                   <span>
@@ -206,29 +309,227 @@
               <td>
                 <span
                   class="status"
-                  [ngClass]="getEstadoClase(solicitud.estado)"
+                  [ngClass]="getEstadoElectronicoClase(solicitud.estado)"
                 >
-                  {{ getEstadoTexto(solicitud.estado) }}
+                  {{ getEstadoElectronicoTexto(solicitud.estado) }}
                 </span>
               </td>
 
               <td>
-                {{ solicitud.total_paginas }}
+                <div class="stage-cell">
+                  <strong>
+                    {{ getEtapaElectronicaTexto(solicitud.etapa_actual) }}
+                  </strong>
+
+                  <span>
+                    {{ getDescripcionUbicacionProceso(solicitud) }}
+                  </span>
+                </div>
+              </td>
+
+              <td>
+                <strong>{{ solicitud.total_documentos || 0 }}</strong>
+                <span *ngIf="solicitud.ultimo_documento">
+                  último: {{ solicitud.ultimo_documento }}
+                </span>
               </td>
 
               <td class="actions-cell">
-                <a
-                  class="detail-btn"
-                  [routerLink]="['/admin/solicitudes', solicitud.id]"
-                >
-                  Ver detalle
-                </a>
+                <div class="action-buttons">
+                  <button
+                    type="button"
+                    class="detail-btn"
+                    (click)="verDetalleElectronico(solicitud)"
+                  >
+                    Ver detalle
+                  </button>
+
+                  <button
+                    type="button"
+                    class="download-btn"
+                    (click)="descargarElectronicoActual(solicitud)"
+                    [disabled]="descargando"
+                  >
+                    Descargar PDF
+                  </button>
+                </div>
               </td>
             </tr>
 
-            <tr *ngIf="solicitudesFiltradas.length === 0">
-              <td colspan="9" class="empty">
-                No existen solicitudes para mostrar.
+            <tr *ngIf="procesosElectronicos.length === 0">
+              <td colspan="10" class="empty">
+                No existen procesos electrónicos para mostrar.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         PANEL MANUALES
+    ====================================================== -->
+
+    <section class="panel" *ngIf="vistaActiva === 'manuales'">
+      <div class="panel-header">
+        <div>
+          <h2>Procesos manuales</h2>
+          <p>
+            Consulta los documentos manuales generados, pendientes de subida o
+            finalizados con PDF firmado.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          (click)="cargarProcesosManuales()"
+          [disabled]="cargando"
+        >
+          {{ cargando ? 'Cargando...' : 'Actualizar' }}
+        </button>
+      </div>
+
+      <p class="panel-note">
+        En el flujo manual, el usuario descarga el formato, lo firma físicamente,
+        lo escanea y lo sube desde seguimiento. El admin solo revisa y descarga.
+      </p>
+
+      <div class="filters manual-filters">
+        <input
+          type="text"
+          [(ngModel)]="busqueda"
+          placeholder="Buscar por ID manual, nombre, apellido o correo..."
+          (keyup.enter)="buscar()"
+        />
+
+        <select [(ngModel)]="filtroEstado">
+          <option value="">Todos los estados</option>
+          <option value="PENDIENTE_SUBIDA">Pendiente de subir firmado</option>
+          <option value="FINALIZADO">Finalizado</option>
+        </select>
+
+        <button type="button" (click)="buscar()">
+          Buscar
+        </button>
+
+        <button type="button" class="clear-btn" (click)="limpiarFiltros()">
+          Limpiar
+        </button>
+      </div>
+
+      <div class="error-box" *ngIf="error">
+        {{ error }}
+      </div>
+
+      <div class="loading" *ngIf="cargando">
+        Cargando procesos manuales...
+      </div>
+
+      <div class="table-wrapper" *ngIf="!cargando">
+        <table>
+          <thead>
+            <tr>
+              <th>ID manual</th>
+              <th>Solicitante</th>
+              <th>Correo</th>
+              <th>Fecha y hora</th>
+              <th>Estado</th>
+              <th>Auditoría</th>
+              <th>Documento firmado</th>
+              <th class="actions-header">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let item of procesosManuales">
+              <td>
+                <strong class="code">
+                  {{ item.uuid_solicitud }}
+                </strong>
+              </td>
+
+              <td>
+                <div class="person-cell">
+                  <strong>{{ item.nombres }} {{ item.apellidos }}</strong>
+                  <span>Proceso físico/manual</span>
+                </div>
+              </td>
+
+              <td>
+                {{ item.correo }}
+              </td>
+
+              <td>
+                <div class="date-cell">
+                  <strong>
+                    {{ obtenerFechaTabla(obtenerFechaManual(item)) }}
+                  </strong>
+
+                  <span>
+                    {{ obtenerHoraManual(item) }}
+                  </span>
+                </div>
+              </td>
+
+              <td>
+                <span
+                  class="status"
+                  [ngClass]="getEstadoManualClase(item.estado)"
+                >
+                  {{ getEstadoManualTexto(item.estado) }}
+                </span>
+              </td>
+
+              <td>
+                {{ item.log_auditoria || 'Sin log disponible' }}
+              </td>
+
+              <td>
+                <span *ngIf="item.documento_escaneado">
+                  {{ item.documento_escaneado }}
+                </span>
+
+                <span *ngIf="!item.documento_escaneado">
+                  Pendiente de subida
+                </span>
+              </td>
+
+              <td class="actions-cell">
+                <div class="action-buttons">
+                  <button
+                    type="button"
+                    class="download-btn"
+                    (click)="descargarManualVacio(item)"
+                    [disabled]="descargando"
+                  >
+                    Formato vacío
+                  </button>
+
+                  <button
+                    type="button"
+                    class="download-btn"
+                    *ngIf="item.estado === 'FINALIZADO' && item.documento_escaneado"
+                    (click)="descargarManualFirmado(item)"
+                    [disabled]="descargando"
+                  >
+                    PDF firmado
+                  </button>
+
+                  <button
+                    type="button"
+                    class="disabled-btn"
+                    *ngIf="item.estado !== 'FINALIZADO' || !item.documento_escaneado"
+                    disabled
+                  >
+                    Sin firmado
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <tr *ngIf="procesosManuales.length === 0">
+              <td colspan="8" class="empty">
+                No existen procesos manuales para mostrar.
               </td>
             </tr>
           </tbody>

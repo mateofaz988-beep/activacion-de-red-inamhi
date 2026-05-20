@@ -108,14 +108,16 @@ CORS(app, resources={
         "origins": [
             "http://localhost:4300",
             "http://127.0.0.1:4300",
-            "http://10.0.5.120:4300"
+            "http://10.0.5.120:4300",
+            "http://10.0.153.69",
+            "http://10.0.153.69:4300"
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"]
     }
 })
 
-app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 mb
+app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024  # 15 MB
 
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = int(os.getenv("DB_PORT", 3306))
@@ -129,11 +131,25 @@ JWT_EXPIRATION_HOURS = int(os.getenv("JWT_EXPIRATION_HOURS", 8))
 BACKEND_HOST = os.getenv("BACKEND_HOST", "127.0.0.1")
 BACKEND_PORT = int(os.getenv("BACKEND_PORT", 5050))
 
-UPLOAD_FOLDER = "uploads"
+# =====================================================
+# carpetas de archivos
+# =====================================================
+
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+
 DOCUMENTOS_FOLDER = os.path.join(UPLOAD_FOLDER, "documentos")
 FIRMADOS_FOLDER = os.path.join(UPLOAD_FOLDER, "firmados")
 ESCANEADOS_FOLDER = os.path.join(UPLOAD_FOLDER, "escaneados")
 
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(DOCUMENTOS_FOLDER, exist_ok=True)
+os.makedirs(FIRMADOS_FOLDER, exist_ok=True)
+os.makedirs(ESCANEADOS_FOLDER, exist_ok=True)
+
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["DOCUMENTOS_FOLDER"] = DOCUMENTOS_FOLDER
+app.config["FIRMADOS_FOLDER"] = FIRMADOS_FOLDER
+app.config["ESCANEADOS_FOLDER"] = ESCANEADOS_FOLDER
 
 # =====================================================
 # crear carpetas necesarias
@@ -1331,39 +1347,47 @@ def listar_mis_solicitudes():
 
     busqueda = limpiar_texto(request.args.get("q"))
 
-    estados_por_rol = {
-        "administrador": [
-            "pendiente_firma_solicitante",
-            "pendiente_jefe_inmediato",
-            "pendiente_maxima_autoridad",
-            "pendiente_tics",
-            "pendiente_ejecucion_tics",
-            "finalizada",
-            "rechazada_jefe_inmediato",
-            "rechazada_maxima_autoridad",
-            "rechazada_tics",
-            "anulada"
-        ],
-        "jefe_inmediato": [
-            "pendiente_jefe_inmediato"
-        ],
-        "maxima_autoridad": [
-            "pendiente_maxima_autoridad"
-        ],
-        "analista_tics": [
-            "pendiente_tics",
-            "pendiente_ejecucion_tics"
-        ]
+    reglas_por_rol = {
+        "administrador": {
+            "estados": [
+                "pendiente_firma_solicitante",
+                "pendiente_jefe_inmediato",
+                "pendiente_maxima_autoridad",
+                "pendiente_tics",
+                "pendiente_ejecucion_tics",
+                "finalizada",
+                "rechazada_jefe_inmediato",
+                "rechazada_maxima_autoridad",
+                "rechazada_tics",
+                "anulada"
+            ],
+            "etapas": None
+        },
+        "jefe_inmediato": {
+            "estados": ["pendiente_jefe_inmediato"],
+            "etapas": ["jefe_inmediato"]
+        },
+        "maxima_autoridad": {
+            "estados": ["pendiente_maxima_autoridad"],
+            "etapas": ["maxima_autoridad"]
+        },
+        "analista_tics": {
+            "estados": ["pendiente_tics", "pendiente_ejecucion_tics"],
+            "etapas": ["tics", "ejecucion_tics"]
+        }
     }
 
-    estados_permitidos = estados_por_rol.get(rol_actual, [])
+    regla = reglas_por_rol.get(rol_actual)
 
-    if not estados_permitidos:
+    if regla is None:
         return jsonify({
             "estado": "error",
             "mensaje": "el rol actual no tiene solicitudes asignadas.",
             "rol": rol_actual
         }), 403
+
+    estados_permitidos = regla["estados"]
+    etapas_permitidas = regla["etapas"]
 
     conexion = get_db_connection()
 
@@ -1376,14 +1400,21 @@ def listar_mis_solicitudes():
     try:
         cursor = conexion.cursor(dictionary=True)
 
-        placeholders = ", ".join(["%s"] * len(estados_permitidos))
-        parametros = list(estados_permitidos)
+        condiciones = []
+        parametros = []
 
-        condiciones_busqueda = ""
+        placeholders_estados = ", ".join(["%s"] * len(estados_permitidos))
+        condiciones.append(f"s.estado in ({placeholders_estados})")
+        parametros.extend(estados_permitidos)
+
+        if etapas_permitidas:
+            placeholders_etapas = ", ".join(["%s"] * len(etapas_permitidas))
+            condiciones.append(f"s.etapa_actual in ({placeholders_etapas})")
+            parametros.extend(etapas_permitidas)
 
         if busqueda:
-            condiciones_busqueda = """
-                and (
+            condiciones.append("""
+                (
                     s.codigo_solicitud like %s or
                     s.nombres_completos like %s or
                     s.cedula like %s or
@@ -1391,7 +1422,7 @@ def listar_mis_solicitudes():
                     s.area_unidad like %s or
                     s.dependencia like %s
                 )
-            """
+            """)
 
             valor_busqueda = f"%{busqueda}%"
 
@@ -1403,6 +1434,8 @@ def listar_mis_solicitudes():
                 valor_busqueda,
                 valor_busqueda
             ])
+
+        where_sql = " and ".join(condiciones)
 
         sql = f"""
             select
@@ -1426,12 +1459,15 @@ def listar_mis_solicitudes():
                 s.bloqueada,
                 s.created_at,
                 s.updated_at,
-                count(p.id) as total_paginas
+
+                (
+                    select count(*)
+                    from solicitud_paginas_web p
+                    where p.solicitud_id = s.id
+                ) as total_paginas
+
             from solicitudes s
-            left join solicitud_paginas_web p on p.solicitud_id = s.id
-            where s.estado in ({placeholders})
-            {condiciones_busqueda}
-            group by s.id
+            where {where_sql}
             order by s.id desc;
         """
 
@@ -1442,6 +1478,8 @@ def listar_mis_solicitudes():
             solicitud["fecha_solicitud"] = serializar_fecha(solicitud["fecha_solicitud"])
             solicitud["created_at"] = serializar_fecha(solicitud["created_at"])
             solicitud["updated_at"] = serializar_fecha(solicitud["updated_at"])
+            solicitud["bloqueada"] = bool(solicitud["bloqueada"]) if solicitud["bloqueada"] is not None else False
+            solicitud["total_paginas"] = int(solicitud["total_paginas"] or 0)
 
         cursor.close()
         conexion.close()
@@ -1455,6 +1493,8 @@ def listar_mis_solicitudes():
         }), 200
 
     except Error as error:
+        print("error al obtener solicitudes asignadas:", error)
+
         return jsonify({
             "estado": "error",
             "mensaje": "error al obtener solicitudes asignadas.",
@@ -2019,7 +2059,7 @@ def generar_pdf_solicitud_a4(solicitud, paginas_web, incluir_seccion_tics=False)
             Paragraph("<b>Cargo</b>", estilos["cell_label"]),
             Paragraph(texto_seguro(solicitud["cargo"])[:80], estilos["cell_text"]),
             Paragraph("<b>Fecha</b>", estilos["cell_label"]),
-            Paragraph(serializar_fecha(solicitud["fecha_solicitud"]), estilos["cell_text"]),
+            
         ],
     ]
 
@@ -2049,25 +2089,25 @@ def generar_pdf_solicitud_a4(solicitud, paginas_web, incluir_seccion_tics=False)
     agregar_titulo_seccion(elementos, "2. INFORMACIÓN DEL ACCESO SOLICITADO", estilos)
 
     datos_acceso = [
-        [
-            Paragraph("<b>Tipo usuario</b>", estilos["cell_label"]),
-            Paragraph(texto_seguro(solicitud["tipo_usuario"]), estilos["cell_text"]),
-            Paragraph("<b>Usuario externo</b>", estilos["cell_label"]),
-            Paragraph(texto_seguro(solicitud["nombre_usuario_externo"] or "No aplica")[:70], estilos["cell_text"]),
-        ],
-        [
-            Paragraph("<b>IP</b>", estilos["cell_label"]),
-            Paragraph(texto_seguro(solicitud["direccion_ip"] or "No registrada"), estilos["cell_text"]),
-            Paragraph("<b>Vigencia</b>", estilos["cell_label"]),
-            Paragraph(texto_seguro(solicitud["tiempo_vigencia_acceso"])[:70], estilos["cell_text"]),
-        ],
-        [
-            Paragraph("<b>Estado</b>", estilos["cell_label"]),
-            Paragraph(estado_legible_pdf(solicitud["estado"]), estilos["cell_text"]),
-            Paragraph("<b>Etapa</b>", estilos["cell_label"]),
-            Paragraph(etapa_legible_pdf(solicitud["etapa_actual"]), estilos["cell_text"]),
-        ],
-    ]
+    [
+        Paragraph("<b>Tipo usuario</b>", estilos["cell_label"]),
+        Paragraph("", estilos["cell_text"]),
+        Paragraph("<b>Usuario externo</b>", estilos["cell_label"]),
+        Paragraph("", estilos["cell_text"]),
+    ],
+    [
+        Paragraph("<b>IP</b>", estilos["cell_label"]),
+        Paragraph("", estilos["cell_text"]),
+        Paragraph("<b>Vigencia</b>", estilos["cell_label"]),
+        Paragraph("", estilos["cell_text"]),
+    ],
+    [
+        Paragraph("<b>Estado</b>", estilos["cell_label"]),
+        Paragraph("", estilos["cell_text"]),
+        Paragraph("<b>Etapa</b>", estilos["cell_label"]),
+        Paragraph("", estilos["cell_text"]),
+    ],
+]
 
     tabla_acceso = Table(
         datos_acceso,
@@ -2140,7 +2180,7 @@ def generar_pdf_solicitud_a4(solicitud, paginas_web, incluir_seccion_tics=False)
             data_paginas.append([
                 Paragraph(str(pagina.get("numero") or ""), estilo_web_numero),
                 Paragraph(str(pagina.get("url_pagina") or ""), estilo_web_cell),
-                Paragraph(str(descripcion or "Sin descripción"), estilo_web_cell)
+                Paragraph(str(descripcion or ""), estilo_web_cell)
             ])
     else:
         data_paginas.append([
@@ -2443,7 +2483,7 @@ def preparar_solicitud_electronica_firmaec():
                 dependencia,
                 area_unidad,
                 cargo,
-                fecha_solicitud,
+                
                 tipo_usuario,
                 nombre_usuario_externo,
                 direccion_ip,
@@ -3428,13 +3468,14 @@ def descargar_documento_manual_vacio(uuid_solicitud):
             "error": str(error)
         }), 500
 
-      # =====================================================
+
+# =====================================================
 # procesos manuales - administrador
 # =====================================================
 
 @app.route("/api/admin/manuales", methods=["GET"])
 @token_requerido
-@roles_permitidos("administrador", "jefe_inmediato", "maxima_autoridad", "analista_tics")
+@roles_permitidos("administrador")
 def listar_solicitudes_manuales_admin():
     busqueda = limpiar_texto(request.args.get("q"))
     estado = limpiar_texto(request.args.get("estado")).upper()
@@ -3549,7 +3590,7 @@ def listar_solicitudes_manuales_admin():
 
 @app.route("/api/admin/manuales/<uuid_solicitud>/descargar-firmado", methods=["GET"])
 @token_requerido
-@roles_permitidos("administrador", "jefe_inmediato", "maxima_autoridad", "analista_tics")
+@roles_permitidos("administrador")
 def descargar_documento_manual_firmado_admin(uuid_solicitud):
     uuid_solicitud = limpiar_texto(uuid_solicitud).upper()
 
@@ -3652,6 +3693,322 @@ def descargar_documento_manual_firmado_admin(uuid_solicitud):
         return jsonify({
             "estado": "error",
             "mensaje": "error al descargar el documento manual firmado.",
+            "error": str(error)
+        }), 500
+
+
+# =====================================================
+# procesos electrónicos - administrador revisor
+# =====================================================
+
+@app.route("/api/admin/procesos-electronicos", methods=["GET"])
+@token_requerido
+@roles_permitidos("administrador")
+def listar_procesos_electronicos_admin():
+    busqueda = limpiar_texto(request.args.get("q"))
+    estado = limpiar_texto(request.args.get("estado"))
+    etapa = limpiar_texto(request.args.get("etapa"))
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        condiciones = []
+        parametros = []
+
+        if busqueda:
+            condiciones.append("""
+                (
+                    s.codigo_solicitud like %s or
+                    s.nombres_completos like %s or
+                    s.cedula like %s or
+                    s.correo_institucional like %s or
+                    s.dependencia like %s or
+                    s.area_unidad like %s or
+                    s.cargo like %s
+                )
+            """)
+
+            valor_busqueda = f"%{busqueda}%"
+
+            parametros.extend([
+                valor_busqueda,
+                valor_busqueda,
+                valor_busqueda,
+                valor_busqueda,
+                valor_busqueda,
+                valor_busqueda,
+                valor_busqueda
+            ])
+
+        if estado:
+            condiciones.append("s.estado = %s")
+            parametros.append(estado)
+
+        if etapa:
+            condiciones.append("s.etapa_actual = %s")
+            parametros.append(etapa)
+
+        where_sql = ""
+
+        if condiciones:
+            where_sql = "where " + " and ".join(condiciones)
+
+        sql = f"""
+            select
+                s.id,
+                s.codigo_solicitud,
+                s.nombres_completos,
+                s.cedula,
+                s.correo_institucional,
+                s.telefono_ext,
+                s.dependencia,
+                s.area_unidad,
+                s.cargo,
+                s.fecha_solicitud,
+                s.tipo_usuario,
+                s.nombre_usuario_externo,
+                s.direccion_ip,
+                s.tiempo_vigencia_acceso,
+                s.justificacion_necesidad_institucional,
+                s.estado,
+                s.etapa_actual,
+                s.bloqueada,
+                s.created_at,
+                s.updated_at,
+
+                (
+                    select count(*)
+                    from solicitud_documentos d
+                    where d.solicitud_id = s.id
+                ) as total_documentos,
+
+                (
+                    select d.nombre_archivo
+                    from solicitud_documentos d
+                    where d.solicitud_id = s.id
+                    order by d.id desc
+                    limit 1
+                ) as ultimo_documento
+
+            from solicitudes s
+            {where_sql}
+            order by s.id desc;
+        """
+
+        cursor.execute(sql, tuple(parametros))
+        solicitudes = cursor.fetchall()
+
+        for item in solicitudes:
+            item["fecha_solicitud"] = str(item["fecha_solicitud"]) if item["fecha_solicitud"] else None
+            item["created_at"] = serializar_fecha(item["created_at"])
+            item["updated_at"] = serializar_fecha(item["updated_at"])
+            item["bloqueada"] = bool(item["bloqueada"]) if item["bloqueada"] is not None else False
+            item["total_documentos"] = int(item["total_documentos"] or 0)
+
+        cursor.close()
+        conexion.close()
+
+        return jsonify({
+            "estado": "ok",
+            "mensaje": "procesos electrónicos obtenidos correctamente.",
+            "total": len(solicitudes),
+            "solicitudes": solicitudes
+        }), 200
+
+    except Error as error:
+        print("error al obtener procesos electrónicos:", error)
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al obtener los procesos electrónicos.",
+            "error": str(error)
+        }), 500
+
+
+@app.route("/api/admin/procesos-electronicos/<codigo_solicitud>/pdf-actual", methods=["GET"])
+@token_requerido
+@roles_permitidos("administrador")
+def descargar_pdf_actual_proceso_electronico_admin(codigo_solicitud):
+    codigo_solicitud = limpiar_texto(codigo_solicitud).upper()
+
+    if not codigo_solicitud:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el código de solicitud es obligatorio."
+        }), 400
+
+    if not re.match(r"^INAMHI-WEB-\d{4}-\d{4}$", codigo_solicitud):
+        return jsonify({
+            "estado": "error",
+            "mensaje": "el código de solicitud no tiene un formato válido."
+        }), 400
+
+    conexion = get_db_connection()
+
+    if conexion is None:
+        return jsonify({
+            "estado": "error",
+            "mensaje": "no se pudo conectar con la base de datos."
+        }), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select
+                id,
+                codigo_solicitud,
+                nombres_completos,
+                cedula,
+                correo_institucional,
+                telefono_ext,
+                dependencia,
+                area_unidad,
+                cargo,
+                fecha_solicitud,
+                tipo_usuario,
+                nombre_usuario_externo,
+                direccion_ip,
+                tiempo_vigencia_acceso,
+                justificacion_necesidad_institucional,
+                estado,
+                etapa_actual,
+                bloqueada,
+                created_at,
+                updated_at
+            from solicitudes
+            where codigo_solicitud = %s
+            limit 1;
+        """, (codigo_solicitud,))
+
+        solicitud = cursor.fetchone()
+
+        if solicitud is None:
+            cursor.close()
+            conexion.close()
+
+            return jsonify({
+                "estado": "error",
+                "mensaje": "no se encontró una solicitud electrónica con ese código."
+            }), 404
+
+        # Buscar el último PDF subido en solicitud_documentos.
+        cursor.execute("""
+            select
+                id,
+                nombre_archivo,
+                ruta_archivo,
+                tipo_documento,
+                etapa,
+                rol_firmante,
+                created_at
+            from solicitud_documentos
+            where solicitud_id = %s
+              and nombre_archivo is not null
+            order by id desc
+            limit 1;
+        """, (solicitud["id"],))
+
+        documento = cursor.fetchone()
+
+        cursor.close()
+        conexion.close()
+
+        # Si existe un documento subido, se descarga ese.
+        if documento:
+            ruta_archivo = documento.get("ruta_archivo")
+
+            if ruta_archivo and os.path.exists(ruta_archivo):
+                return send_file(
+                    ruta_archivo,
+                    mimetype="application/pdf",
+                    as_attachment=True,
+                    download_name=f"documento_actual_{codigo_solicitud}.pdf",
+                    max_age=0
+                )
+
+            # Si en la BD solo está el nombre, buscamos en carpetas conocidas.
+            nombre_archivo = documento.get("nombre_archivo")
+
+            posibles_rutas = [
+                os.path.join(FIRMADOS_FOLDER, nombre_archivo),
+                os.path.join(DOCUMENTOS_FOLDER, nombre_archivo),
+                os.path.join(ESCANEADOS_FOLDER, nombre_archivo)
+            ]
+
+            for ruta in posibles_rutas:
+                if ruta and os.path.exists(ruta):
+                    return send_file(
+                        ruta,
+                        mimetype="application/pdf",
+                        as_attachment=True,
+                        download_name=f"documento_actual_{codigo_solicitud}.pdf",
+                        max_age=0
+                    )
+
+        # Si no hay PDF firmado/subido, generamos el formato actual desde la solicitud.
+        conexion = get_db_connection()
+
+        if conexion is None:
+            return jsonify({
+                "estado": "error",
+                "mensaje": "no se pudo conectar con la base de datos."
+            }), 500
+
+        cursor = conexion.cursor(dictionary=True)
+
+        cursor.execute("""
+            select
+                numero,
+                url_pagina,
+                descripcion
+            from solicitud_paginas_web
+            where solicitud_id = %s
+            order by numero asc;
+        """, (solicitud["id"],))
+
+        paginas_web = cursor.fetchall()
+
+        cursor.close()
+        conexion.close()
+
+        pdf_buffer = generar_pdf_solicitud_a4(
+            solicitud,
+            paginas_web,
+            incluir_seccion_tics=False
+        )
+
+        return send_file(
+            pdf_buffer,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"formato_{codigo_solicitud}.pdf",
+            max_age=0
+        )
+
+    except Error as error:
+        print("error al descargar pdf actual electrónico:", error)
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error al descargar el PDF actual del proceso electrónico.",
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        print("error inesperado al descargar pdf actual electrónico:", error)
+
+        return jsonify({
+            "estado": "error",
+            "mensaje": "error inesperado al descargar el PDF actual del proceso electrónico.",
             "error": str(error)
         }), 500
 # =====================================================
@@ -3840,35 +4197,26 @@ def obtener_solicitud_admin(solicitud_id):
 # =====================================================
 
 def obtener_siguiente_estado_por_rol(estado_actual, rol_actual):
-    flujo = {
-        "pendiente_firma_solicitante": {
-            "rol": "administrador",
-            "nuevo_estado": "pendiente_jefe_inmediato",
-            "nueva_etapa": "jefe_inmediato"
-        },
-        "pendiente_jefe_inmediato": {
-            "rol": "jefe_inmediato",
+    reglas = {
+        ("pendiente_jefe_inmediato", "jefe_inmediato"): {
             "nuevo_estado": "pendiente_maxima_autoridad",
             "nueva_etapa": "maxima_autoridad"
         },
-        "pendiente_maxima_autoridad": {
-            "rol": "maxima_autoridad",
+        ("pendiente_maxima_autoridad", "maxima_autoridad"): {
             "nuevo_estado": "pendiente_tics",
             "nueva_etapa": "tics"
         },
-        "pendiente_tics": {
-            "rol": "analista_tics",
+        ("pendiente_tics", "analista_tics"): {
             "nuevo_estado": "pendiente_ejecucion_tics",
             "nueva_etapa": "ejecucion_tics"
         },
-        "pendiente_ejecucion_tics": {
-            "rol": "analista_tics",
+        ("pendiente_ejecucion_tics", "analista_tics"): {
             "nuevo_estado": "finalizada",
             "nueva_etapa": "finalizado"
         }
     }
 
-    regla = flujo.get(estado_actual)
+    return reglas.get((estado_actual, rol_actual))
 
     if regla is None:
         return None
@@ -4686,8 +5034,8 @@ def aprobar_solicitud(solicitud_id):
 
             return jsonify({
                 "estado": "error",
-                "mensaje": "antes de aprobar debe existir un PDF firmado manualmente o una firma electrónica registrada.",
-                "requisito": "pdf_firmado_o_firma_electronica",
+                "mensaje": "antes de aprobar debe existir un PDF firmado electrónicamente con FirmaEC.",
+                "requisito": "pdf_firmado_electronico_firmaec",
                 "rol_actual": rol_actual,
                 "estado_actual": estado_anterior
             }), 409

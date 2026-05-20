@@ -23,10 +23,6 @@
         Dashboard
       </a>
 
-      <a routerLink="/admin/solicitudes" routerLinkActive="active">
-        Solicitudes
-      </a>
-
       <a routerLink="/admin/usuarios" routerLinkActive="active">
         Usuarios
       </a>
@@ -112,11 +108,19 @@
     <header class="topbar">
       <div>
         <a [routerLink]="getRutaVolver()" class="back-link">
-          ← Volver a solicitudes
+          ← Volver
         </a>
 
         <h1>Detalle de Solicitud</h1>
-        <p>Información completa de la solicitud registrada.</p>
+
+        <p *ngIf="esAdmin()">
+          Vista de revisión administrativa. El administrador solo consulta información
+          y descarga documentos.
+        </p>
+
+        <p *ngIf="!esAdmin()">
+          Gestión del proceso electrónico institucional mediante FirmaEC.
+        </p>
       </div>
 
       <button
@@ -142,6 +146,10 @@
     </div>
 
     <ng-container *ngIf="!cargando && solicitud">
+      <!-- =====================================================
+           ENCABEZADO DEL DETALLE
+      ====================================================== -->
+
       <section class="hero-card">
         <div>
           <span class="label">Código de solicitud</span>
@@ -165,23 +173,64 @@
       </section>
 
       <!-- =====================================================
-           ACCIONES DEL FLUJO
+           AVISO ADMIN REVISOR
       ====================================================== -->
 
-      <section class="actions-card" *ngIf="!estaFinalizada()">
+      <section class="actions-card admin-review-card" *ngIf="esAdmin()">
         <div>
-          <h3>Acciones del flujo</h3>
+          <h3>Vista de revisión administrativa</h3>
 
           <p>
-            Gestione la solicitud según el rol autenticado y el estado actual del proceso.
-            Para continuar, primero debe existir un documento firmado cargado.
+            El administrador puede revisar el estado, la etapa actual, los datos
+            del solicitante y descargar los documentos disponibles. No puede aprobar,
+            rechazar, subir documentos, subir firmas ni finalizar procesos.
           </p>
         </div>
 
+        <div class="completed-badge">
+          <i class="bi bi-eye-fill"></i>
+          Solo revisión
+        </div>
+      </section>
+
+      <!-- =====================================================
+           ADVERTENCIA FIRMA ELECTRÓNICA OBLIGATORIA
+           SOLO PARA JEFE / AUTORIDAD / TICS
+      ====================================================== -->
+
+      <section class="actions-card firmaec-required-card" *ngIf="!esAdmin() && !estaFinalizada()">
+        <div>
+          <h3>Firma electrónica obligatoria con FirmaEC</h3>
+
+          <p>
+            Para continuar con el trámite debe descargar el PDF firmado actual,
+            abrirlo externamente en FirmaEC, firmarlo electrónicamente y subir
+            el nuevo PDF firmado. En este flujo no se permite subir documentos
+            firmados manualmente ni imágenes de firma.
+          </p>
+        </div>
+
+        <div class="completed-badge warning">
+          <i class="bi bi-shield-lock-fill"></i>
+          FirmaEC obligatorio
+        </div>
+      </section>
+
+      <!-- =====================================================
+           ACCIONES DEL FLUJO SOLO PARA ROLES OPERATIVOS
+      ====================================================== -->
+
+      <section class="actions-card" *ngIf="!estaFinalizada() && !esAdmin()">
+        <div>
+          <h3>Acciones del flujo electrónico</h3>
+
+          <p>
+            Primero descargue el PDF firmado actual y súbalo nuevamente firmado
+            electrónicamente. Luego podrá aprobar o echazar la solicitud.
+        </div>
+
         <div class="actions">
-          <!-- =====================================================
-               ADMIN / JEFE / AUTORIDAD
-          ====================================================== -->
+          <!-- JEFE / AUTORIDAD -->
           <button
             *ngIf="!esTics()"
             type="button"
@@ -193,9 +242,7 @@
             <span *ngIf="procesandoAprobacion">Procesando...</span>
           </button>
 
-          <!-- =====================================================
-               TICS: APROBAR VALIDACIÓN TÉCNICA
-          ====================================================== -->
+          <!-- TICS: APROBAR VALIDACIÓN TÉCNICA -->
           <button
             *ngIf="esTics()"
             type="button"
@@ -207,9 +254,7 @@
             <span *ngIf="procesandoAprobacion">Procesando...</span>
           </button>
 
-          <!-- =====================================================
-               TICS: FINALIZAR PROCESO
-          ====================================================== -->
+          <!-- TICS: FINALIZAR PROCESO -->
           <button
             *ngIf="esTics()"
             type="button"
@@ -232,8 +277,7 @@
           </button>
         </div>
       </section>
-
-      <!-- =====================================================
+            <!-- =====================================================
            SOLICITUD FINALIZADA
       ====================================================== -->
 
@@ -254,7 +298,7 @@
       </section>
 
       <!-- =====================================================
-           GESTIÓN DE DOCUMENTOS Y FIRMAS
+           DOCUMENTACIÓN ELECTRÓNICA
       ====================================================== -->
 
       <section class="documents-card">
@@ -262,14 +306,20 @@
           <div>
             <span class="label">Documentación</span>
 
-            <h3>Gestión de documentos y firmas</h3>
+            <h3>
+              {{ esAdmin() ? 'Revisión de documentos' : 'Firma electrónica del documento' }}
+            </h3>
 
-            <p *ngIf="!estaFinalizada()">
-              Descargue el PDF generado para firmarlo manualmente, o cargue una imagen
-              de firma electrónica para que el sistema la coloque automáticamente en el PDF.
+            <p *ngIf="esAdmin()">
+              Consulte y descargue los documentos disponibles del proceso. Esta vista
+              es únicamente de revisión administrativa.
             </p>
 
-            <p *ngIf="estaFinalizada()">
+            <p *ngIf="!esAdmin() && !estaFinalizada()">
+              Descargue el último PDF firmado disponible, añada la firma y suba el documento firmado.
+            </p>
+
+            <p *ngIf="!esAdmin() && estaFinalizada()">
               La documentación de esta solicitud ya fue procesada y el flujo fue cerrado
               correctamente.
             </p>
@@ -283,7 +333,7 @@
             {{
               estaFinalizada()
                 ? 'Proceso documental finalizado'
-                : (documentoFirmadoCargado ? 'Documento firmado cargado' : 'Documento firmado pendiente')
+                : (documentoFirmadoCargado ? 'PDF firmado electrónicamente cargado' : 'PDF firmado electrónicamente pendiente')
             }}
           </span>
         </div>
@@ -292,24 +342,18 @@
           <article class="flow-step">
             <div class="step-number">1</div>
 
-            <h4>Descargar documento</h4>
+            <h4>Descargar PDF firmado actual</h4>
 
-            <p>
-              Use “PDF generado” para obtener la plantilla del sistema.
-              Use “PDF firmado actual” para revisar el último documento subido
-              por el rol anterior.
+            <p *ngIf="esAdmin()">
+              Descargue el último documento disponible para revisar el avance del trámite.
+            </p>
+
+            <p *ngIf="!esAdmin()">
+              Descargue el PDF firmado actual, agregue su firma
+              electrónica y guarde el nuevo PDF firmado.
             </p>
 
             <div class="doc-actions">
-              <button
-                type="button"
-                class="btn-doc-secondary"
-                (click)="descargarPdf()"
-                [disabled]="procesando"
-              >
-                Descargar PDF generado
-              </button>
-
               <button
                 type="button"
                 class="signed-pdf-btn"
@@ -321,87 +365,63 @@
             </div>
           </article>
 
-          <article class="flow-step">
+          <article class="flow-step" *ngIf="!esAdmin()">
             <div class="step-number">2</div>
 
-            <h4>Firmar documento</h4>
+            <h4>Firmar externamente</h4>
 
             <p>
-              Puede firmar el PDF manualmente y subirlo, o subir una imagen de firma
-              electrónica para que el sistema la inserte automáticamente en el PDF.
+              Abra la aplicación para firmas electronicas de su preferencia en su equipo, seleccione el PDF descargado,
+              agregue su firma electrónica y guarde el nuevo documento firmado.
             </p>
 
-            <div class="hint-box" *ngIf="!estaFinalizada()">
-              Para firma manual: descargue, firme, escanee y suba el PDF. Para firma electrónica:
-              cargue una imagen PNG, JPG o JPEG de la firma.
-            </div>
-
-            <div class="hint-box success" *ngIf="estaFinalizada()">
-              Esta etapa ya fue completada dentro del flujo institucional.
+            <div class="hint-box">
+              Este flujo es exclusivo para firma electrónica. No suba documentos
+              firmados manualmente ni imágenes de firma.
             </div>
           </article>
 
-          <article class="flow-step">
+          <article class="flow-step" *ngIf="!esAdmin()">
             <div class="step-number">3</div>
 
-            <h4>Subir documento o firma</h4>
+            <h4>Subir PDF firmado electrónicamente</h4>
 
             <p>
-              Puede subir el PDF firmado manualmente o cargar una imagen de firma electrónica.
-              Si carga una imagen, el sistema la colocará automáticamente en el PDF.
+              Después de firmar el documento, suba aquí el nuevo PDF firmado.
+              Podrá revisarlo antes de guardarlo en el sistema.
             </p>
 
             <div class="upload-buttons">
-              <input
-                type="file"
-                accept="application/pdf"
-                #inputFirmaManual
-                hidden
-                (change)="seleccionarFirmaManual($event)"
-              />
-
-              <button
-                type="button"
-                class="btn-upload manual"
-                (click)="inputFirmaManual.click()"
-                [disabled]="procesando || estaFinalizada()"
-              >
-                Subir PDF firmado manualmente
-              </button>
-
-              <input
-                type="file"
-                accept="image/png,image/jpeg"
-                #inputFirmaElectronica
-                hidden
-                (change)="seleccionarFirmaElectronica($event)"
-              />
-
               <button
                 type="button"
                 class="btn-upload electronic"
-                (click)="inputFirmaElectronica.click()"
+                (click)="abrirModalFirmaElectronica()"
                 [disabled]="procesando || estaFinalizada()"
               >
-                Subir firma electrónica
+                Subir PDF firmado electrónicamente
               </button>
             </div>
           </article>
         </div>
 
-        <div class="document-warning" *ngIf="!documentoFirmadoCargado && !estaFinalizada()">
-          Para continuar con el flujo primero debe subir un PDF firmado manualmente
-          o cargar una imagen de firma electrónica.
+        <div class="document-warning" *ngIf="!documentoFirmadoCargado && !estaFinalizada() && !esAdmin()">
+          Para aprobar o continuar el flujo, primero debe subir el PDF firmado electrónicamente con FirmaEC.
         </div>
 
-        <div class="document-success" *ngIf="documentoFirmadoCargado && !estaFinalizada()">
-          El documento firmado fue registrado correctamente. Ya puede continuar con la acción correspondiente.
-        </div>
+       
 
         <div class="document-success" *ngIf="estaFinalizada()">
           La solicitud fue finalizada correctamente. No se requieren más acciones documentales.
         </div>
+
+        <div class="document-success" *ngIf="esAdmin() && !estaFinalizada()">
+          Vista de revisión administrativa. El administrador solo puede consultar y descargar documentos.
+        </div>
       </section>
+
+      <!-- =====================================================
+           INFORMACIÓN DE LA SOLICITUD
+      ====================================================== -->
 
       <section class="detail-grid">
         <article class="card">
@@ -486,11 +506,10 @@
           </div>
         </article>
       </section>
-
-      <section class="card">
+            <section class="card">
         <h3>Páginas web solicitadas</h3>
 
-        <div class="web-list">
+        <div class="web-list" *ngIf="paginasWeb.length > 0">
           <div class="web-item" *ngFor="let pagina of paginasWeb">
             <span>{{ pagina.numero }}</span>
 
@@ -500,19 +519,221 @@
             </div>
           </div>
         </div>
+
+        <p class="justification" *ngIf="paginasWeb.length === 0">
+          No existen páginas web registradas para esta solicitud.
+        </p>
       </section>
 
       <section class="card">
         <h3>Justificación institucional</h3>
 
         <p class="justification">
-          {{ solicitud.justificacion_necesidad_institucional }}
+          {{ solicitud.justificacion_necesidad_institucional || 'Sin justificación registrada.' }}
+        </p>
+      </section>
+
+      <section class="card" *ngIf="documentos.length > 0">
+        <h3>Documentos registrados</h3>
+
+        <div class="web-list">
+          <div class="web-item" *ngFor="let documento of documentos; let i = index">
+            <span>{{ i + 1 }}</span>
+
+            <div>
+              <strong>{{ documento.nombre_archivo || 'Documento sin nombre' }}</strong>
+
+              <p>
+                Tipo: {{ documento.tipo_documento || 'No registrado' }}
+                · Etapa: {{ documento.etapa || 'No registrada' }}
+                · Rol firmante: {{ documento.rol_firmante || 'No registrado' }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" *ngIf="documentos.length === 0">
+        <h3>Documentos registrados</h3>
+
+        <p class="justification">
+          Todavía no existen documentos registrados para esta solicitud.
         </p>
       </section>
     </ng-container>
   </main>
 
-  <div class="modal-backdrop" *ngIf="mostrarModalRechazo">
+  <!-- =====================================================
+       MODAL PARA SUBIR PDF FIRMADO ELECTRÓNICAMENTE
+       JEFE / AUTORIDAD / TICS
+  ====================================================== -->
+
+  <div class="modal-backdrop-firmaec" *ngIf="mostrarModalFirmaElectronica && !esAdmin()">
+    <section class="modal-firmaec-card">
+      <button
+        type="button"
+        class="close-modal-firmaec"
+        (click)="cerrarModalFirmaElectronica()"
+        [disabled]="procesando"
+        aria-label="Cerrar ventana de firma electrónica"
+      >
+        ×
+      </button>
+
+      <div class="firmaec-modal-header">
+        <div class="firmaec-modal-icon">
+          <i class="bi bi-shield-lock-fill"></i>
+        </div>
+
+        <div>
+          <span>Firma electrónica obligatoria</span>
+          <h3>Subir PDF firmado con FirmaEC</h3>
+
+          <p>
+            Descargue el PDF firmado actual, fírmelo externamente con FirmaEC
+            y suba aquí el nuevo PDF firmado electrónicamente.
+          </p>
+        </div>
+      </div>
+
+      <div class="firmaec-warning">
+        <i class="bi bi-info-circle-fill"></i>
+
+        <div>
+          <h4>Guía para firmar con FirmaEC</h4>
+
+          <p>
+            1. Descargue el PDF firmado actual desde la pantalla de detalle.<br />
+            2. Abra la aplicación FirmaEC instalada en su equipo.<br />
+            3. Seleccione el PDF descargado y agregue su firma electrónica.<br />
+            4. Guarde el nuevo PDF firmado en su computadora.<br />
+            5. Regrese a esta ventana, seleccione el PDF firmado, verifíquelo y guárdelo.
+          </p>
+        </div>
+      </div>
+
+      <div class="firmaec-generated" *ngIf="solicitud">
+        <span>Código de solicitud</span>
+        <strong>{{ solicitud.codigo_solicitud }}</strong>
+      </div>
+
+      <section class="modal-request-summary" *ngIf="solicitud">
+        <div>
+          <span>Solicitante</span>
+          <strong>{{ solicitud.nombres_completos }}</strong>
+        </div>
+
+        <div>
+          <span>Cédula</span>
+          <strong>{{ solicitud.cedula }}</strong>
+        </div>
+
+        <div>
+          <span>Correo</span>
+          <strong>{{ solicitud.correo_institucional }}</strong>
+        </div>
+
+        <div>
+          <span>Dependencia</span>
+          <strong>{{ solicitud.dependencia }}</strong>
+        </div>
+
+        <div>
+          <span>Área / Unidad</span>
+          <strong>{{ solicitud.area_unidad }}</strong>
+        </div>
+
+        <div>
+          <span>Cargo</span>
+          <strong>{{ solicitud.cargo }}</strong>
+        </div>
+
+        <div>
+          <span>Estado actual</span>
+          <strong>{{ getEstadoTexto(solicitud.estado) }}</strong>
+        </div>
+
+        <div>
+          <span>Etapa actual</span>
+          <strong>{{ getEtapaTexto(solicitud.etapa_actual) }}</strong>
+        </div>
+      </section>
+
+      <label class="firmaec-upload-zone">
+        <input
+          type="file"
+          accept=".pdf,application/pdf"
+          [disabled]="procesando"
+          (change)="seleccionarPdfFirmadoElectronico($event)"
+        />
+
+        <i class="bi bi-cloud-arrow-up-fill"></i>
+
+        <strong *ngIf="!nombreArchivoFirmadoElectronico">
+          Seleccionar PDF firmado electrónicamente
+        </strong>
+
+        <strong *ngIf="nombreArchivoFirmadoElectronico">
+          {{ nombreArchivoFirmadoElectronico }}
+        </strong>
+
+        <span>
+          Solo PDF firmado con FirmaEC · Máximo 10 MB
+        </span>
+      </label>
+
+      <div class="preview-actions" *ngIf="archivoFirmadoElectronico">
+        <button
+          type="button"
+          class="preview-btn"
+          (click)="verPdfFirmadoElectronico()"
+          [disabled]="procesando"
+        >
+          Ver PDF seleccionado
+        </button>
+
+        <button
+          type="button"
+          class="remove-selected-btn"
+          (click)="quitarPdfFirmadoElectronico()"
+          [disabled]="procesando"
+        >
+          Quitar y seleccionar otro
+        </button>
+      </div>
+
+      <div class="firmaec-error" *ngIf="error">
+        {{ error }}
+      </div>
+
+      <div class="firmaec-success" *ngIf="mensajeOk">
+        {{ mensajeOk }}
+      </div>
+
+      <div class="firmaec-final-actions">
+        <button
+          type="button"
+          class="send-firmaec-btn"
+          [disabled]="!archivoFirmadoElectronico || procesando"
+          (click)="subirPdfFirmadoElectronico()"
+        >
+          <span *ngIf="!procesando">
+            Guardar PDF firmado electrónicamente
+          </span>
+
+          <span *ngIf="procesando">
+            Guardando PDF firmado...
+          </span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <!-- =====================================================
+       MODAL DE RECHAZO SOLO PARA ROLES OPERATIVOS
+  ====================================================== -->
+
+  <div class="modal-backdrop" *ngIf="mostrarModalRechazo && !esAdmin()">
     <section class="modal-card">
       <h2>Rechazar solicitud</h2>
 

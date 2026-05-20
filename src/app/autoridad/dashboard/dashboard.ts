@@ -30,6 +30,13 @@ export interface SolicitudAutoridad {
   total_paginas: number;
 }
 
+interface RespuestaSolicitudesAutoridad {
+  estado?: string;
+  mensaje?: string;
+  total?: number;
+  solicitudes?: SolicitudAutoridad[];
+}
+
 @Component({
   selector: 'app-autoridad-dashboard',
   standalone: true,
@@ -44,7 +51,14 @@ export interface SolicitudAutoridad {
 })
 export class AutoridadDashboard implements OnInit {
 
-  private readonly API_URL = '/api';
+  /*
+    LOCAL:
+    http://localhost:5050/api
+
+    SERVIDOR CON NGINX:
+    /api
+  */
+  private readonly API_URL = 'http://localhost:5050/api';
 
   solicitudes: SolicitudAutoridad[] = [];
   solicitudesFiltradas: SolicitudAutoridad[] = [];
@@ -70,6 +84,12 @@ export class AutoridadDashboard implements OnInit {
 
   ngOnInit(): void {
     this.usuario = this.authService.getUsuario();
+
+    if (!this.authService.getToken()) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
     this.cargarSolicitudes();
   }
 
@@ -93,23 +113,69 @@ export class AutoridadDashboard implements OnInit {
       params = params.set('q', busquedaLimpia);
     }
 
-    this.http.get<any>(`${this.API_URL}/mis-solicitudes`, {
+    /*
+      Este endpoint debe devolver únicamente las solicitudes asignadas
+      a la máxima autoridad, es decir:
+      estado = pendiente_maxima_autoridad
+      etapa_actual = maxima_autoridad
+    */
+    this.http.get<RespuestaSolicitudesAutoridad>(`${this.API_URL}/mis-solicitudes`, {
       headers: this.getHeaders(),
       params
     }).subscribe({
       next: (response) => {
         this.cargando = false;
 
+        if (response.estado && response.estado !== 'ok') {
+          this.solicitudes = [];
+          this.solicitudesFiltradas = [];
+          this.calcularEstadisticas();
+          this.error = response.mensaje || 'No se pudieron cargar las solicitudes asignadas.';
+          return;
+        }
+
         this.solicitudes = response.solicitudes || [];
+
+        /*
+          Seguridad visual:
+          aunque el backend debería filtrar por rol, aquí nos aseguramos
+          de mostrar solo las solicitudes que corresponden a máxima autoridad.
+        */
+        this.solicitudes = this.solicitudes.filter((solicitud) =>
+          solicitud.estado === 'pendiente_maxima_autoridad' ||
+          solicitud.estado === 'rechazada_maxima_autoridad' ||
+          solicitud.estado === 'pendiente_tics' ||
+          solicitud.estado === 'pendiente_ejecucion_tics' ||
+          solicitud.estado === 'finalizada'
+        );
+
         this.aplicarFiltroEstado();
         this.calcularEstadisticas();
       },
       error: (err) => {
         this.cargando = false;
+        this.solicitudes = [];
+        this.solicitudesFiltradas = [];
+        this.calcularEstadisticas();
 
         if (err.status === 401 || err.status === 403) {
           this.authService.logout();
           this.router.navigate(['/auth/login']);
+          return;
+        }
+
+        if (err.status === 0) {
+          this.error = 'No se pudo conectar con el servidor Flask. Verifique que el backend esté encendido en el puerto 5050.';
+          return;
+        }
+
+        if (err.status === 404) {
+          this.error = 'No existe la ruta /api/mis-solicitudes en Flask o no está registrada correctamente.';
+          return;
+        }
+
+        if (err.status === 500) {
+          this.error = err.error?.mensaje || 'Error interno del servidor al cargar las solicitudes de máxima autoridad.';
           return;
         }
 
@@ -133,7 +199,7 @@ export class AutoridadDashboard implements OnInit {
     this.totalSolicitudes = this.solicitudes.length;
 
     this.totalPendientes = this.solicitudes.filter((solicitud) =>
-      solicitud.estado.includes('pendiente')
+      solicitud.estado === 'pendiente_maxima_autoridad'
     ).length;
 
     this.totalFinalizadas = this.solicitudes.filter((solicitud) =>
@@ -141,7 +207,7 @@ export class AutoridadDashboard implements OnInit {
     ).length;
 
     this.totalRechazadas = this.solicitudes.filter((solicitud) =>
-      solicitud.estado.includes('rechazada')
+      solicitud.estado === 'rechazada_maxima_autoridad'
     ).length;
   }
 
