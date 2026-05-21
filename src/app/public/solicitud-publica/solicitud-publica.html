@@ -181,48 +181,70 @@
           </small>
         </label>
 
-        <label>
-          Dependencia *
-          <input
-            type="text"
-            formControlName="dependencia"
-            placeholder="Ejemplo: Dirección Administrativa Financiera"
-            maxlength="150"
-            (input)="limpiarTextoSimple('dependencia')"
-          />
+        <!-- =====================================================
+             LISTAS DEPENDIENTES: DIRECCIÓN → ÁREA → CARGO
+        ====================================================== -->
 
-          <small *ngIf="campoInvalido('dependencia')">
-            {{ obtenerMensajeCampo('dependencia') }}
+        <label>
+          Dirección / Dependencia *
+          <select
+            formControlName="direccion_id"
+            (change)="onDireccionSeleccionada()"
+          >
+            <option value="">Seleccione una dirección</option>
+
+            <option
+              *ngFor="let direccion of direcciones"
+              [value]="direccion.id"
+            >
+              {{ direccion.nombre }}
+            </option>
+          </select>
+
+          <small *ngIf="campoInvalido('direccion_id')">
+            {{ obtenerMensajeCampo('direccion_id') }}
           </small>
         </label>
 
         <label>
           Área / Unidad *
-          <input
-            type="text"
-            formControlName="area_unidad"
-            placeholder="Ejemplo: Unidad de Tecnologías de la Información"
-            maxlength="150"
-            (input)="limpiarTextoSimple('area_unidad')"
-          />
+          <select
+            formControlName="area_id"
+            (change)="onAreaSeleccionada()"
+          >
+            <option value="">Seleccione un área</option>
 
-          <small *ngIf="campoInvalido('area_unidad')">
-            {{ obtenerMensajeCampo('area_unidad') }}
+            <option
+              *ngFor="let area of areas"
+              [value]="area.id"
+            >
+              {{ area.nombre }}
+            </option>
+          </select>
+
+          <small *ngIf="campoInvalido('area_id')">
+            {{ obtenerMensajeCampo('area_id') }}
           </small>
         </label>
 
         <label>
           Cargo *
-          <input
-            type="text"
-            formControlName="cargo"
-            placeholder="Ejemplo: Analista Institucional"
-            maxlength="150"
-            (input)="limpiarTextoSimple('cargo')"
-          />
+          <select
+            formControlName="cargo_id"
+            (change)="onCargoSeleccionado()"
+          >
+            <option value="">Seleccione un cargo</option>
 
-          <small *ngIf="campoInvalido('cargo')">
-            {{ obtenerMensajeCampo('cargo') }}
+            <option
+              *ngFor="let cargo of cargos"
+              [value]="cargo.id"
+            >
+              {{ cargo.nombre }}
+            </option>
+          </select>
+
+          <small *ngIf="campoInvalido('cargo_id')">
+            {{ obtenerMensajeCampo('cargo_id') }}
           </small>
         </label>
 
@@ -239,7 +261,28 @@
         </label>
       </div>
 
-      <!-- =====================================================
+      <div class="assigned-chief-card" *ngIf="jefeAsignado">
+        <div>
+          <span>Jefe asignado automáticamente</span>
+          <strong>
+            {{ jefeAsignado.nombres }} {{ jefeAsignado.apellidos || '' }}
+          </strong>
+          <p>{{ jefeAsignado.cargo }}</p>
+        </div>
+
+        <small>
+          La solicitud será enviada únicamente al jefe responsable del área seleccionada.
+        </small>
+      </div>
+
+      <div class="assigned-chief-card warning" *ngIf="formulario.get('area_id')?.value && !jefeAsignado">
+        <div>
+          <span>Jefe no configurado</span>
+          <strong>No existe un jefe asignado para esta área.</strong>
+          <p>Comuníquese con TICS o con el administrador del sistema.</p>
+        </div>
+      </div>
+            <!-- =====================================================
            SECCIÓN 2: INFORMACIÓN DE LA SOLICITUD
       ====================================================== -->
 
@@ -264,20 +307,24 @@
               Externo
             </option>
           </select>
+
+          <small *ngIf="campoInvalido('tipo_usuario')">
+            {{ obtenerMensajeCampo('tipo_usuario') }}
+          </small>
         </label>
 
         <label>
-         Fecha fin de vigencia del acceso *
-        <input
-           type="date"
+          Fecha fin de vigencia del acceso *
+          <input
+            type="date"
             formControlName="tiempo_vigencia_acceso"
             [min]="formulario.get('fecha_solicitud')?.value"
-            />
+          />
 
-             <small *ngIf="campoInvalido('tiempo_vigencia_acceso')">
-                {{ obtenerMensajeCampo('tiempo_vigencia_acceso') }}
-               </small>
-              </label>
+          <small *ngIf="campoInvalido('tiempo_vigencia_acceso')">
+            {{ obtenerMensajeCampo('tiempo_vigencia_acceso') }}
+          </small>
+        </label>
 
         <label *ngIf="formulario.get('tipo_usuario')?.value === 'externo'">
           Nombre del usuario externo *
@@ -427,7 +474,7 @@
         <button
           type="button"
           class="download-format-btn"
-          [disabled]="preparandoFirmaEc || cargando"
+          [disabled]="preparandoFirmaEc || cargando || !jefeAsignado"
           (click)="abrirModalFirmaEc()"
         >
           Continuar con firma electrónica
@@ -435,8 +482,7 @@
       </div>
     </form>
   </main>
-
-  <!-- =====================================================
+    <!-- =====================================================
        MODAL FIRMAEC ASISTIDO
   ====================================================== -->
 
@@ -530,6 +576,30 @@
       <div class="firmaec-generated loading-code" *ngIf="preparandoFirmaEc">
         <span>Generando automáticamente</span>
         <strong>Preparando ID y formato PDF...</strong>
+      </div>
+
+      <div class="firmaec-selected-info" *ngIf="jefeAsignado">
+        <div>
+          <span>Dirección</span>
+          <strong>{{ nombreDireccionSeleccionada || 'No registrada' }}</strong>
+        </div>
+
+        <div>
+          <span>Área / Unidad</span>
+          <strong>{{ nombreAreaSeleccionada || 'No registrada' }}</strong>
+        </div>
+
+        <div>
+          <span>Cargo</span>
+          <strong>{{ nombreCargoSeleccionado || 'No registrado' }}</strong>
+        </div>
+
+        <div>
+          <span>Jefe responsable</span>
+          <strong>
+            {{ jefeAsignado.nombres }} {{ jefeAsignado.apellidos || '' }}
+          </strong>
+        </div>
       </div>
 
       <div class="firmaec-actions-grid one-action">

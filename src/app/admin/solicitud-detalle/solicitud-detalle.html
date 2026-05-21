@@ -1,4 +1,4 @@
-<section class="detail-page">
+<section class="admin-layout">
   <aside class="sidebar">
     <div class="brand">
       <div class="logo-box">
@@ -11,126 +11,97 @@
       </div>
     </div>
 
-    <!-- =========================
-         MENÚ ADMIN
-    ========================== -->
-    <nav class="menu" *ngIf="esAdmin()">
+    <nav class="menu">
       <a
-        routerLink="/admin/dashboard"
+        [routerLink]="getRutaVolver()"
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
       >
         Dashboard
       </a>
 
-      <a routerLink="/admin/usuarios" routerLinkActive="active">
+      <a
+        routerLink="/admin/solicitudes"
+        routerLinkActive="active"
+        *ngIf="esAdmin()"
+      >
+        Procesos electrónicos
+      </a>
+
+      <a
+        routerLink="/admin/manuales"
+        routerLinkActive="active"
+        *ngIf="esAdmin()"
+      >
+        Procesos manuales
+      </a>
+
+      <a
+        routerLink="/admin/usuarios"
+        routerLinkActive="active"
+        *ngIf="esAdmin()"
+      >
         Usuarios
       </a>
 
-      <a routerLink="/admin/reportes" routerLinkActive="active">
+      <a
+        routerLink="/admin/reportes"
+        routerLinkActive="active"
+        *ngIf="esAdmin()"
+      >
         Reportes
       </a>
 
-      <a routerLink="/admin/auditoria" routerLinkActive="active">
+      <a
+        routerLink="/admin/auditoria"
+        routerLinkActive="active"
+        *ngIf="esAdmin()"
+      >
         Auditoría
       </a>
     </nav>
-
-    <!-- =========================
-         MENÚ JEFE INMEDIATO
-    ========================== -->
-    <nav class="menu" *ngIf="esJefe()">
-      <a
-        routerLink="/jefe/dashboard"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
-      >
-        Solicitudes asignadas
-      </a>
-
-      <a routerLink="/jefe/historial" routerLinkActive="active">
-        Historial
-      </a>
-
-      <a routerLink="/jefe/reportes" routerLinkActive="active">
-        Reportes
-      </a>
-    </nav>
-
-    <!-- =========================
-         MENÚ MÁXIMA AUTORIDAD
-    ========================== -->
-    <nav class="menu" *ngIf="esAutoridad()">
-      <a
-        routerLink="/autoridad/dashboard"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
-      >
-        Solicitudes asignadas
-      </a>
-
-      <a routerLink="/autoridad/historial" routerLinkActive="active">
-        Historial
-      </a>
-
-      <a routerLink="/autoridad/reportes" routerLinkActive="active">
-        Reportes
-      </a>
-    </nav>
-
-    <!-- =========================
-         MENÚ TICS
-    ========================== -->
-    <nav class="menu" *ngIf="esTics()">
-      <a
-        routerLink="/tics/dashboard"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
-      >
-        Solicitudes asignadas
-      </a>
-
-      <a routerLink="/tics/historial" routerLinkActive="active">
-        Historial
-      </a>
-
-      <a routerLink="/tics/reportes" routerLinkActive="active">
-        Reportes
-      </a>
-    </nav>
-
-    <button class="logout" type="button" (click)="logout()">
-      Cerrar sesión
-    </button>
   </aside>
 
   <main class="content">
     <header class="topbar">
       <div>
-        <a [routerLink]="getRutaVolver()" class="back-link">
-          ← Volver
-        </a>
+        <span class="eyebrow">Detalle de solicitud</span>
+        <h1>Revisión del proceso electrónico</h1>
 
-        <h1>Detalle de Solicitud</h1>
-
-        <p *ngIf="esAdmin()">
-          Vista de revisión administrativa. El administrador solo consulta información
-          y descarga documentos.
-        </p>
-
-        <p *ngIf="!esAdmin()">
-          Gestión del proceso electrónico institucional mediante FirmaEC.
+        <p>
+          Consulte la información completa, revise documentos cargados y continúe
+          el flujo mediante firma electrónica con FirmaEC.
         </p>
       </div>
 
-      <button
-        type="button"
-        class="refresh-btn"
-        (click)="cargarDetalle()"
-        [disabled]="cargando || procesando"
-      >
-        Actualizar
-      </button>
+      <div class="user-actions">
+        <a
+          class="back-btn"
+          [routerLink]="getRutaVolver()"
+        >
+          <i class="bi bi-arrow-left"></i>
+          Volver
+        </a>
+
+        <button
+          type="button"
+          class="refresh-btn"
+          (click)="cargarDetalle()"
+          [disabled]="cargando || procesando"
+        >
+          <i class="bi bi-arrow-clockwise"></i>
+          Actualizar
+        </button>
+
+        <button
+          type="button"
+          class="logout-top-btn"
+          (click)="logout()"
+        >
+          <i class="bi bi-box-arrow-right"></i>
+          Cerrar sesión
+        </button>
+      </div>
     </header>
 
     <div class="loading" *ngIf="cargando">
@@ -157,12 +128,16 @@
           <h2>{{ solicitud.codigo_solicitud }}</h2>
 
           <p>
-            {{ solicitud.nombres_completos }} · {{ solicitud.correo_institucional }}
+            {{ solicitud.nombres_completos }} ·
+            {{ solicitud.correo_institucional }}
           </p>
         </div>
 
         <div class="status-group">
-          <span class="status" [ngClass]="getEstadoClase(solicitud.estado)">
+          <span
+            class="status"
+            [ngClass]="getEstadoClase(solicitud.estado)"
+          >
             {{ getEstadoTexto(solicitud.estado) }}
           </span>
 
@@ -176,14 +151,17 @@
            AVISO ADMIN REVISOR
       ====================================================== -->
 
-      <section class="actions-card admin-review-card" *ngIf="esAdmin()">
+      <section
+        class="actions-card admin-review-card"
+        *ngIf="esAdmin()"
+      >
         <div>
           <h3>Vista de revisión administrativa</h3>
 
           <p>
-            El administrador puede revisar el estado, la etapa actual, los datos
-            del solicitante y descargar los documentos disponibles. No puede aprobar,
-            rechazar, subir documentos, subir firmas ni finalizar procesos.
+            El administrador puede revisar datos, estado, etapa actual y documentos
+            cargados. No puede aprobar, rechazar, subir documentos ni finalizar
+            procesos.
           </p>
         </div>
 
@@ -195,10 +173,12 @@
 
       <!-- =====================================================
            ADVERTENCIA FIRMA ELECTRÓNICA OBLIGATORIA
-           SOLO PARA JEFE / AUTORIDAD / TICS
       ====================================================== -->
 
-      <section class="actions-card firmaec-required-card" *ngIf="!esAdmin() && !estaFinalizada()">
+      <section
+        class="actions-card firmaec-required-card"
+        *ngIf="!esAdmin() && !estaFinalizada()"
+      >
         <div>
           <h3>Firma electrónica obligatoria con FirmaEC</h3>
 
@@ -217,217 +197,140 @@
       </section>
 
       <!-- =====================================================
-           ACCIONES DEL FLUJO SOLO PARA ROLES OPERATIVOS
+           ACCIONES DEL FLUJO ELECTRÓNICO
       ====================================================== -->
 
-      <section class="actions-card" *ngIf="!estaFinalizada() && !esAdmin()">
+      <section
+        class="actions-card"
+        *ngIf="!estaFinalizada() && !esAdmin()"
+      >
         <div>
           <h3>Acciones del flujo electrónico</h3>
 
           <p>
             Primero descargue el PDF firmado actual y súbalo nuevamente firmado
-            electrónicamente. Luego podrá aprobar o echazar la solicitud.
+            electrónicamente con FirmaEC. Luego podrá aprobar, rechazar o finalizar
+            según el rol autenticado.
+          </p>
         </div>
 
-        <div class="actions">
-          <!-- JEFE / AUTORIDAD -->
+        <div class="actions-grid">
           <button
-            *ngIf="!esTics()"
+            type="button"
+            class="signed-pdf-btn"
+            (click)="descargarDocumentoFirmadoActual()"
+            [disabled]="procesando"
+          >
+            <i class="bi bi-file-earmark-arrow-down-fill"></i>
+            Descargar PDF firmado actual
+          </button>
+
+          <button
+            type="button"
+            class="firmaec-open-btn"
+            (click)="abrirModalFirmaElectronica()"
+            [disabled]="procesando || estaFinalizada()"
+          >
+            <i class="bi bi-cloud-arrow-up-fill"></i>
+            Subir PDF firmado con FirmaEC
+          </button>
+        </div>
+
+        <div
+          class="document-warning"
+          *ngIf="!documentoFirmadoCargado && !estaFinalizada()"
+        >
+          Para continuar con el flujo debe subir primero el PDF firmado
+          electrónicamente con FirmaEC.
+        </div>
+
+        <div
+          class="document-success"
+          *ngIf="documentoFirmadoCargado && !estaFinalizada()"
+        >
+          El documento firmado electrónicamente fue registrado correctamente.
+          Ya puede continuar con la acción correspondiente.
+        </div>
+      </section>
+
+      <!-- =====================================================
+           ACCIONES DE APROBACIÓN / RECHAZO
+      ====================================================== -->
+
+      <section
+        class="decision-card"
+        *ngIf="!estaFinalizada() && !esAdmin()"
+      >
+        <div>
+          <h3>Decisión del proceso</h3>
+
+          <p>
+            Revise la solicitud y el documento firmado antes de ejecutar una acción.
+          </p>
+        </div>
+
+        <div class="decision-actions">
+          <button
             type="button"
             class="approve-btn"
+            *ngIf="puedeAprobar()"
             (click)="confirmarAprobacion()"
-            [disabled]="procesando || !puedeAprobar() || !documentoFirmadoCargado"
+            [disabled]="procesando || !documentoFirmadoCargado"
           >
-            <span *ngIf="!procesandoAprobacion">{{ getTextoBotonAprobar() }}</span>
-            <span *ngIf="procesandoAprobacion">Procesando...</span>
+            <i class="bi bi-check-circle-fill"></i>
+            {{ getTextoBotonAprobar() }}
           </button>
 
-          <!-- TICS: APROBAR VALIDACIÓN TÉCNICA -->
           <button
-            *ngIf="esTics()"
             type="button"
             class="approve-btn"
+            *ngIf="puedeAprobarValidacionTics()"
             (click)="confirmarAprobacionTics()"
-            [disabled]="procesando || !puedeAprobarValidacionTics() || !documentoFirmadoCargado"
+            [disabled]="procesando || !documentoFirmadoCargado"
           >
-            <span *ngIf="!procesandoAprobacion">Aprobar validación TICS</span>
-            <span *ngIf="procesandoAprobacion">Procesando...</span>
+            <i class="bi bi-shield-check"></i>
+            Aprobar validación TICS
           </button>
 
-          <!-- TICS: FINALIZAR PROCESO -->
           <button
-            *ngIf="esTics()"
             type="button"
-            class="finish-btn"
+            class="approve-btn final"
+            *ngIf="puedeFinalizarTics()"
             (click)="confirmarFinalizacionTics()"
-            [disabled]="procesando || !puedeFinalizarTics() || !documentoFirmadoCargado"
+            [disabled]="procesando || !documentoFirmadoCargado"
           >
-            <span *ngIf="!procesandoFinalizacion">Finalizar proceso TICS</span>
-            <span *ngIf="procesandoFinalizacion">Finalizando...</span>
+            <i class="bi bi-check2-circle"></i>
+            Finalizar proceso TICS
           </button>
 
           <button
             type="button"
             class="reject-btn"
+            *ngIf="puedeRechazar()"
             (click)="abrirModalRechazo()"
-            [disabled]="procesando || !puedeRechazar()"
+            [disabled]="procesando"
           >
-            <span *ngIf="!procesandoRechazo">Rechazar solicitud</span>
-            <span *ngIf="procesandoRechazo">Rechazando...</span>
+            <i class="bi bi-x-circle-fill"></i>
+            Rechazar solicitud
           </button>
         </div>
       </section>
             <!-- =====================================================
-           SOLICITUD FINALIZADA
-      ====================================================== -->
-
-      <section class="actions-card completed-card" *ngIf="estaFinalizada()">
-        <div>
-          <h3>Proceso finalizado</h3>
-
-          <p>
-            Esta solicitud fue aprobada y finalizada correctamente. Ya no existen
-            acciones pendientes para este flujo.
-          </p>
-        </div>
-
-        <div class="completed-badge">
-          <i class="bi bi-check-circle-fill"></i>
-          Solicitud finalizada
-        </div>
-      </section>
-
-      <!-- =====================================================
-           DOCUMENTACIÓN ELECTRÓNICA
-      ====================================================== -->
-
-      <section class="documents-card">
-        <div class="documents-header">
-          <div>
-            <span class="label">Documentación</span>
-
-            <h3>
-              {{ esAdmin() ? 'Revisión de documentos' : 'Firma electrónica del documento' }}
-            </h3>
-
-            <p *ngIf="esAdmin()">
-              Consulte y descargue los documentos disponibles del proceso. Esta vista
-              es únicamente de revisión administrativa.
-            </p>
-
-            <p *ngIf="!esAdmin() && !estaFinalizada()">
-              Descargue el último PDF firmado disponible, añada la firma y suba el documento firmado.
-            </p>
-
-            <p *ngIf="!esAdmin() && estaFinalizada()">
-              La documentación de esta solicitud ya fue procesada y el flujo fue cerrado
-              correctamente.
-            </p>
-          </div>
-
-          <span
-            class="document-status"
-            [class.ok]="documentoFirmadoCargado || estaFinalizada()"
-            [class.pending]="!documentoFirmadoCargado && !estaFinalizada()"
-          >
-            {{
-              estaFinalizada()
-                ? 'Proceso documental finalizado'
-                : (documentoFirmadoCargado ? 'PDF firmado electrónicamente cargado' : 'PDF firmado electrónicamente pendiente')
-            }}
-          </span>
-        </div>
-
-        <div class="documents-flow">
-          <article class="flow-step">
-            <div class="step-number">1</div>
-
-            <h4>Descargar PDF firmado actual</h4>
-
-            <p *ngIf="esAdmin()">
-              Descargue el último documento disponible para revisar el avance del trámite.
-            </p>
-
-            <p *ngIf="!esAdmin()">
-              Descargue el PDF firmado actual, agregue su firma
-              electrónica y guarde el nuevo PDF firmado.
-            </p>
-
-            <div class="doc-actions">
-              <button
-                type="button"
-                class="signed-pdf-btn"
-                (click)="descargarDocumentoFirmadoActual()"
-                [disabled]="procesando"
-              >
-                Descargar PDF firmado actual
-              </button>
-            </div>
-          </article>
-
-          <article class="flow-step" *ngIf="!esAdmin()">
-            <div class="step-number">2</div>
-
-            <h4>Firmar externamente</h4>
-
-            <p>
-              Abra la aplicación para firmas electronicas de su preferencia en su equipo, seleccione el PDF descargado,
-              agregue su firma electrónica y guarde el nuevo documento firmado.
-            </p>
-
-            <div class="hint-box">
-              Este flujo es exclusivo para firma electrónica. No suba documentos
-              firmados manualmente ni imágenes de firma.
-            </div>
-          </article>
-
-          <article class="flow-step" *ngIf="!esAdmin()">
-            <div class="step-number">3</div>
-
-            <h4>Subir PDF firmado electrónicamente</h4>
-
-            <p>
-              Después de firmar el documento, suba aquí el nuevo PDF firmado.
-              Podrá revisarlo antes de guardarlo en el sistema.
-            </p>
-
-            <div class="upload-buttons">
-              <button
-                type="button"
-                class="btn-upload electronic"
-                (click)="abrirModalFirmaElectronica()"
-                [disabled]="procesando || estaFinalizada()"
-              >
-                Subir PDF firmado electrónicamente
-              </button>
-            </div>
-          </article>
-        </div>
-
-        <div class="document-warning" *ngIf="!documentoFirmadoCargado && !estaFinalizada() && !esAdmin()">
-          Para aprobar o continuar el flujo, primero debe subir el PDF firmado electrónicamente con FirmaEC.
-        </div>
-
-       
-
-        <div class="document-success" *ngIf="estaFinalizada()">
-          La solicitud fue finalizada correctamente. No se requieren más acciones documentales.
-        </div>
-
-        <div class="document-success" *ngIf="esAdmin() && !estaFinalizada()">
-          Vista de revisión administrativa. El administrador solo puede consultar y descargar documentos.
-        </div>
-      </section>
-
-      <!-- =====================================================
-           INFORMACIÓN DE LA SOLICITUD
+           INFORMACIÓN PRINCIPAL DE LA SOLICITUD
       ====================================================== -->
 
       <section class="detail-grid">
-        <article class="card">
-          <h3>Información del solicitante</h3>
+        <article class="info-panel">
+          <div class="panel-title">
+            <i class="bi bi-person-vcard-fill"></i>
 
-          <div class="info-grid">
+            <div>
+              <h3>Datos del solicitante</h3>
+              <p>Información personal e institucional registrada.</p>
+            </div>
+          </div>
+
+          <div class="info-list">
             <div>
               <span>Nombres completos</span>
               <strong>{{ solicitud.nombres_completos }}</strong>
@@ -439,15 +342,28 @@
             </div>
 
             <div>
-              <span>Correo</span>
+              <span>Correo institucional</span>
               <strong>{{ solicitud.correo_institucional }}</strong>
             </div>
 
             <div>
               <span>Teléfono</span>
-              <strong>{{ solicitud.telefono_ext }}</strong>
+              <strong>{{ solicitud.telefono_ext || 'No registrado' }}</strong>
             </div>
+          </div>
+        </article>
 
+        <article class="info-panel">
+          <div class="panel-title">
+            <i class="bi bi-building-fill"></i>
+
+            <div>
+              <h3>Datos institucionales</h3>
+              <p>Dependencia, área y cargo del solicitante.</p>
+            </div>
+          </div>
+
+          <div class="info-list">
             <div>
               <span>Dependencia</span>
               <strong>{{ solicitud.dependencia }}</strong>
@@ -465,15 +381,22 @@
 
             <div>
               <span>Fecha de solicitud</span>
-              <strong>{{ solicitud.fecha_solicitud }}</strong>
+              <strong>{{ solicitud.fecha_solicitud || 'No registrada' }}</strong>
             </div>
           </div>
         </article>
 
-        <article class="card">
-          <h3>Información de acceso</h3>
+        <article class="info-panel">
+          <div class="panel-title">
+            <i class="bi bi-router-fill"></i>
 
-          <div class="info-grid">
+            <div>
+              <h3>Información del acceso</h3>
+              <p>Datos técnicos y vigencia solicitada.</p>
+            </div>
+          </div>
+
+          <div class="info-list">
             <div>
               <span>Tipo de usuario</span>
               <strong>{{ solicitud.tipo_usuario }}</strong>
@@ -490,292 +413,456 @@
             </div>
 
             <div>
-              <span>Tiempo de vigencia</span>
-              <strong>{{ solicitud.tiempo_vigencia_acceso }}</strong>
+              <span>Vigencia del acceso</span>
+              <strong>{{ solicitud.tiempo_vigencia_acceso || 'No registrada' }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article class="info-panel">
+          <div class="panel-title">
+            <i class="bi bi-diagram-3-fill"></i>
+
+            <div>
+              <h3>Estado del proceso</h3>
+              <p>Etapa actual dentro del flujo electrónico.</p>
+            </div>
+          </div>
+
+          <div class="info-list">
+            <div>
+              <span>Estado</span>
+              <strong>{{ getEstadoTexto(solicitud.estado) }}</strong>
             </div>
 
             <div>
-              <span>Creado el</span>
-              <strong>{{ solicitud.created_at }}</strong>
+              <span>Etapa actual</span>
+              <strong>{{ getEtapaTexto(solicitud.etapa_actual) }}</strong>
             </div>
 
             <div>
-              <span>Actualizado el</span>
-              <strong>{{ solicitud.updated_at }}</strong>
+              <span>Bloqueada</span>
+              <strong>{{ solicitud.bloqueada ? 'Sí' : 'No' }}</strong>
+            </div>
+
+            <div>
+              <span>Última actualización</span>
+              <strong>{{ solicitud.updated_at || 'No registrada' }}</strong>
             </div>
           </div>
         </article>
       </section>
-            <section class="card">
-        <h3>Páginas web solicitadas</h3>
 
-        <div class="web-list" *ngIf="paginasWeb.length > 0">
-          <div class="web-item" *ngFor="let pagina of paginasWeb">
-            <span>{{ pagina.numero }}</span>
+      <!-- =====================================================
+           JUSTIFICACIÓN
+      ====================================================== -->
 
-            <div>
-              <strong>{{ pagina.url_pagina }}</strong>
-              <p>{{ pagina.descripcion || 'Sin descripción' }}</p>
-            </div>
+      <section class="panel-section">
+        <div class="section-heading">
+          <div>
+            <span>Justificación</span>
+            <h3>Necesidad institucional</h3>
           </div>
+
+          <i class="bi bi-card-text"></i>
         </div>
 
-        <p class="justification" *ngIf="paginasWeb.length === 0">
-          No existen páginas web registradas para esta solicitud.
-        </p>
+        <div class="justification-box">
+          {{ solicitud.justificacion_necesidad_institucional || 'No se registró justificación.' }}
+        </div>
       </section>
 
-      <section class="card">
-        <h3>Justificación institucional</h3>
+      <!-- =====================================================
+           PÁGINAS WEB SOLICITADAS
+      ====================================================== -->
 
-        <p class="justification">
-          {{ solicitud.justificacion_necesidad_institucional || 'Sin justificación registrada.' }}
-        </p>
+      <section class="panel-section">
+        <div class="section-heading">
+          <div>
+            <span>Accesos solicitados</span>
+            <h3>Páginas web registradas</h3>
+          </div>
+
+          <i class="bi bi-globe2"></i>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>N°</th>
+                <th>URL / Página web</th>
+                <th>Descripción</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr *ngFor="let pagina of paginasWeb; let i = index">
+                <td>{{ pagina.numero || i + 1 }}</td>
+
+                <td>
+                  <a
+                    [href]="pagina.url_pagina"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="url-link"
+                  >
+                    {{ pagina.url_pagina }}
+                  </a>
+                </td>
+
+                <td>
+                  {{ pagina.descripcion || 'Sin descripción' }}
+                </td>
+              </tr>
+
+              <tr *ngIf="paginasWeb.length === 0">
+                <td colspan="3" class="empty">
+                  No existen páginas web registradas.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
-      <section class="card" *ngIf="documentos.length > 0">
-        <h3>Documentos registrados</h3>
+      <!-- =====================================================
+           DOCUMENTOS REGISTRADOS
+      ====================================================== -->
 
-        <div class="web-list">
-          <div class="web-item" *ngFor="let documento of documentos; let i = index">
-            <span>{{ i + 1 }}</span>
+      <section class="panel-section">
+        <div class="section-heading">
+          <div>
+            <span>Documentación</span>
+            <h3>PDFs cargados durante el proceso</h3>
+          </div>
 
-            <div>
-              <strong>{{ documento.nombre_archivo || 'Documento sin nombre' }}</strong>
+          <i class="bi bi-file-earmark-pdf-fill"></i>
+        </div>
+
+        <div class="documents-grid" *ngIf="documentos.length > 0">
+          <article
+            class="document-card"
+            *ngFor="let documento of documentos"
+          >
+            <div class="document-icon">
+              <i class="bi bi-file-earmark-pdf-fill"></i>
+            </div>
+
+            <div class="document-info">
+              <span>{{ documento.etapa || 'Etapa no registrada' }}</span>
+
+              <h4>{{ documento.nombre_archivo || 'Documento PDF' }}</h4>
 
               <p>
                 Tipo: {{ documento.tipo_documento || 'No registrado' }}
-                · Etapa: {{ documento.etapa || 'No registrada' }}
-                · Rol firmante: {{ documento.rol_firmante || 'No registrado' }}
+              </p>
+
+              <p>
+                Firmado:
+                <strong>{{ documento.firmado ? 'Sí' : 'No' }}</strong>
+                · Firma validada:
+                <strong>{{ documento.firma_validada ? 'Sí' : 'No' }}</strong>
+              </p>
+            </div>
+
+            <a
+              class="document-download-btn"
+              [href]="API_BASE + '/documentos/' + documento.id + '/descargar'"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <i class="bi bi-download"></i>
+              Descargar
+            </a>
+          </article>
+        </div>
+
+        <div class="empty-documents" *ngIf="documentos.length === 0">
+          <i class="bi bi-folder2-open"></i>
+
+          <strong>No existen documentos cargados todavía.</strong>
+
+          <p>
+            Cuando el solicitante, jefe inmediato, máxima autoridad o TICS suban
+            documentos firmados, aparecerán en esta sección.
+          </p>
+        </div>
+      </section>
+            <!-- =====================================================
+           MODAL FIRMA ELECTRÓNICA FIRMAEC
+      ====================================================== -->
+
+      <div
+        class="modal-backdrop-firmaec"
+        *ngIf="mostrarModalFirmaElectronica"
+      >
+        <section class="modal-firmaec-card">
+          <button
+            type="button"
+            class="close-modal-firmaec"
+            (click)="cerrarModalFirmaElectronica()"
+            [disabled]="procesando"
+            aria-label="Cerrar modal FirmaEC"
+          >
+            ×
+          </button>
+
+          <div class="firmaec-modal-header">
+            <div class="firmaec-modal-icon">
+              <i class="bi bi-shield-lock-fill"></i>
+            </div>
+
+            <div>
+              <span>Firma electrónica</span>
+
+              <h3>Subir PDF firmado con FirmaEC</h3>
+
+              <p>
+                Descargue el PDF firmado actual, fírmelo externamente con FirmaEC
+                y suba aquí el nuevo documento firmado electrónicamente.
               </p>
             </div>
           </div>
-        </div>
-      </section>
 
-      <section class="card" *ngIf="documentos.length === 0">
-        <h3>Documentos registrados</h3>
+          <div class="firmaec-warning">
+            <i class="bi bi-exclamation-triangle-fill"></i>
 
-        <p class="justification">
-          Todavía no existen documentos registrados para esta solicitud.
-        </p>
-      </section>
+            <div>
+              <h4>FirmaEC obligatorio</h4>
+
+              <p>
+                No se aceptan documentos firmados manualmente, imágenes pegadas,
+                capturas de pantalla ni archivos distintos a PDF. El documento debe
+                estar firmado electrónicamente desde la aplicación FirmaEC.
+              </p>
+            </div>
+          </div>
+
+          <div class="firmaec-selected-info" *ngIf="solicitud">
+            <div>
+              <span>Código</span>
+              <strong>{{ solicitud.codigo_solicitud }}</strong>
+            </div>
+
+            <div>
+              <span>Solicitante</span>
+              <strong>{{ solicitud.nombres_completos }}</strong>
+            </div>
+
+            <div>
+              <span>Estado actual</span>
+              <strong>{{ getEstadoTexto(solicitud.estado) }}</strong>
+            </div>
+
+            <div>
+              <span>Etapa actual</span>
+              <strong>{{ getEtapaTexto(solicitud.etapa_actual) }}</strong>
+            </div>
+          </div>
+
+          <div class="firmaec-guide">
+            <h4>Pasos para continuar</h4>
+
+            <ol>
+              <li>Descargue el PDF firmado actual desde el detalle de la solicitud.</li>
+              <li>Abra la aplicación FirmaEC instalada en su equipo.</li>
+              <li>Seleccione el PDF descargado y realice su firma electrónica.</li>
+              <li>Guarde el nuevo PDF firmado en su computadora.</li>
+              <li>Seleccione aquí el PDF firmado, revíselo y envíelo.</li>
+            </ol>
+          </div>
+
+          <label class="firmaec-upload-zone">
+            <input
+              type="file"
+              accept=".pdf,application/pdf"
+              [disabled]="procesando"
+              (change)="seleccionarArchivoFirmadoElectronico($event)"
+            />
+
+            <i class="bi bi-cloud-arrow-up-fill"></i>
+
+            <strong *ngIf="!nombreArchivoFirmadoElectronico">
+              Seleccionar PDF firmado electrónicamente
+            </strong>
+
+            <strong *ngIf="nombreArchivoFirmadoElectronico">
+              {{ nombreArchivoFirmadoElectronico }}
+            </strong>
+
+            <span>
+              Solo PDF · Máximo 15 MB
+            </span>
+          </label>
+
+          <div
+            class="preview-actions"
+            *ngIf="archivoFirmadoElectronico"
+          >
+            <button
+              type="button"
+              class="preview-btn"
+              (click)="verPdfFirmadoElectronico()"
+              [disabled]="procesando"
+            >
+              <i class="bi bi-eye-fill"></i>
+              Ver PDF seleccionado
+            </button>
+
+            <button
+              type="button"
+              class="remove-selected-btn"
+              (click)="quitarPdfFirmadoElectronico()"
+              [disabled]="procesando"
+            >
+              <i class="bi bi-trash-fill"></i>
+              Quitar PDF
+            </button>
+          </div>
+
+          <div
+            class="firmaec-error"
+            *ngIf="error"
+          >
+            {{ error }}
+          </div>
+
+          <div
+            class="firmaec-success"
+            *ngIf="mensajeOk"
+          >
+            {{ mensajeOk }}
+          </div>
+
+          <div class="firmaec-final-actions">
+            <button
+              type="button"
+              class="cancel-modal-btn"
+              (click)="cerrarModalFirmaElectronica()"
+              [disabled]="procesando"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              class="send-firmaec-btn"
+              (click)="subirFirmaElectronica()"
+              [disabled]="procesando || !archivoFirmadoElectronico"
+            >
+              <span *ngIf="!procesando">
+                <i class="bi bi-send-check-fill"></i>
+                Enviar PDF firmado
+              </span>
+
+              <span *ngIf="procesando">
+                Enviando PDF firmado...
+              </span>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <!-- =====================================================
+           MODAL RECHAZO
+      ====================================================== -->
+
+      <div
+        class="modal-backdrop-rechazo"
+        *ngIf="mostrarModalRechazo"
+      >
+        <section class="modal-rechazo-card">
+          <button
+            type="button"
+            class="close-modal-rechazo"
+            (click)="cerrarModalRechazo()"
+            [disabled]="procesandoRechazo"
+            aria-label="Cerrar modal rechazo"
+          >
+            ×
+          </button>
+
+          <div class="rechazo-modal-header">
+            <div class="rechazo-modal-icon">
+              <i class="bi bi-x-octagon-fill"></i>
+            </div>
+
+            <div>
+              <span>Rechazo de solicitud</span>
+
+              <h3>Registrar motivo de rechazo</h3>
+
+              <p>
+                Ingrese un motivo claro y específico. Este motivo quedará registrado
+                en el historial del proceso.
+              </p>
+            </div>
+          </div>
+
+          <div
+            class="rechazo-info"
+            *ngIf="solicitud"
+          >
+            <div>
+              <span>Código</span>
+              <strong>{{ solicitud.codigo_solicitud }}</strong>
+            </div>
+
+            <div>
+              <span>Solicitante</span>
+              <strong>{{ solicitud.nombres_completos }}</strong>
+            </div>
+
+            <div>
+              <span>Estado actual</span>
+              <strong>{{ getEstadoTexto(solicitud.estado) }}</strong>
+            </div>
+          </div>
+
+          <label class="rechazo-label">
+            Motivo del rechazo *
+            <textarea
+              [(ngModel)]="motivoRechazo"
+              rows="6"
+              maxlength="1000"
+              placeholder="Explique el motivo del rechazo..."
+              [disabled]="procesandoRechazo"
+            ></textarea>
+
+            <span class="counter">
+              {{ motivoRechazo.length || 0 }}/1000
+            </span>
+          </label>
+
+          <div class="rechazo-actions">
+            <button
+              type="button"
+              class="cancel-modal-btn"
+              (click)="cerrarModalRechazo()"
+              [disabled]="procesandoRechazo"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              class="confirm-reject-btn"
+              (click)="rechazar()"
+              [disabled]="procesandoRechazo"
+            >
+              <span *ngIf="!procesandoRechazo">
+                <i class="bi bi-x-circle-fill"></i>
+                Confirmar rechazo
+              </span>
+
+              <span *ngIf="procesandoRechazo">
+                Procesando rechazo...
+              </span>
+            </button>
+          </div>
+        </section>
+      </div>
     </ng-container>
   </main>
-
-  <!-- =====================================================
-       MODAL PARA SUBIR PDF FIRMADO ELECTRÓNICAMENTE
-       JEFE / AUTORIDAD / TICS
-  ====================================================== -->
-
-  <div class="modal-backdrop-firmaec" *ngIf="mostrarModalFirmaElectronica && !esAdmin()">
-    <section class="modal-firmaec-card">
-      <button
-        type="button"
-        class="close-modal-firmaec"
-        (click)="cerrarModalFirmaElectronica()"
-        [disabled]="procesando"
-        aria-label="Cerrar ventana de firma electrónica"
-      >
-        ×
-      </button>
-
-      <div class="firmaec-modal-header">
-        <div class="firmaec-modal-icon">
-          <i class="bi bi-shield-lock-fill"></i>
-        </div>
-
-        <div>
-          <span>Firma electrónica obligatoria</span>
-          <h3>Subir PDF firmado con FirmaEC</h3>
-
-          <p>
-            Descargue el PDF firmado actual, fírmelo externamente con FirmaEC
-            y suba aquí el nuevo PDF firmado electrónicamente.
-          </p>
-        </div>
-      </div>
-
-      <div class="firmaec-warning">
-        <i class="bi bi-info-circle-fill"></i>
-
-        <div>
-          <h4>Guía para firmar con FirmaEC</h4>
-
-          <p>
-            1. Descargue el PDF firmado actual desde la pantalla de detalle.<br />
-            2. Abra la aplicación FirmaEC instalada en su equipo.<br />
-            3. Seleccione el PDF descargado y agregue su firma electrónica.<br />
-            4. Guarde el nuevo PDF firmado en su computadora.<br />
-            5. Regrese a esta ventana, seleccione el PDF firmado, verifíquelo y guárdelo.
-          </p>
-        </div>
-      </div>
-
-      <div class="firmaec-generated" *ngIf="solicitud">
-        <span>Código de solicitud</span>
-        <strong>{{ solicitud.codigo_solicitud }}</strong>
-      </div>
-
-      <section class="modal-request-summary" *ngIf="solicitud">
-        <div>
-          <span>Solicitante</span>
-          <strong>{{ solicitud.nombres_completos }}</strong>
-        </div>
-
-        <div>
-          <span>Cédula</span>
-          <strong>{{ solicitud.cedula }}</strong>
-        </div>
-
-        <div>
-          <span>Correo</span>
-          <strong>{{ solicitud.correo_institucional }}</strong>
-        </div>
-
-        <div>
-          <span>Dependencia</span>
-          <strong>{{ solicitud.dependencia }}</strong>
-        </div>
-
-        <div>
-          <span>Área / Unidad</span>
-          <strong>{{ solicitud.area_unidad }}</strong>
-        </div>
-
-        <div>
-          <span>Cargo</span>
-          <strong>{{ solicitud.cargo }}</strong>
-        </div>
-
-        <div>
-          <span>Estado actual</span>
-          <strong>{{ getEstadoTexto(solicitud.estado) }}</strong>
-        </div>
-
-        <div>
-          <span>Etapa actual</span>
-          <strong>{{ getEtapaTexto(solicitud.etapa_actual) }}</strong>
-        </div>
-      </section>
-
-      <label class="firmaec-upload-zone">
-        <input
-          type="file"
-          accept=".pdf,application/pdf"
-          [disabled]="procesando"
-          (change)="seleccionarPdfFirmadoElectronico($event)"
-        />
-
-        <i class="bi bi-cloud-arrow-up-fill"></i>
-
-        <strong *ngIf="!nombreArchivoFirmadoElectronico">
-          Seleccionar PDF firmado electrónicamente
-        </strong>
-
-        <strong *ngIf="nombreArchivoFirmadoElectronico">
-          {{ nombreArchivoFirmadoElectronico }}
-        </strong>
-
-        <span>
-          Solo PDF firmado con FirmaEC · Máximo 10 MB
-        </span>
-      </label>
-
-      <div class="preview-actions" *ngIf="archivoFirmadoElectronico">
-        <button
-          type="button"
-          class="preview-btn"
-          (click)="verPdfFirmadoElectronico()"
-          [disabled]="procesando"
-        >
-          Ver PDF seleccionado
-        </button>
-
-        <button
-          type="button"
-          class="remove-selected-btn"
-          (click)="quitarPdfFirmadoElectronico()"
-          [disabled]="procesando"
-        >
-          Quitar y seleccionar otro
-        </button>
-      </div>
-
-      <div class="firmaec-error" *ngIf="error">
-        {{ error }}
-      </div>
-
-      <div class="firmaec-success" *ngIf="mensajeOk">
-        {{ mensajeOk }}
-      </div>
-
-      <div class="firmaec-final-actions">
-        <button
-          type="button"
-          class="send-firmaec-btn"
-          [disabled]="!archivoFirmadoElectronico || procesando"
-          (click)="subirPdfFirmadoElectronico()"
-        >
-          <span *ngIf="!procesando">
-            Guardar PDF firmado electrónicamente
-          </span>
-
-          <span *ngIf="procesando">
-            Guardando PDF firmado...
-          </span>
-        </button>
-      </div>
-    </section>
-  </div>
-
-  <!-- =====================================================
-       MODAL DE RECHAZO SOLO PARA ROLES OPERATIVOS
-  ====================================================== -->
-
-  <div class="modal-backdrop" *ngIf="mostrarModalRechazo && !esAdmin()">
-    <section class="modal-card">
-      <h2>Rechazar solicitud</h2>
-
-      <p>
-        Ingrese el motivo de rechazo. Este texto quedará registrado en la auditoría
-        del sistema y será enviado por correo al solicitante.
-      </p>
-
-      <label>
-        Motivo del rechazo *
-        <textarea
-          [(ngModel)]="motivoRechazo"
-          rows="5"
-          maxlength="1000"
-          placeholder="Explique claramente el motivo del rechazo..."
-        ></textarea>
-      </label>
-
-      <div class="counter">
-        {{ motivoRechazo.length }}/1000
-      </div>
-
-      <div class="modal-actions">
-        <button
-          type="button"
-          class="cancel-modal"
-          (click)="cerrarModalRechazo()"
-          [disabled]="procesando"
-        >
-          Cancelar
-        </button>
-
-        <button
-          type="button"
-          class="confirm-reject"
-          (click)="rechazar()"
-          [disabled]="procesando"
-        >
-          <span *ngIf="!procesandoRechazo">Confirmar rechazo</span>
-          <span *ngIf="procesandoRechazo">Procesando...</span>
-        </button>
-      </div>
-    </section>
-  </div>
 </section>

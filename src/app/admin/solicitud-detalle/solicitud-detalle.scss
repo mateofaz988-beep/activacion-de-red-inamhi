@@ -1162,6 +1162,929 @@
   opacity: 0.6;
 }
 
+
+/* =====================================================
+   BOTONES SUPERIORES
+===================================================== */
+
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.back-btn,
+.refresh-btn,
+.logout-top-btn {
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.back-btn {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.refresh-btn {
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #0284c7);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22);
+}
+
+.logout-top-btn {
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+}
+
+.back-btn:hover,
+.refresh-btn:hover:not(:disabled),
+.logout-top-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.04);
+}
+
+.refresh-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+/* =====================================================
+   AVISOS Y ACCIONES DEL FLUJO
+===================================================== */
+
+.admin-review-card,
+.firmaec-required-card,
+.actions-card,
+.decision-card,
+.panel-section {
+  margin-top: 22px;
+  padding: 22px;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.07);
+}
+
+.admin-review-card,
+.firmaec-required-card,
+.actions-card,
+.decision-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+}
+
+.admin-review-card h3,
+.firmaec-required-card h3,
+.actions-card h3,
+.decision-card h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 950;
+}
+
+.admin-review-card p,
+.firmaec-required-card p,
+.actions-card p,
+.decision-card p {
+  margin: 6px 0 0;
+  color: #64748b;
+  line-height: 1.6;
+  font-weight: 650;
+}
+
+.completed-badge {
+  min-width: max-content;
+  padding: 12px 16px;
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 950;
+}
+
+.completed-badge.warning {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.firmaec-required-card {
+  background:
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.14), transparent 38%),
+    #ffffff;
+  border-color: #fde68a;
+}
+
+.actions-grid,
+.decision-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.signed-pdf-btn,
+.firmaec-open-btn,
+.approve-btn,
+.reject-btn {
+  min-height: 46px;
+  padding: 12px 16px;
+  border-radius: 15px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 950;
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.signed-pdf-btn {
+  color: #ffffff;
+  background: linear-gradient(135deg, #334155, #0f172a);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.22);
+}
+
+.firmaec-open-btn {
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.24);
+}
+
+.approve-btn {
+  color: #ffffff;
+  background: linear-gradient(135deg, #15803d, #22c55e);
+  box-shadow: 0 14px 28px rgba(21, 128, 61, 0.24);
+}
+
+.approve-btn.final {
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+}
+
+.reject-btn {
+  color: #ffffff;
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  box-shadow: 0 14px 28px rgba(220, 38, 38, 0.22);
+}
+
+.signed-pdf-btn:hover:not(:disabled),
+.firmaec-open-btn:hover:not(:disabled),
+.approve-btn:hover:not(:disabled),
+.reject-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.04);
+}
+
+.signed-pdf-btn:disabled,
+.firmaec-open-btn:disabled,
+.approve-btn:disabled,
+.reject-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.document-warning,
+.document-success {
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.document-warning {
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.document-success {
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+/* =====================================================
+   DETALLE DE INFORMACIÓN
+===================================================== */
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.info-panel {
+  padding: 22px;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.07);
+}
+
+.panel-title {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.panel-title i {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #0284c7);
+  font-size: 22px;
+}
+
+.panel-title h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 19px;
+  font-weight: 950;
+}
+
+.panel-title p {
+  margin: 4px 0 0;
+  color: #64748b;
+  line-height: 1.5;
+  font-weight: 650;
+}
+
+.info-list {
+  display: grid;
+  gap: 12px;
+}
+
+.info-list div {
+  padding: 13px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.info-list span {
+  display: block;
+  margin-bottom: 5px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.info-list strong {
+  display: block;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+  word-break: break-word;
+}
+
+/* =====================================================
+   SECCIONES, TABLAS Y DOCUMENTOS
+===================================================== */
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.section-heading span {
+  display: inline-flex;
+  margin-bottom: 5px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.section-heading h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 950;
+}
+
+.section-heading i {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #0284c7);
+  font-size: 22px;
+}
+
+.justification-box {
+  min-height: 100px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  line-height: 1.7;
+  font-weight: 700;
+  white-space: pre-wrap;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-wrapper th,
+.table-wrapper td {
+  padding: 13px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  color: #334155;
+  font-size: 14px;
+  vertical-align: top;
+}
+
+.table-wrapper th {
+  color: #0f172a;
+  background: #eff6ff;
+  font-weight: 950;
+}
+
+.url-link {
+  color: #1d4ed8;
+  font-weight: 850;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.url-link:hover {
+  text-decoration: underline;
+}
+
+.empty {
+  text-align: center;
+  color: #94a3b8;
+  font-weight: 850;
+}
+
+.documents-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.document-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.document-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  font-size: 24px;
+}
+
+.document-info span {
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.document-info h4 {
+  margin: 4px 0;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 950;
+  word-break: break-word;
+}
+
+.document-info p {
+  margin: 3px 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.document-download-btn {
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #0284c7);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  font-weight: 950;
+}
+
+.empty-documents {
+  padding: 30px;
+  border-radius: 22px;
+  text-align: center;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+}
+
+.empty-documents i {
+  display: block;
+  margin-bottom: 10px;
+  color: #94a3b8;
+  font-size: 42px;
+}
+
+.empty-documents strong {
+  display: block;
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.empty-documents p {
+  margin: 8px auto 0;
+  max-width: 520px;
+  line-height: 1.6;
+}
+
+/* =====================================================
+   MODAL FIRMAEC
+===================================================== */
+
+.modal-backdrop-firmaec,
+.modal-backdrop-rechazo {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.22), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.18), transparent 34%),
+    rgba(15, 23, 42, 0.76);
+  backdrop-filter: blur(10px);
+}
+
+.modal-firmaec-card,
+.modal-rechazo-card {
+  position: relative;
+  width: min(980px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 28px;
+  border-radius: 28px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.30);
+}
+
+.close-modal-firmaec,
+.close-modal-rechazo {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  color: #334155;
+  background: #f1f5f9;
+  font-size: 30px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.close-modal-firmaec:hover:not(:disabled),
+.close-modal-rechazo:hover:not(:disabled) {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.close-modal-firmaec:disabled,
+.close-modal-rechazo:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.firmaec-modal-header,
+.rechazo-modal-header {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding-right: 52px;
+  margin-bottom: 18px;
+}
+
+.firmaec-modal-icon,
+.rechazo-modal-icon {
+  width: 58px;
+  height: 58px;
+  min-width: 58px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-size: 26px;
+}
+
+.firmaec-modal-icon {
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+}
+
+.rechazo-modal-icon {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+}
+
+.firmaec-modal-header span,
+.rechazo-modal-header span {
+  display: inline-flex;
+  margin-bottom: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.firmaec-modal-header span {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.rechazo-modal-header span {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.firmaec-modal-header h3,
+.rechazo-modal-header h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 26px;
+  font-weight: 950;
+}
+
+.firmaec-modal-header p,
+.rechazo-modal-header p {
+  margin: 8px 0 0;
+  color: #64748b;
+  line-height: 1.55;
+  font-weight: 650;
+}
+
+.firmaec-warning,
+.firmaec-guide {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 18px;
+}
+
+.firmaec-warning {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.firmaec-warning i {
+  font-size: 22px;
+}
+
+.firmaec-warning h4,
+.firmaec-guide h4 {
+  margin: 0 0 8px;
+  font-weight: 950;
+}
+
+.firmaec-warning p {
+  margin: 0;
+  line-height: 1.6;
+  font-weight: 700;
+}
+
+.firmaec-guide {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.firmaec-guide ol {
+  margin: 0;
+  padding-left: 22px;
+  color: #475569;
+  line-height: 1.7;
+  font-weight: 700;
+}
+
+.firmaec-selected-info,
+.rechazo-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.firmaec-selected-info div,
+.rechazo-info div {
+  padding: 14px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.firmaec-selected-info span,
+.rechazo-info span {
+  display: block;
+  margin-bottom: 5px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.firmaec-selected-info strong,
+.rechazo-info strong {
+  color: #0f172a;
+  font-weight: 950;
+  word-break: break-word;
+}
+
+.firmaec-upload-zone {
+  margin-top: 18px;
+  min-height: 160px;
+  border: 2px dashed #93c5fd;
+  border-radius: 24px;
+  background: #f8fafc;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 26px;
+  cursor: pointer;
+}
+
+.firmaec-upload-zone:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.firmaec-upload-zone input {
+  display: none;
+}
+
+.firmaec-upload-zone i {
+  color: #2563eb;
+  font-size: 42px;
+}
+
+.firmaec-upload-zone strong {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 950;
+  word-break: break-word;
+}
+
+.firmaec-upload-zone span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.preview-actions,
+.firmaec-final-actions,
+.rechazo-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.preview-btn,
+.remove-selected-btn,
+.cancel-modal-btn,
+.send-firmaec-btn,
+.confirm-reject-btn {
+  min-height: 44px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  font-weight: 950;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.preview-btn,
+.send-firmaec-btn {
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #0284c7);
+}
+
+.remove-selected-btn,
+.confirm-reject-btn {
+  color: #ffffff;
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+}
+
+.cancel-modal-btn {
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+}
+
+.preview-btn:disabled,
+.remove-selected-btn:disabled,
+.cancel-modal-btn:disabled,
+.send-firmaec-btn:disabled,
+.confirm-reject-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.firmaec-error,
+.firmaec-success {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.firmaec-error {
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.firmaec-success {
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+/* =====================================================
+   MODAL RECHAZO
+===================================================== */
+
+.rechazo-label {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.rechazo-label textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  outline: none;
+  border-radius: 16px;
+  padding: 14px;
+  resize: vertical;
+  color: #0f172a;
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.rechazo-label textarea:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
+}
+
+.counter {
+  justify-self: end;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 980px) {
+  .admin-review-card,
+  .firmaec-required-card,
+  .actions-card,
+  .decision-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .detail-grid,
+  .firmaec-selected-info,
+  .rechazo-info {
+    grid-template-columns: 1fr;
+  }
+
+  .document-card {
+    grid-template-columns: 1fr;
+  }
+
+  .document-download-btn {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .modal-firmaec-card,
+  .modal-rechazo-card {
+    padding: 22px;
+    border-radius: 22px;
+  }
+
+  .firmaec-modal-header,
+  .rechazo-modal-header {
+    flex-direction: column;
+    padding-right: 44px;
+  }
+
+  .actions-grid,
+  .decision-actions,
+  .preview-actions,
+  .firmaec-final-actions,
+  .rechazo-actions,
+  .user-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .signed-pdf-btn,
+  .firmaec-open-btn,
+  .approve-btn,
+  .reject-btn,
+  .preview-btn,
+  .remove-selected-btn,
+  .cancel-modal-btn,
+  .send-firmaec-btn,
+  .confirm-reject-btn,
+  .back-btn,
+  .refresh-btn,
+  .logout-top-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* =====================================================
    RESPONSIVE
 ===================================================== */

@@ -11,6 +11,56 @@ import {
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+interface Direccion {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+  estado?: string;
+}
+
+interface Area {
+  id: number;
+  direccion_id: number;
+  nombre: string;
+  siglas?: string | null;
+  descripcion?: string | null;
+  estado?: string;
+}
+
+interface Cargo {
+  id: number;
+  area_id: number;
+  nombre: string;
+  descripcion?: string | null;
+  estado?: string;
+}
+
+interface JefeAsignado {
+  id?: number;
+  usuario_id?: number | null;
+  area_id?: number;
+  nombres: string;
+  apellidos?: string | null;
+  correo?: string | null;
+  cargo: string;
+  tipo_responsable?: string;
+}
+
+interface CatalogoResponse<T> {
+  estado: string;
+  mensaje?: string;
+  data?: T[];
+  direcciones?: T[];
+  areas?: T[];
+  cargos?: T[];
+}
+
+interface JefeResponse {
+  estado: string;
+  mensaje?: string;
+  jefe?: JefeAsignado | null;
+}
+
 interface PrepararFirmaResponse {
   estado: string;
   mensaje: string;
@@ -85,6 +135,26 @@ export class SolicitudPublica implements OnInit {
 
   pasoFirmaEc: 'generando' | 'descarga' | 'subida' | 'finalizado' = 'generando';
 
+  // =====================================================
+  // CATÁLOGOS ORGANIZACIONALES
+  // Dirección → Área → Cargo → Jefe asignado
+  // =====================================================
+
+  direcciones: Direccion[] = [];
+  areas: Area[] = [];
+  cargos: Cargo[] = [];
+
+  jefeAsignado: JefeAsignado | null = null;
+
+  nombreDireccionSeleccionada = '';
+  nombreAreaSeleccionada = '';
+  nombreCargoSeleccionado = '';
+
+  cargandoDirecciones = false;
+  cargandoAreas = false;
+  cargandoCargos = false;
+  cargandoJefe = false;
+
   constructor(
     private fb: FormBuilder,
     private http: HttpClient
@@ -92,6 +162,7 @@ export class SolicitudPublica implements OnInit {
 
   ngOnInit(): void {
     this.crearFormulario();
+    this.cargarDirecciones();
   }
 
   // =====================================================
@@ -132,30 +203,30 @@ export class SolicitudPublica implements OnInit {
           Validators.pattern(/^[0-9]{10}$/)
         ]
       ],
-      dependencia: [
+
+      // =====================================================
+      // NUEVOS CAMPOS POR CATÁLOGO SQL
+      // =====================================================
+
+      direccion_id: [
         '',
         [
-          Validators.required,
-          Validators.minLength(3),
-          Validators.maxLength(150)
+          Validators.required
         ]
       ],
-      area_unidad: [
+      area_id: [
         '',
         [
-          Validators.required,
-          Validators.minLength(3),
-          Validators.maxLength(150)
+          Validators.required
         ]
       ],
-      cargo: [
+      cargo_id: [
         '',
         [
-          Validators.required,
-          Validators.minLength(3),
-          Validators.maxLength(150)
+          Validators.required
         ]
       ],
+
       fecha_solicitud: [
         fechaActual,
         [
@@ -184,8 +255,7 @@ export class SolicitudPublica implements OnInit {
       tiempo_vigencia_acceso: [
         '',
         [
-          Validators.required,
-          
+          Validators.required
         ]
       ],
       justificacion_necesidad_institucional: [
@@ -230,6 +300,199 @@ export class SolicitudPublica implements OnInit {
   }
 
   // =====================================================
+  // CATÁLOGOS: DIRECCIONES, ÁREAS, CARGOS Y JEFE
+  // =====================================================
+
+  cargarDirecciones(): void {
+    this.cargandoDirecciones = true;
+    this.errorGeneral = '';
+
+    this.http.get<CatalogoResponse<Direccion>>(`${this.API_BASE}/public/catalogos/direcciones`)
+      .subscribe({
+        next: (response) => {
+          this.cargandoDirecciones = false;
+
+          if (response.estado !== 'ok') {
+            this.errorGeneral = response.mensaje || 'No se pudieron cargar las direcciones.';
+            return;
+          }
+
+          this.direcciones = response.direcciones || response.data || [];
+        },
+        error: (err) => {
+          this.cargandoDirecciones = false;
+
+          if (err.status === 0) {
+            this.errorGeneral = 'No se pudo conectar con el servidor para cargar las direcciones.';
+            return;
+          }
+
+          this.errorGeneral =
+            err.error?.mensaje ||
+            'No se pudieron cargar las direcciones institucionales.';
+        }
+      });
+  }
+
+  onDireccionSeleccionada(): void {
+    const direccionId = Number(this.formulario.get('direccion_id')?.value || 0);
+
+    this.areas = [];
+    this.cargos = [];
+    this.jefeAsignado = null;
+
+    this.nombreDireccionSeleccionada = '';
+    this.nombreAreaSeleccionada = '';
+    this.nombreCargoSeleccionado = '';
+
+    this.formulario.patchValue({
+      area_id: '',
+      cargo_id: ''
+    });
+
+    const direccion = this.direcciones.find((item) => Number(item.id) === direccionId);
+    this.nombreDireccionSeleccionada = direccion?.nombre || '';
+
+    if (!direccionId) {
+      return;
+    }
+
+    this.cargarAreasPorDireccion(direccionId);
+  }
+
+  cargarAreasPorDireccion(direccionId: number): void {
+    this.cargandoAreas = true;
+    this.errorGeneral = '';
+
+    this.http.get<CatalogoResponse<Area>>(
+      `${this.API_BASE}/public/catalogos/direcciones/${direccionId}/areas`
+    ).subscribe({
+      next: (response) => {
+        this.cargandoAreas = false;
+
+        if (response.estado !== 'ok') {
+          this.errorGeneral = response.mensaje || 'No se pudieron cargar las áreas.';
+          return;
+        }
+
+        this.areas = response.areas || response.data || [];
+      },
+      error: (err) => {
+        this.cargandoAreas = false;
+
+        if (err.status === 0) {
+          this.errorGeneral = 'No se pudo conectar con el servidor para cargar las áreas.';
+          return;
+        }
+
+        this.errorGeneral =
+          err.error?.mensaje ||
+          'No se pudieron cargar las áreas de la dirección seleccionada.';
+      }
+    });
+  }
+
+  onAreaSeleccionada(): void {
+    const areaId = Number(this.formulario.get('area_id')?.value || 0);
+
+    this.cargos = [];
+    this.jefeAsignado = null;
+
+    this.nombreAreaSeleccionada = '';
+    this.nombreCargoSeleccionado = '';
+
+    this.formulario.patchValue({
+      cargo_id: ''
+    });
+
+    const area = this.areas.find((item) => Number(item.id) === areaId);
+    this.nombreAreaSeleccionada = area?.nombre || '';
+
+    if (!areaId) {
+      return;
+    }
+
+    this.cargarCargosPorArea(areaId);
+    this.cargarJefePorArea(areaId);
+  }
+
+  cargarCargosPorArea(areaId: number): void {
+    this.cargandoCargos = true;
+    this.errorGeneral = '';
+
+    this.http.get<CatalogoResponse<Cargo>>(
+      `${this.API_BASE}/public/catalogos/areas/${areaId}/cargos`
+    ).subscribe({
+      next: (response) => {
+        this.cargandoCargos = false;
+
+        if (response.estado !== 'ok') {
+          this.errorGeneral = response.mensaje || 'No se pudieron cargar los cargos.';
+          return;
+        }
+
+        this.cargos = response.cargos || response.data || [];
+      },
+      error: (err) => {
+        this.cargandoCargos = false;
+
+        if (err.status === 0) {
+          this.errorGeneral = 'No se pudo conectar con el servidor para cargar los cargos.';
+          return;
+        }
+
+        this.errorGeneral =
+          err.error?.mensaje ||
+          'No se pudieron cargar los cargos del área seleccionada.';
+      }
+    });
+  }
+
+  cargarJefePorArea(areaId: number): void {
+    this.cargandoJefe = true;
+    this.errorGeneral = '';
+
+    this.http.get<JefeResponse>(
+      `${this.API_BASE}/public/catalogos/areas/${areaId}/jefe`
+    ).subscribe({
+      next: (response) => {
+        this.cargandoJefe = false;
+
+        if (response.estado !== 'ok') {
+          this.jefeAsignado = null;
+          this.errorGeneral = response.mensaje || 'No existe jefe configurado para el área seleccionada.';
+          return;
+        }
+
+        this.jefeAsignado = response.jefe || null;
+
+        if (!this.jefeAsignado) {
+          this.errorGeneral = 'No existe jefe configurado para el área seleccionada.';
+        }
+      },
+      error: (err) => {
+        this.cargandoJefe = false;
+        this.jefeAsignado = null;
+
+        if (err.status === 0) {
+          this.errorGeneral = 'No se pudo conectar con el servidor para cargar el jefe asignado.';
+          return;
+        }
+
+        this.errorGeneral =
+          err.error?.mensaje ||
+          'No se pudo obtener el jefe asignado del área seleccionada.';
+      }
+    });
+  }
+
+  onCargoSeleccionado(): void {
+    const cargoId = Number(this.formulario.get('cargo_id')?.value || 0);
+    const cargo = this.cargos.find((item) => Number(item.id) === cargoId);
+
+    this.nombreCargoSeleccionado = cargo?.nombre || '';
+  }
+    // =====================================================
   // MODAL IP
   // =====================================================
 
@@ -279,6 +542,11 @@ export class SolicitudPublica implements OnInit {
     if (this.formulario.invalid) {
       this.marcarFormularioComoTocado();
       this.errorGeneral = 'Revise los campos marcados antes de generar el formato para FirmaEC.';
+      return;
+    }
+
+    if (!this.jefeAsignado) {
+      this.errorGeneral = 'No existe un jefe asignado para el área seleccionada. No se puede continuar.';
       return;
     }
 
@@ -470,8 +738,13 @@ export class SolicitudPublica implements OnInit {
       return;
     }
 
+    if (!this.jefeAsignado) {
+      this.errorFirmaEc = 'No existe jefe asignado para esta área. No se puede enviar la solicitud.';
+      return;
+    }
+
     const confirmar = window.confirm(
-      'Verifique que el PDF seleccionado sea el documento correcto y que esté firmado electrónicamente con FirmaEC.\n\nAl enviarlo, la solicitud pasará al jefe inmediato.'
+      'Verifique que el PDF seleccionado sea el documento correcto y que esté firmado electrónicamente con FirmaEC.\n\nAl enviarlo, la solicitud pasará únicamente al jefe responsable del área seleccionada.'
     );
 
     if (!confirmar) {
@@ -500,10 +773,13 @@ export class SolicitudPublica implements OnInit {
         this.codigoGenerado = this.codigoFirmaEc;
 
         this.exitoFirmaEc =
-          'PDF firmado subido correctamente. La solicitud fue enviada al jefe inmediato.';
+          'PDF firmado subido correctamente. La solicitud fue enviada al jefe inmediato asignado.';
 
         this.formulario.reset();
         this.crearFormulario();
+        this.cargarDirecciones();
+        this.reiniciarCatalogosSeleccionados();
+
         this.archivoFirmado = null;
         this.nombreArchivoFirmado = '';
         this.liberarVistaPreviaFirmado();
@@ -533,6 +809,16 @@ export class SolicitudPublica implements OnInit {
     this.exitoFirmaEc = '';
     this.pasoFirmaEc = 'generando';
     this.liberarVistaPreviaFirmado();
+    this.reiniciarCatalogosSeleccionados();
+  }
+
+  reiniciarCatalogosSeleccionados(): void {
+    this.areas = [];
+    this.cargos = [];
+    this.jefeAsignado = null;
+    this.nombreDireccionSeleccionada = '';
+    this.nombreAreaSeleccionada = '';
+    this.nombreCargoSeleccionado = '';
   }
 
   // =====================================================
@@ -627,8 +913,7 @@ export class SolicitudPublica implements OnInit {
       emitEvent: false
     });
   }
-
-  // =====================================================
+    // =====================================================
   // VALIDACIONES GENERALES
   // =====================================================
 
@@ -798,14 +1083,38 @@ export class SolicitudPublica implements OnInit {
   construirPayload(): any {
     const valor = this.formulario.getRawValue();
 
+    const direccionId = Number(valor.direccion_id || 0);
+    const areaId = Number(valor.area_id || 0);
+    const cargoId = Number(valor.cargo_id || 0);
+
+    const direccion = this.direcciones.find((item) =>
+      Number(item.id) === direccionId
+    );
+
+    const area = this.areas.find((item) =>
+      Number(item.id) === areaId
+    );
+
+    const cargo = this.cargos.find((item) =>
+      Number(item.id) === cargoId
+    );
+
     return {
       nombres_completos: this.normalizarTexto(valor.nombres_completos),
       cedula: String(valor.cedula || '').trim(),
       correo_institucional: String(valor.correo_institucional || '').trim().toLowerCase(),
       telefono_ext: String(valor.telefono_ext || '').trim(),
-      dependencia: this.normalizarTexto(valor.dependencia),
-      area_unidad: this.normalizarTexto(valor.area_unidad),
-      cargo: this.normalizarTexto(valor.cargo),
+
+      direccion_id: direccionId,
+      area_id: areaId,
+      cargo_id: cargoId,
+      jefe_asignado_id: this.jefeAsignado?.usuario_id || null,
+      jefe_area_personal_id: this.jefeAsignado?.id || null,
+
+      dependencia: this.normalizarTexto(direccion?.nombre || this.nombreDireccionSeleccionada),
+      area_unidad: this.normalizarTexto(area?.nombre || this.nombreAreaSeleccionada),
+      cargo: this.normalizarTexto(cargo?.nombre || this.nombreCargoSeleccionado),
+
       fecha_solicitud: valor.fecha_solicitud,
 
       tipo_usuario: valor.tipo_usuario,
@@ -815,7 +1124,8 @@ export class SolicitudPublica implements OnInit {
           : null,
 
       direccion_ip: String(valor.direccion_ip || '').trim() || null,
-      tiempo_vigencia_acceso: this.normalizarTexto(valor.tiempo_vigencia_acceso),
+      tiempo_vigencia_acceso: String(valor.tiempo_vigencia_acceso || '').trim(),
+
       justificacion_necesidad_institucional: this.normalizarTexto(
         valor.justificacion_necesidad_institucional
       ),
