@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpClientModule, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
@@ -69,7 +69,6 @@ interface ProcesoElectronicoAdmin {
   imports: [
     CommonModule,
     FormsModule,
-    HttpClientModule,
     RouterLink,
     RouterLinkActive
   ],
@@ -129,9 +128,15 @@ export class AdminDashboard implements OnInit {
 
   private obtenerHeaders(): HttpHeaders {
     const token = this.authService.getToken();
+    
+    // ✅ CORREGIDO: Validación segura del token
+    if (!token) {
+      return new HttpHeaders();
+    }
 
     return new HttpHeaders({
-      Authorization: `Bearer ${token}`
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
     });
   }
 
@@ -141,7 +146,6 @@ export class AdminDashboard implements OnInit {
       this.router.navigate(['/auth/login']);
       return true;
     }
-
     return false;
   }
 
@@ -153,7 +157,6 @@ export class AdminDashboard implements OnInit {
     if (this.vistaActiva === vista) {
       return;
     }
-
     this.vistaActiva = vista;
     this.busqueda = '';
     this.filtroEstado = '';
@@ -167,7 +170,6 @@ export class AdminDashboard implements OnInit {
       this.cargarProcesosManuales();
       return;
     }
-
     this.cargarProcesosElectronicos();
   }
 
@@ -192,11 +194,11 @@ export class AdminDashboard implements OnInit {
 
     const params: string[] = [];
 
-    if (this.busqueda.trim()) {
+    if (this.busqueda?.trim()) {
       params.push(`q=${encodeURIComponent(this.busqueda.trim())}`);
     }
 
-    if (this.filtroEstado.trim()) {
+    if (this.filtroEstado?.trim()) {
       params.push(`estado=${encodeURIComponent(this.filtroEstado.trim())}`);
     }
 
@@ -204,15 +206,13 @@ export class AdminDashboard implements OnInit {
 
     this.http.get<RespuestaManualAdmin>(
       `${this.API_URL}/admin/manuales${query}`,
-      {
-        headers: this.obtenerHeaders()
-      }
+      { headers: this.obtenerHeaders() }
     ).subscribe({
       next: (response) => {
         this.cargando = false;
 
-        if (response.estado !== 'ok') {
-          this.error = response.mensaje || 'No se pudieron cargar los procesos manuales.';
+        if (response?.estado !== 'ok') {
+          this.error = response?.mensaje || 'No se pudieron cargar los procesos manuales.';
           return;
         }
 
@@ -232,19 +232,20 @@ export class AdminDashboard implements OnInit {
   }
 
   calcularEstadisticasManuales(): void {
-    this.totalManuales = this.procesosManuales.length;
+    this.totalManuales = this.procesosManuales?.length || 0;
 
-    this.totalManualesPendientes = this.procesosManuales.filter((item) =>
+    this.totalManualesPendientes = this.procesosManuales?.filter((item) =>
       item.estado === 'PENDIENTE_SUBIDA' || item.estado === 'DESCARGADO'
-    ).length;
+    ).length || 0;
 
-    this.totalManualesFinalizados = this.procesosManuales.filter((item) =>
+    this.totalManualesFinalizados = this.procesosManuales?.filter((item) =>
       item.estado === 'FINALIZADO'
-    ).length;
+    ).length || 0;
   }
 
   descargarManualVacio(item: ProcesoManualAdmin): void {
     if (!item?.uuid_solicitud) {
+      this.error = 'UUID de solicitud no válido.';
       return;
     }
 
@@ -256,6 +257,7 @@ export class AdminDashboard implements OnInit {
 
   descargarManualFirmado(item: ProcesoManualAdmin): void {
     if (!item?.uuid_solicitud) {
+      this.error = 'UUID de solicitud no válido.';
       return;
     }
 
@@ -280,37 +282,29 @@ export class AdminDashboard implements OnInit {
 
     const params: string[] = [];
 
-    if (this.busqueda.trim()) {
+    if (this.busqueda?.trim()) {
       params.push(`q=${encodeURIComponent(this.busqueda.trim())}`);
     }
 
-    if (this.filtroEstado.trim()) {
+    if (this.filtroEstado?.trim()) {
       params.push(`estado=${encodeURIComponent(this.filtroEstado.trim())}`);
     }
 
-    if (this.filtroEtapa.trim()) {
+    if (this.filtroEtapa?.trim()) {
       params.push(`etapa=${encodeURIComponent(this.filtroEtapa.trim())}`);
     }
 
     const query = params.length ? `?${params.join('&')}` : '';
 
-    /*
-      Endpoint recomendado para el nuevo admin revisor:
-      GET /api/admin/procesos-electronicos
-
-      Si aún no lo tienes en Flask, créalo después.
-    */
     this.http.get<RespuestaElectronicaAdmin>(
       `${this.API_URL}/admin/procesos-electronicos${query}`,
-      {
-        headers: this.obtenerHeaders()
-      }
+      { headers: this.obtenerHeaders() }
     ).subscribe({
       next: (response) => {
         this.cargando = false;
 
-        if (response.estado !== 'ok') {
-          this.error = response.mensaje || 'No se pudieron cargar los procesos electrónicos.';
+        if (response?.estado !== 'ok') {
+          this.error = response?.mensaje || 'No se pudieron cargar los procesos electrónicos.';
           return;
         }
 
@@ -330,30 +324,27 @@ export class AdminDashboard implements OnInit {
   }
 
   calcularEstadisticasElectronicos(): void {
-    this.totalElectronicos = this.procesosElectronicos.length;
+    this.totalElectronicos = this.procesosElectronicos?.length || 0;
 
-    this.totalElectronicosPendientes = this.procesosElectronicos.filter((item) =>
-      item.estado.includes('pendiente')
-    ).length;
+    this.totalElectronicosPendientes = this.procesosElectronicos?.filter((item) =>
+      item.estado?.includes('pendiente')
+    ).length || 0;
 
-    this.totalElectronicosRechazados = this.procesosElectronicos.filter((item) =>
-      item.estado.includes('rechazada')
-    ).length;
+    this.totalElectronicosRechazados = this.procesosElectronicos?.filter((item) =>
+      item.estado?.includes('rechazada')
+    ).length || 0;
 
-    this.totalElectronicosFinalizados = this.procesosElectronicos.filter((item) =>
+    this.totalElectronicosFinalizados = this.procesosElectronicos?.filter((item) =>
       item.estado === 'finalizada'
-    ).length;
+    ).length || 0;
   }
 
   descargarElectronicoActual(item: ProcesoElectronicoAdmin): void {
     if (!item?.codigo_solicitud) {
+      this.error = 'Código de solicitud no válido.';
       return;
     }
 
-    /*
-      Endpoint recomendado:
-      GET /api/admin/procesos-electronicos/<codigo_solicitud>/pdf-actual
-    */
     this.descargarArchivoProtegido(
       `${this.API_URL}/admin/procesos-electronicos/${item.codigo_solicitud}/pdf-actual`,
       `documento_actual_${item.codigo_solicitud}.pdf`
@@ -361,14 +352,10 @@ export class AdminDashboard implements OnInit {
   }
 
   verDetalleElectronico(item: ProcesoElectronicoAdmin): void {
-    if (!item?.codigo_solicitud) {
+    if (!item?.id) {
+      this.error = 'ID de solicitud no válido.';
       return;
     }
-
-    /*
-      Más adelante podemos crear una vista completa de detalle.
-      Por ahora redirecciona al detalle administrativo si ya existe.
-    */
     this.router.navigate(['/admin/solicitudes', item.id]);
   }
 
@@ -422,7 +409,6 @@ export class AdminDashboard implements OnInit {
     }
 
     const valor = String(fecha).trim();
-
     if (!valor) {
       return 'Sin fecha';
     }
@@ -432,10 +418,7 @@ export class AdminDashboard implements OnInit {
       return `${dia}/${mes}/${anio}`;
     }
 
-    const valorCompatible = valor.includes('T')
-      ? valor
-      : valor.replace(' ', 'T');
-
+    const valorCompatible = valor.includes('T') ? valor : valor.replace(' ', 'T');
     const fechaObj = new Date(valorCompatible);
 
     if (Number.isNaN(fechaObj.getTime())) {
@@ -455,7 +438,6 @@ export class AdminDashboard implements OnInit {
     }
 
     const valor = String(fecha).trim();
-
     if (!valor) {
       return 'Sin hora registrada';
     }
@@ -472,10 +454,7 @@ export class AdminDashboard implements OnInit {
       return 'Sin hora registrada';
     }
 
-    const valorCompatible = valor.includes('T')
-      ? valor
-      : valor.replace(' ', 'T');
-
+    const valorCompatible = valor.includes('T') ? valor : valor.replace(' ', 'T');
     const fechaObj = new Date(valorCompatible);
 
     if (Number.isNaN(fechaObj.getTime())) {
@@ -497,19 +476,18 @@ export class AdminDashboard implements OnInit {
   }
 
   obtenerFechaManual(item: ProcesoManualAdmin): string {
-    return item.fecha_registro || item.created_at || '';
+    return item?.fecha_registro || item?.created_at || '';
   }
 
   obtenerHoraManual(item: ProcesoManualAdmin): string {
-    if (item.hora_registro) {
+    if (item?.hora_registro) {
       return item.hora_registro;
     }
-
-    return this.obtenerHoraTabla(item.created_at);
+    return this.obtenerHoraTabla(item?.created_at);
   }
 
   obtenerFechaElectronica(item: ProcesoElectronicoAdmin): string {
-    return item.created_at || item.fecha_solicitud || '';
+    return item?.created_at || item?.fecha_solicitud || '';
   }
 
   // =====================================================
@@ -522,7 +500,6 @@ export class AdminDashboard implements OnInit {
       PENDIENTE_SUBIDA: 'Pendiente de subir firmado',
       FINALIZADO: 'Finalizado'
     };
-
     return estados[estado] || estado;
   }
 
@@ -530,7 +507,6 @@ export class AdminDashboard implements OnInit {
     if (estado === 'FINALIZADO') {
       return 'finalizada';
     }
-
     return 'pendiente';
   }
 
@@ -547,7 +523,6 @@ export class AdminDashboard implements OnInit {
       finalizada: 'Finalizada',
       anulada: 'Anulada'
     };
-
     return estados[estado] || estado;
   }
 
@@ -555,19 +530,15 @@ export class AdminDashboard implements OnInit {
     if (!estado) {
       return 'normal';
     }
-
     if (estado.includes('rechazada')) {
       return 'rechazada';
     }
-
     if (estado === 'finalizada') {
       return 'finalizada';
     }
-
     if (estado.includes('pendiente')) {
       return 'pendiente';
     }
-
     return 'normal';
   }
 
@@ -581,7 +552,6 @@ export class AdminDashboard implements OnInit {
       ejecucion_tics: 'Ejecución TICS',
       finalizado: 'Finalizado'
     };
-
     return etapas[etapa] || etapa;
   }
 
@@ -594,7 +564,7 @@ export class AdminDashboard implements OnInit {
       return 'Proceso finalizado correctamente.';
     }
 
-    if (item.estado.includes('rechazada')) {
+    if (item.estado?.includes('rechazada')) {
       return 'Proceso rechazado. Revise el detalle del trámite.';
     }
 

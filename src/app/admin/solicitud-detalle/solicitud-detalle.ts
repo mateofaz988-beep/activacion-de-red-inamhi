@@ -156,9 +156,17 @@ export class SolicitudDetalle implements OnInit {
       error: (err: any) => {
         this.cargando = false;
 
-        if (err.status === 401 || err.status === 403) {
+        if (err.status === 401) {
           this.authService.logout();
           this.router.navigate(['/auth/login']);
+          return;
+        }
+
+        if (err.status === 403) {
+          this.mostrarError(
+            'Acceso denegado',
+            err.error?.mensaje || 'No tiene permisos para ver el detalle de esta solicitud.'
+          );
           return;
         }
 
@@ -256,8 +264,6 @@ export class SolicitudDetalle implements OnInit {
 
   // =====================================================
   // DESCARGA DEL PDF GENERADO
-  // Queda disponible para compatibilidad, pero el HTML
-  // operativo ya no muestra este botón.
   // =====================================================
 
   descargarPdf(): void {
@@ -289,9 +295,17 @@ export class SolicitudDetalle implements OnInit {
       error: (err: any) => {
         this.procesando = false;
 
-        if (err.status === 401 || err.status === 403) {
+        if (err.status === 401) {
           this.authService.logout();
           this.router.navigate(['/auth/login']);
+          return;
+        }
+
+        if (err.status === 403) {
+          this.mostrarError(
+            'Acceso denegado',
+            err.error?.mensaje || 'No tiene permisos para descargar este PDF.'
+          );
           return;
         }
 
@@ -338,9 +352,17 @@ export class SolicitudDetalle implements OnInit {
       error: (err: any) => {
         this.procesando = false;
 
-        if (err.status === 401 || err.status === 403) {
+        if (err.status === 401) {
           this.authService.logout();
           this.router.navigate(['/auth/login']);
+          return;
+        }
+
+        if (err.status === 403) {
+          this.mostrarError(
+            'Acceso denegado',
+            err.error?.mensaje || 'No tiene permisos para descargar este documento.'
+          );
           return;
         }
 
@@ -404,9 +426,6 @@ export class SolicitudDetalle implements OnInit {
     this.mensajeOk = '';
     this.limpiarPdfFirmadoElectronico();
   }
-
-
-
     // =====================================================
   // SELECCIÓN Y VISTA PREVIA DEL PDF FIRMADO
   // =====================================================
@@ -597,6 +616,14 @@ export class SolicitudDetalle implements OnInit {
       return;
     }
 
+    const token = this.authService.getToken();
+
+    if (!token) {
+      this.authService.logout();
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
     const formData = new FormData();
     formData.append('archivo', this.archivoFirmadoElectronico);
 
@@ -604,7 +631,11 @@ export class SolicitudDetalle implements OnInit {
     this.error = '';
     this.mensajeOk = '';
 
-    this.http.post<any>(url, formData).subscribe({
+    this.http.post<any>(url, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }).subscribe({
       next: (response) => {
         this.procesando = false;
 
@@ -637,9 +668,17 @@ export class SolicitudDetalle implements OnInit {
       error: (err: any) => {
         this.procesando = false;
 
-        if (err.status === 401 || err.status === 403) {
+        if (err.status === 401) {
           this.authService.logout();
           this.router.navigate(['/auth/login']);
+          return;
+        }
+
+        if (err.status === 403) {
+          this.mostrarError(
+            'Acceso denegado',
+            err.error?.mensaje || 'No tiene permisos para subir la firma de esta solicitud.'
+          );
           return;
         }
 
@@ -655,7 +694,6 @@ export class SolicitudDetalle implements OnInit {
 
   // =====================================================
   // COMPATIBILIDAD CON HTML ANTERIOR
-  // Si tu HTML usa estos nombres, no tendrás error.
   // =====================================================
 
   seleccionarArchivoFirmaElectronica(event: Event): void {
@@ -681,8 +719,6 @@ export class SolicitudDetalle implements OnInit {
   subirPdfFirmaElectronica(): void {
     this.subirFirmaElectronica();
   }
-
-
     // =====================================================
   // APROBACIÓN GENERAL JEFE / AUTORIDAD
   // =====================================================
@@ -1006,9 +1042,17 @@ export class SolicitudDetalle implements OnInit {
         this.procesandoAprobacion = false;
         this.procesandoFinalizacion = false;
 
-        if (err.status === 401 || err.status === 403) {
+        if (err.status === 401) {
           this.authService.logout();
           this.router.navigate(['/auth/login']);
+          return;
+        }
+
+        if (err.status === 403) {
+          this.mostrarError(
+            'Acceso denegado',
+            err.error?.mensaje || 'No tiene permisos para aprobar o finalizar esta solicitud.'
+          );
           return;
         }
 
@@ -1107,9 +1151,17 @@ export class SolicitudDetalle implements OnInit {
         this.procesando = false;
         this.procesandoRechazo = false;
 
-        if (err.status === 401 || err.status === 403) {
+        if (err.status === 401) {
           this.authService.logout();
           this.router.navigate(['/auth/login']);
+          return;
+        }
+
+        if (err.status === 403) {
+          this.mostrarError(
+            'Acceso denegado',
+            err.error?.mensaje || 'No tiene permisos para rechazar esta solicitud.'
+          );
           return;
         }
 
@@ -1207,6 +1259,18 @@ export class SolicitudDetalle implements OnInit {
   }
 
   // =====================================================
+  // TRACK BY
+  // =====================================================
+
+  trackByPagina(_index: number, pagina: PaginaWebAdmin): number {
+    return pagina.id;
+  }
+
+  trackByDocumento(_index: number, documento: DocumentoSolicitud): number {
+    return documento.id;
+  }
+
+  // =====================================================
   // TEXTOS DE ESTADOS Y ETAPAS
   // =====================================================
 
@@ -1266,7 +1330,7 @@ export class SolicitudDetalle implements OnInit {
   // MENSAJES Y SESIÓN
   // =====================================================
 
-  mostrarError(titulo: string, mensaje: string): void {
+  private mostrarError(titulo: string, mensaje: string): void {
     Swal.fire({
       title: titulo,
       text: mensaje,

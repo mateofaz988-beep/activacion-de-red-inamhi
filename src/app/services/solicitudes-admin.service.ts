@@ -65,6 +65,30 @@ export interface SolicitudesAdminResponse {
   solicitudes: SolicitudAdmin[];
 }
 
+export interface SolicitudManual {
+  id: number;
+  uuid_solicitud: string;
+  nombres: string;
+  apellidos: string;
+  correo: string;
+  estado: string;
+  documento_vacio: string | null;
+  documento_escaneado: string | null;
+  fecha_registro: string | null;
+  hora_registro: string | null;
+  created_at: string;
+  updated_at: string;
+  log_auditoria?: string;
+  tiene_documento_firmado: boolean;
+}
+
+export interface SolicitudesManualesResponse {
+  estado: string;
+  mensaje: string;
+  total: number;
+  solicitudes: SolicitudManual[];
+}
+
 export interface SolicitudDetalleResponse {
   estado: string;
   solicitud: SolicitudAdmin;
@@ -315,6 +339,39 @@ export class SolicitudesAdminService {
       {
         headers: this.getHeaders()
       }
+    );
+  }
+
+  /* =====================================================
+     PROCESOS MANUALES (ADMIN)
+  ===================================================== */
+
+  listarSolicitudesManuales(
+    estado: string = '',
+    q: string = ''
+  ): Observable<SolicitudesManualesResponse> {
+    const params: string[] = [];
+
+    if (estado) {
+      params.push(`estado=${encodeURIComponent(estado)}`);
+    }
+
+    if (q) {
+      params.push(`q=${encodeURIComponent(q)}`);
+    }
+
+    const query = params.length ? `?${params.join('&')}` : '';
+
+    return this.http.get<SolicitudesManualesResponse>(
+      `${this.API_BASE}/admin/manuales${query}`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  descargarDocumentoManualFirmado(uuid: string): Observable<Blob> {
+    return this.http.get(
+      `${this.API_BASE}/admin/manuales/${encodeURIComponent(uuid)}/descargar-firmado`,
+      { headers: this.getHeaders(), responseType: 'blob' }
     );
   }
 

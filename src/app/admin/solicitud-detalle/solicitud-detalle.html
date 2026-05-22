@@ -1,4 +1,4 @@
-<section class="admin-layout">
+<section class="detail-page">
   <aside class="sidebar">
     <div class="brand">
       <div class="logo-box">
@@ -104,15 +104,15 @@
       </div>
     </header>
 
-    <div class="loading" *ngIf="cargando">
+    <div class="loading" *ngIf="cargando" aria-live="polite" aria-busy="true">
       Cargando detalle de solicitud...
     </div>
 
-    <div class="error-box" *ngIf="error">
+    <div class="error-box" *ngIf="error" role="alert" aria-live="assertive">
       {{ error }}
     </div>
 
-    <div class="ok-box" *ngIf="mensajeOk">
+    <div class="ok-box" *ngIf="mensajeOk" role="status" aria-live="polite">
       {{ mensajeOk }}
     </div>
 
@@ -497,7 +497,7 @@
             </thead>
 
             <tbody>
-              <tr *ngFor="let pagina of paginasWeb; let i = index">
+              <tr *ngFor="let pagina of paginasWeb; let i = index; trackBy: trackByPagina">
                 <td>{{ pagina.numero || i + 1 }}</td>
 
                 <td>
@@ -543,7 +543,7 @@
         <div class="documents-grid" *ngIf="documentos.length > 0">
           <article
             class="document-card"
-            *ngFor="let documento of documentos"
+            *ngFor="let documento of documentos; trackBy: trackByDocumento"
           >
             <div class="document-icon">
               <i class="bi bi-file-earmark-pdf-fill"></i>
@@ -596,6 +596,9 @@
       <div
         class="modal-backdrop-firmaec"
         *ngIf="mostrarModalFirmaElectronica"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-firmaec-titulo"
       >
         <section class="modal-firmaec-card">
           <button
@@ -616,7 +619,7 @@
             <div>
               <span>Firma electrónica</span>
 
-              <h3>Subir PDF firmado con FirmaEC</h3>
+              <h3 id="modal-firmaec-titulo">Subir PDF firmado con FirmaEC</h3>
 
               <p>
                 Descargue el PDF firmado actual, fírmelo externamente con FirmaEC
@@ -683,17 +686,11 @@
 
             <i class="bi bi-cloud-arrow-up-fill"></i>
 
-            <strong *ngIf="!nombreArchivoFirmadoElectronico">
-              Seleccionar PDF firmado electrónicamente
+            <strong>
+              {{ nombreArchivoFirmadoElectronico || 'Seleccionar PDF firmado electrónicamente' }}
             </strong>
 
-            <strong *ngIf="nombreArchivoFirmadoElectronico">
-              {{ nombreArchivoFirmadoElectronico }}
-            </strong>
-
-            <span>
-              Solo PDF · Máximo 15 MB
-            </span>
+            <span>Solo PDF · Máximo 15 MB</span>
           </label>
 
           <div
@@ -771,6 +768,9 @@
       <div
         class="modal-backdrop-rechazo"
         *ngIf="mostrarModalRechazo"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-rechazo-titulo"
       >
         <section class="modal-rechazo-card">
           <button
@@ -791,7 +791,7 @@
             <div>
               <span>Rechazo de solicitud</span>
 
-              <h3>Registrar motivo de rechazo</h3>
+              <h3 id="modal-rechazo-titulo">Registrar motivo de rechazo</h3>
 
               <p>
                 Ingrese un motivo claro y específico. Este motivo quedará registrado
@@ -830,8 +830,8 @@
               [disabled]="procesandoRechazo"
             ></textarea>
 
-            <span class="counter">
-              {{ motivoRechazo.length || 0 }}/1000
+            <span class="counter" aria-live="polite">
+              {{ motivoRechazo.length }}/1000
             </span>
           </label>
 

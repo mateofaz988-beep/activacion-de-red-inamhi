@@ -117,6 +117,14 @@ export const routes: Routes = [
     }
   },
   {
+    path: 'admin/solicitud-detalle/:id',
+    component: SolicitudDetalle,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['administrador']
+    }
+  },
+  {
     path: 'admin/usuarios',
     component: Usuarios,
     canActivate: [roleGuard],
@@ -170,6 +178,14 @@ export const routes: Routes = [
     }
   },
   {
+    path: 'jefe/solicitud-detalle/:id',
+    component: SolicitudDetalle,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['jefe_inmediato']
+    }
+  },
+  {
     path: 'jefe/solicitudes/:id',
     component: SolicitudDetalle,
     canActivate: [roleGuard],
@@ -207,6 +223,14 @@ export const routes: Routes = [
     }
   },
   {
+    path: 'autoridad/solicitud-detalle/:id',
+    component: SolicitudDetalle,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['maxima_autoridad']
+    }
+  },
+  {
     path: 'autoridad/solicitudes/:id',
     component: SolicitudDetalle,
     canActivate: [roleGuard],
@@ -238,6 +262,14 @@ export const routes: Routes = [
   {
     path: 'tics/reportes',
     component: TicsReportes,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['analista_tics']
+    }
+  },
+  {
+    path: 'tics/solicitud-detalle/:id',
+    component: SolicitudDetalle,
     canActivate: [roleGuard],
     data: {
       roles: ['analista_tics']

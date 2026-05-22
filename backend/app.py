@@ -117,6 +117,25 @@ CORS(app, resources={
     }
 })
 
+# =====================================================
+# permitir preflight CORS global sin token
+# =====================================================
+
+@app.before_request
+def manejar_preflight_cors():
+    if request.method == "OPTIONS":
+        respuesta = jsonify({
+            "estado": "ok",
+            "mensaje": "preflight correcto."
+        })
+
+        respuesta.headers.add("Access-Control-Allow-Origin", request.headers.get("Origin", "*"))
+        respuesta.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        respuesta.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        respuesta.headers.add("Access-Control-Allow-Credentials", "true")
+
+        return respuesta, 200
+
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024  # 15 MB
 
 DB_HOST = os.getenv("DB_HOST", "localhost")
@@ -624,6 +643,16 @@ def decodificar_token(token):
 def token_requerido(f):
     @wraps(f)
     def decorador(*args, **kwargs):
+
+        # =====================================================
+        # permitir preflight CORS sin exigir token
+        # =====================================================
+        if request.method == "OPTIONS":
+            return jsonify({
+                "estado": "ok",
+                "mensaje": "preflight correcto."
+            }), 200
+
         auth_header = request.headers.get("Authorization")
 
         if not auth_header:
@@ -3678,10 +3707,7 @@ def descargar_documento_manual_vacio(uuid_solicitud):
 @app.route("/api/admin/manuales", methods=["GET"])
 @token_requerido
 @roles_permitidos("administrador")
-def listar_solicitudes_manuales_admin():
-    busqueda = limpiar_texto(request.args.get("q"))
-    estado = limpiar_texto(request.args.get("estado")).upper()
-
+def listar_procesos_manuales_admin():
     conexion = get_db_connection()
 
     if conexion is None:
@@ -3693,50 +3719,7 @@ def listar_solicitudes_manuales_admin():
     try:
         cursor = conexion.cursor(dictionary=True)
 
-        condiciones = []
-        parametros = []
-
-        if busqueda:
-            condiciones.append("""
-                (
-                    uuid_solicitud like %s or
-                    nombres like %s or
-                    apellidos like %s or
-                    correo like %s
-                )
-            """)
-
-            valor_busqueda = f"%{busqueda}%"
-
-            parametros.extend([
-                valor_busqueda,
-                valor_busqueda,
-                valor_busqueda,
-                valor_busqueda
-            ])
-
-        if estado:
-            estados_validos = ["DESCARGADO", "PENDIENTE_SUBIDA", "FINALIZADO"]
-
-            if estado not in estados_validos:
-                cursor.close()
-                conexion.close()
-
-                return jsonify({
-                    "estado": "error",
-                    "mensaje": "estado manual inválido.",
-                    "estados_validos": estados_validos
-                }), 400
-
-            condiciones.append("estado = %s")
-            parametros.append(estado)
-
-        where_sql = ""
-
-        if condiciones:
-            where_sql = "where " + " and ".join(condiciones)
-
-        sql = f"""
+        cursor.execute("""
             select
                 id,
                 uuid_solicitud,
@@ -3744,48 +3727,52 @@ def listar_solicitudes_manuales_admin():
                 apellidos,
                 correo,
                 estado,
-                documento_vacio,
-                documento_escaneado,
+                documento_firmado_nombre,
+                documento_firmado_ruta,
                 fecha_registro,
                 hora_registro,
                 created_at,
-                updated_at
-            from solicitudes_manual
-            {where_sql}
+                case
+                    when documento_firmado_ruta is not null
+                         and documento_firmado_ruta <> ''
+                    then true
+                    else false
+                end as tiene_documento_firmado
+            from solicitudes_manuales
             order by id desc;
-        """
+        """)
 
-        cursor.execute(sql, tuple(parametros))
         solicitudes = cursor.fetchall()
 
         for item in solicitudes:
-            item["fecha_registro"] = str(item["fecha_registro"]) if item["fecha_registro"] else None
-            item["hora_registro"] = str(item["hora_registro"]) if item["hora_registro"] else None
-            item["created_at"] = serializar_fecha(item["created_at"])
-            item["updated_at"] = serializar_fecha(item["updated_at"])
+            item["tiene_documento_firmado"] = bool(item["tiene_documento_firmado"])
+            item["fecha_registro"] = serializar_fecha(item.get("fecha_registro"))
+            item["created_at"] = serializar_fecha(item.get("created_at"))
 
-            item["log_auditoria"] = (
-                f"Solicitud manual descargada por: {item['nombres']} {item['apellidos']} "
-                f"con correo {item['correo']} el {item['fecha_registro']} "
-                f"a las {item['hora_registro']}."
-            )
-
-            item["tiene_documento_firmado"] = item["documento_escaneado"] is not None
+            if item.get("hora_registro"):
+                item["hora_registro"] = str(item["hora_registro"])
 
         cursor.close()
         conexion.close()
 
         return jsonify({
             "estado": "ok",
-            "mensaje": "solicitudes manuales obtenidas correctamente.",
+            "mensaje": "procesos manuales obtenidos correctamente.",
             "total": len(solicitudes),
             "solicitudes": solicitudes
         }), 200
 
     except Error as error:
+        print("ERROR AL LISTAR PROCESOS MANUALES:", error)
+
+        try:
+            conexion.close()
+        except Exception:
+            pass
+
         return jsonify({
             "estado": "error",
-            "mensaje": "error al obtener las solicitudes manuales.",
+            "mensaje": "error al obtener los procesos manuales.",
             "error": str(error)
         }), 500
 
@@ -5523,40 +5510,99 @@ Sistema de Gestión de Solicitudes de Liberación Web - INAMHI
 # =====================================================
 # correo de finalización / aprobación total de solicitud
 # =====================================================
-
 def enviar_correo_finalizacion_solicitud(solicitud):
     destinatario = limpiar_texto(solicitud.get("correo_institucional")).lower()
     codigo_solicitud = solicitud.get("codigo_solicitud")
     nombres = solicitud.get("nombres_completos") or "usuario/a"
-
-    print("==============================================")
-    print("INTENTANDO ENVIAR CORREO DE FINALIZACIÓN")
-    print("DESTINATARIO:", destinatario)
-    print("CÓDIGO:", codigo_solicitud)
-    print("==============================================")
-
+    fecha_actual = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
     if not destinatario:
         raise Exception("la solicitud no tiene correo institucional registrado.")
 
-    asunto = f"Solicitud de Liberación Web finalizada - {codigo_solicitud}"
+    asunto = f"✅ Solicitud de Liberación Web finalizada - {codigo_solicitud}"
+    
+    # ✅ SEGURIDAD: Escapar caracteres HTML para evitar inyección de scripts
+    nombres_seguro = html.escape(str(nombres))
+    codigo_seguro = html.escape(str(codigo_solicitud))
+    fecha_segura = html.escape(str(fecha_actual))
 
-    cuerpo = f"""
+    # Versión texto plano (fallback)
+    cuerpo_texto = f"""
 Estimado/a {nombres},
 
-Su solicitud de Liberación Web con código {codigo_solicitud} ha sido aprobada y finalizada correctamente por la Unidad de Tecnologías de la Información.
-
-El proceso de revisión, aprobación y ejecución técnica ha concluido satisfactoriamente.
-
-Estado actual: Finalizada
+Su solicitud de Liberación Web con código {codigo_solicitud} ha sido aprobada y finalizada correctamente.
+Estado: Finalizada | Fecha: {fecha_actual}
 
 Atentamente,
-Sistema de Liberación Web - INAMHI
+Sistema de Gestión de Solicitudes - INAMHI
 """
 
+    # Versión HTML con diseño profesional
+    cuerpo_html = f"""
+<html>
+<body style="margin:0; padding:0; background:#f1f5f9; font-family:Segoe UI, Arial, sans-serif;">
+  <div style="max-width:720px; margin:32px auto; background:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e2e8f0; box-shadow:0 4px 6px rgba(0,0,0,0.05);">
+    
+    <!-- Encabezado -->
+    <div style="background:#0f172a; color:#ffffff; padding:24px; text-align:center;">
+      <h2 style="margin:0; font-size:22px; letter-spacing:0.5px;">✅ Solicitud Finalizada</h2>
+      <p style="margin:8px 0 0; font-size:14px; opacity:0.9;">Sistema de Gestión de Solicitudes - INAMHI</p>
+    </div>
+
+    <!-- Cuerpo -->
+    <div style="padding:32px; color:#0f172a; line-height:1.6;">
+      <p style="font-size:16px; margin-bottom:20px;">Estimado/a <strong>{nombres_seguro}</strong>,</p>
+      <p style="font-size:15px; color:#334155;">
+        Nos complace informarle que su solicitud de liberación web ha sido 
+        <strong style="color:#10b981;">aprobada y finalizada</strong> satisfactoriamente por la Unidad de Tecnologías de la Información.
+      </p>
+
+      <!-- Tabla de Datos -->
+      <table style="width:100%; border-collapse:collapse; margin:28px 0; font-size:14px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+        <tr style="background:#f8fafc;">
+          <td style="padding:14px; border:1px solid #e2e8f0; font-weight:bold; color:#475569; width:40%;">Código de solicitud</td>
+          <td style="padding:14px; border:1px solid #e2e8f0; font-family:monospace; font-size:15px;">{codigo_seguro}</td>
+        </tr>
+        <tr>
+          <td style="padding:14px; border:1px solid #e2e8f0; font-weight:bold; color:#475569; background:#f8fafc;">Estado actual</td>
+          <td style="padding:14px; border:1px solid #e2e8f0;">
+            <span style="background:#dcfce7; color:#166534; padding:6px 12px; border-radius:20px; font-weight:bold; font-size:12px; text-transform:uppercase;">Finalizada</span>
+          </td>
+        </tr>
+        <tr style="background:#f8fafc;">
+          <td style="padding:14px; border:1px solid #e2e8f0; font-weight:bold; color:#475569;">Fecha de finalización</td>
+          <td style="padding:14px; border:1px solid #e2e8f0;">{fecha_segura}</td>
+        </tr>
+      </table>
+
+      <!-- Caja de Nota -->
+      <div style="background:#f0fdf4; border-left:4px solid #10b981; color:#15803d; padding:18px; border-radius:0 8px 8px 0;">
+        <strong style="display:block; margin-bottom:6px;">¿Qué sigue?</strong>
+        Los accesos solicitados han sido configurados en los sistemas correspondientes. 
+        En caso de no visualizar los cambios en las próximas 2 horas, por favor contacte a la mesa de ayuda.
+      </div>
+
+      <p style="margin-top:32px; color:#64748b; font-size:14px;">
+        Atentamente,<br>
+        <strong style="color:#0f172a;">Sistema de Gestión de Solicitudes de Liberación Web - INAMHI</strong>
+      </p>
+    </div>
+    
+    <!-- Footer -->
+    <div style="background:#f8fafc; padding:16px; text-align:center; font-size:12px; color:#94a3b8; border-top:1px solid #e2e8f0;">
+      &copy; {datetime.datetime.now().year} Instituto Nacional de Meteorología e Hidrología.
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+    # Llamada a tu función existente que soporta cuerpo_html
     enviar_correo(
         destinatario=destinatario,
         asunto=asunto,
-        cuerpo=cuerpo
+        cuerpo=cuerpo_texto,
+        cuerpo_html=cuerpo_html
     )
 # =====================================================
 # rechazo de solicitud
@@ -5824,134 +5870,7 @@ def rechazar_solicitud(solicitud_id):
             "mensaje": "error inesperado al rechazar la solicitud.",
             "error": str(error)
         }), 500
-        # =====================================================
-        # Obtener solicitud actual
-        # =====================================================
-
-        cursor.execute("""
-            select
-                id,
-                codigo_solicitud,
-                estado,
-                etapa_actual,
-                bloqueada
-            from solicitudes
-            where id = %s
-            limit 1;
-        """, (solicitud_id,))
-
-        solicitud = cursor.fetchone()
-
-        if solicitud is None:
-            cursor.close()
-            conexion.close()
-
-            return jsonify({
-                "estado": "error",
-                "mensaje": "solicitud no encontrada."
-            }), 404
-
-        if solicitud["bloqueada"]:
-            cursor.close()
-            conexion.close()
-
-            return jsonify({
-                "estado": "error",
-                "mensaje": "la solicitud se encuentra bloqueada y no puede ser procesada."
-            }), 409
-
-        estado_anterior = solicitud["estado"]
-        etapa_anterior = solicitud["etapa_actual"]
-
-        # =====================================================
-        # Validar rol y estado actual
-        # =====================================================
-
-        regla = obtener_estado_rechazo_por_rol(estado_anterior, rol_actual)
-
-        if regla is None:
-            cursor.close()
-            conexion.close()
-
-            return jsonify({
-                "estado": "error",
-                "mensaje": "no tiene permisos para rechazar esta solicitud en su estado actual.",
-                "rol_actual": rol_actual,
-                "estado_actual": estado_anterior
-            }), 403
-
-        nuevo_estado = regla["nuevo_estado"]
-        nueva_etapa = regla["nueva_etapa"]
-
-        cursor.execute("""
-            update solicitudes
-            set
-                estado = %s,
-                etapa_actual = %s,
-                updated_at = now()
-            where id = %s;
-        """, (nuevo_estado, nueva_etapa, solicitud_id))
-
-        conexion.commit()
-
-        cursor.close()
-        conexion.close()
-
-        registrar_auditoria(
-            usuario_id=usuario_actual["id"],
-            solicitud_id=solicitud_id,
-            modulo="flujo_solicitud",
-            accion="rechazar_solicitud",
-            descripcion=f"solicitud {solicitud['codigo_solicitud']} rechazada por rol {rol_actual}",
-            datos_anteriores={
-                "estado": estado_anterior,
-                "etapa_actual": etapa_anterior
-            },
-            datos_nuevos={
-                "estado": nuevo_estado,
-                "etapa_actual": nueva_etapa,
-                "motivo": motivo
-            }
-        )
-
-        return jsonify({
-            "estado": "ok",
-            "mensaje": "solicitud rechazada correctamente.",
-            "solicitud": {
-                "id": solicitud_id,
-                "codigo_solicitud": solicitud["codigo_solicitud"],
-                "estado_anterior": estado_anterior,
-                "estado_actual": nuevo_estado,
-                "etapa_actual": nueva_etapa,
-                "motivo": motivo
-            }
-        }), 200
-
-    except Error as error:
-        try:
-            conexion.rollback()
-            conexion.close()
-        except Exception:
-            pass
-
-        return jsonify({
-            "estado": "error",
-            "mensaje": "error al rechazar la solicitud.",
-            "error": str(error)
-        }), 500
-
-    except Exception as error:
-        try:
-            conexion.rollback()
-            conexion.close()
-        except Exception:
-            pass
-
-        return jsonify({
-            "estado": "error",
-            "mensaje": "error inesperado al rechazar la solicitud.",
-            "error": str(error)
-        }), 500
+       
 
 
 # =====================================================
@@ -8101,6 +8020,83 @@ def jefe_subir_pdf_firmado(solicitud_id):
             "mensaje": "error inesperado al subir el PDF firmado por el jefe.",
             "error": str(error)
         }), 500
+        # =====================================================
+# DESCARGAR DOCUMENTO MANUAL FIRMADO (ADMIN)
+# =====================================================
+@app.route("/api/admin/manuales/<uuid_solicitud>/documento-firmado", methods=["GET"])
+@token_requerido
+@roles_permitidos("administrador")
+def descargar_documento_manual_firmado_admin_final(uuid_solicitud):
+    uuid_solicitud = limpiar_texto(uuid_solicitud)
+    if not uuid_solicitud:
+        return jsonify({"estado": "error", "mensaje": "el identificador del proceso manual es obligatorio."}), 400
+
+    conexion = get_db_connection()
+    if conexion is None:
+        return jsonify({"estado": "error", "mensaje": "no se pudo conectar con la base de datos."}), 500
+
+    try:
+        cursor = conexion.cursor(dictionary=True)
+        cursor.execute("""
+            select uuid_solicitud, documento_firmado_nombre, documento_firmado_ruta
+            from solicitudes_manuales
+            where uuid_solicitud = %s
+            limit 1;
+        """, (uuid_solicitud,))
+        solicitud = cursor.fetchone()
+        cursor.close()
+        conexion.close()
+
+        if solicitud is None:
+            return jsonify({"estado": "error", "mensaje": "no se encontró el proceso manual."}), 404
+
+        ruta_relativa = solicitud.get("documento_firmado_ruta")
+        if not ruta_relativa:
+            return jsonify({"estado": "error", "mensaje": "este proceso manual no tiene documento firmado subido."}), 404
+
+        ruta_absoluta = os.path.join(BASE_DIR, ruta_relativa.replace("/", os.sep))
+        if not os.path.exists(ruta_absoluta):
+            return jsonify({"estado": "error", "mensaje": "el archivo firmado no existe en el servidor."}), 404
+
+        nombre_descarga = solicitud.get("documento_firmado_nombre") or f"{uuid_solicitud}_firmado.pdf"
+        return send_file(ruta_absoluta, mimetype="application/pdf", as_attachment=True, download_name=nombre_descarga, max_age=0)
+
+    except Error as error:
+        print("ERROR AL DESCARGAR DOCUMENTO MANUAL:", error)
+        try:
+            conexion.close()
+        except Exception:
+            pass
+        return jsonify({"estado": "error", "mensaje": "error al descargar el documento firmado.", "error": str(error)}), 500
+
+# =====================================================
+# MANEJO DE ERRORES GLOBALES
+# =====================================================
+@app.errorhandler(404)
+def error_404(error):
+    return jsonify({"estado": "error", "mensaje": "ruta no encontrada."}), 404
+
+@app.errorhandler(405)
+def error_405(error):
+    return jsonify({"estado": "error", "mensaje": "método no permitido para esta ruta."}), 405
+
+@app.errorhandler(413)
+def error_413(error):
+    return jsonify({"estado": "error", "mensaje": "el archivo supera el tamaño máximo permitido de 15 MB."}), 413
+
+@app.errorhandler(500)
+def error_500(error):
+    return jsonify({"estado": "error", "mensaje": "error interno del servidor."}), 500
+    
+    
+
+
+
+
+
+
+
+
 
 # =====================================================
 # iniciar servidor
@@ -8140,5 +8136,5 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=BACKEND_PORT,
-        debug=True
+        debug=False
     )
