@@ -8342,7 +8342,7 @@ if __name__ == "__main__":
     print(" para que otra pc pueda ver el sistema, ejecuta angular así:")
     print(" ng serve --host 0.0.0.0 --port 4300")
     print("--------------------------------------")
-    print(" si no abre desde otra pc, habilita firewall para los puertos 4300 y 5050")
+    print(" si no abre desde otra pc, habilita firewall para los puertos 4300 y 5050 sapos ")
     print("======================================")
 
     app.run(
