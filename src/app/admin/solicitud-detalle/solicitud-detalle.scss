@@ -164,6 +164,17 @@
   font-weight: 650;
 }
 
+.eyebrow {
+  display: inline-flex;
+  padding: 8px 13px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 12px;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
 .refresh-btn {
   border: none;
   cursor: pointer;
@@ -316,851 +327,6 @@
   border: 1px solid #e2e8f0;
 }
 
-/* =====================================================
-   CARDS DE ACCIONES
-===================================================== */
-
-.actions-card,
-.documents-card,
-.card {
-  margin-bottom: 20px;
-  padding: 24px;
-  border-radius: 24px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.07);
-}
-
-.actions-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 22px;
-}
-
-.actions-card h3,
-.documents-card h3,
-.card h3 {
-  margin: 0;
-  color: #0f172a;
-  font-size: 22px;
-  font-weight: 950;
-}
-
-.actions-card p,
-.documents-card p,
-.card p {
-  margin: 8px 0 0;
-  color: #64748b;
-  line-height: 1.55;
-  font-weight: 650;
-}
-
-.admin-review-card {
-  border-color: rgba(37, 99, 235, 0.22);
-  background:
-    radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 35%),
-    #ffffff;
-}
-
-.firmaec-required-card {
-  border-color: rgba(245, 158, 11, 0.32);
-  background:
-    radial-gradient(circle at top right, rgba(245, 158, 11, 0.16), transparent 35%),
-    #ffffff;
-}
-
-.completed-card {
-  border-color: rgba(34, 197, 94, 0.26);
-  background:
-    radial-gradient(circle at top right, rgba(34, 197, 94, 0.12), transparent 35%),
-    #ffffff;
-}
-
-.completed-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  white-space: nowrap;
-  padding: 12px 16px;
-  border-radius: 999px;
-  color: #166534;
-  background: #dcfce7;
-  border: 1px solid #bbf7d0;
-  font-weight: 950;
-}
-
-.completed-badge.warning {
-  color: #92400e;
-  background: #fef3c7;
-  border-color: #fde68a;
-}
-
-/* =====================================================
-   BOTONES DE ACCIÓN
-===================================================== */
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.approve-btn,
-.finish-btn,
-.reject-btn,
-.signed-pdf-btn,
-.btn-upload,
-.btn-doc-secondary {
-  border: none;
-  cursor: pointer;
-  min-height: 46px;
-  padding: 12px 16px;
-  border-radius: 15px;
-  color: #ffffff;
-  font-weight: 950;
-  transition:
-    transform 0.2s ease,
-    filter 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.approve-btn {
-  background: linear-gradient(135deg, #15803d, #22c55e);
-  box-shadow: 0 14px 28px rgba(21, 128, 61, 0.22);
-}
-
-.finish-btn {
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
-  box-shadow: 0 14px 28px rgba(15, 118, 110, 0.22);
-}
-
-.reject-btn {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
-  box-shadow: 0 14px 28px rgba(220, 38, 38, 0.22);
-}
-
-.signed-pdf-btn {
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
-  box-shadow: 0 14px 28px rgba(15, 118, 110, 0.22);
-}
-
-.btn-upload.electronic {
-  background: linear-gradient(135deg, #7c3aed, #2563eb);
-  box-shadow: 0 16px 30px rgba(124, 58, 237, 0.25);
-}
-
-.approve-btn:hover:not(:disabled),
-.finish-btn:hover:not(:disabled),
-.reject-btn:hover:not(:disabled),
-.signed-pdf-btn:hover:not(:disabled),
-.btn-upload:hover:not(:disabled),
-.btn-doc-secondary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  filter: brightness(1.04);
-}
-
-.approve-btn:disabled,
-.finish-btn:disabled,
-.reject-btn:disabled,
-.signed-pdf-btn:disabled,
-.btn-upload:disabled,
-.btn-doc-secondary:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-  box-shadow: none;
-}
-
-/* =====================================================
-   DOCUMENTOS
-===================================================== */
-
-.documents-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  align-items: flex-start;
-  margin-bottom: 20px;
-}
-
-.document-status {
-  min-width: 250px;
-  text-align: center;
-}
-
-.document-status.ok {
-  color: #166534;
-  background: #dcfce7;
-  border: 1px solid #bbf7d0;
-}
-
-.document-status.pending {
-  color: #92400e;
-  background: #fef3c7;
-  border: 1px solid #fde68a;
-}
-
-.documents-flow {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
-  gap: 16px;
-}
-
-.flow-step {
-  padding: 20px;
-  border-radius: 22px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.flow-step:hover {
-  transform: translateY(-2px);
-  border-color: #bfdbfe;
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
-}
-
-.step-number {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 12px;
-  border-radius: 14px;
-  color: #ffffff;
-  background: linear-gradient(135deg, #2563eb, #0284c7);
-  font-weight: 950;
-}
-
-.flow-step h4 {
-  margin: 0;
-  color: #0f172a;
-  font-size: 17px;
-  font-weight: 950;
-}
-
-.doc-actions,
-.upload-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.hint-box {
-  margin-top: 14px;
-  padding: 13px 14px;
-  border-radius: 16px;
-  color: #92400e;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-left: 5px solid #f59e0b;
-  font-weight: 800;
-  line-height: 1.45;
-}
-
-.document-warning,
-.document-success {
-  margin-top: 16px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  font-weight: 850;
-  line-height: 1.45;
-}
-
-.document-warning {
-  color: #92400e;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-}
-
-.document-success {
-  color: #166534;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-}
-
-/* =====================================================
-   INFORMACIÓN
-===================================================== */
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(160px, 1fr));
-  gap: 14px;
-  margin-top: 18px;
-}
-
-.info-grid div {
-  padding: 14px;
-  border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-}
-
-.info-grid span {
-  display: block;
-  margin-bottom: 5px;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.info-grid strong {
-  display: block;
-  color: #0f172a;
-  font-size: 14px;
-  font-weight: 900;
-  word-break: break-word;
-}
-
-.web-list {
-  display: grid;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.web-item {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  padding: 14px;
-  border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-}
-
-.web-item > span {
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  color: #ffffff;
-  background: linear-gradient(135deg, #2563eb, #0284c7);
-  font-weight: 950;
-}
-
-.web-item strong {
-  color: #0f172a;
-  font-weight: 950;
-  word-break: break-word;
-}
-
-.web-item p,
-.justification {
-  margin: 6px 0 0;
-  color: #64748b;
-  line-height: 1.6;
-  font-weight: 650;
-}
-
-/* =====================================================
-   MODAL FIRMAEC - VENTANA FLOTANTE
-===================================================== */
-
-.modal-backdrop-firmaec {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.22), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.18), transparent 34%),
-    rgba(15, 23, 42, 0.74);
-  backdrop-filter: blur(10px);
-}
-
-.modal-firmaec-card {
-  position: relative;
-  width: min(980px, 100%);
-  max-height: 92vh;
-  overflow-y: auto;
-  padding: 28px;
-  border-radius: 28px;
-  background:
-    linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.98)),
-    #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.95);
-  box-shadow:
-    0 30px 80px rgba(15, 23, 42, 0.30),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  animation: modalFirmaEcIn 0.25s ease;
-}
-
-@keyframes modalFirmaEcIn {
-  from {
-    opacity: 0;
-    transform: translateY(18px) scale(0.98);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.close-modal-firmaec {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  z-index: 2;
-  width: 42px;
-  height: 42px;
-  border: none;
-  border-radius: 14px;
-  cursor: pointer;
-  color: #334155;
-  background: #f1f5f9;
-  font-size: 30px;
-  line-height: 1;
-  display: grid;
-  place-items: center;
-  transition:
-    transform 0.2s ease,
-    background 0.2s ease,
-    color 0.2s ease;
-}
-
-.close-modal-firmaec:hover:not(:disabled) {
-  transform: rotate(90deg);
-  color: #991b1b;
-  background: #fee2e2;
-}
-
-.close-modal-firmaec:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-  transform: none;
-  color: #94a3b8;
-  background: #e2e8f0;
-}
-
-.firmaec-modal-header {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  padding-right: 52px;
-  margin-bottom: 20px;
-}
-
-.firmaec-modal-icon {
-  width: 58px;
-  height: 58px;
-  min-width: 58px;
-  border-radius: 20px;
-  display: grid;
-  place-items: center;
-  color: #ffffff;
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
-  box-shadow: 0 18px 36px rgba(37, 99, 235, 0.28);
-}
-
-.firmaec-modal-icon i {
-  font-size: 26px;
-  line-height: 1;
-}
-
-.firmaec-modal-header span {
-  display: inline-flex;
-  margin-bottom: 6px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  color: #1d4ed8;
-  background: #dbeafe;
-  font-size: 12px;
-  font-weight: 950;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.firmaec-modal-header h3 {
-  margin: 0;
-  color: #0f172a;
-  font-size: 26px;
-  font-weight: 950;
-  letter-spacing: -0.5px;
-}
-
-.firmaec-modal-header p {
-  margin: 8px 0 0;
-  color: #64748b;
-  line-height: 1.55;
-  font-weight: 650;
-}
-
-.firmaec-warning {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  margin: 18px 0;
-  padding: 18px;
-  border-radius: 20px;
-  color: #92400e;
-  background: linear-gradient(135deg, #fffbeb, #fef3c7);
-  border: 1px solid #fde68a;
-}
-
-.firmaec-warning > i {
-  font-size: 22px;
-  line-height: 1;
-  margin-top: 2px;
-}
-
-.firmaec-warning h4 {
-  margin: 0 0 8px;
-  color: #78350f;
-  font-size: 16px;
-  font-weight: 950;
-}
-
-.firmaec-warning p {
-  margin: 0;
-  line-height: 1.65;
-  font-weight: 700;
-}
-
-.firmaec-generated {
-  display: grid;
-  gap: 6px;
-  margin: 18px 0;
-  padding: 18px;
-  border-radius: 20px;
-  background:
-    radial-gradient(circle at top right, rgba(37, 99, 235, 0.15), transparent 40%),
-    linear-gradient(135deg, #eff6ff, #ffffff);
-  border: 1px solid #bfdbfe;
-}
-
-.firmaec-generated span {
-  color: #1d4ed8;
-  font-size: 12px;
-  font-weight: 950;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.firmaec-generated strong {
-  color: #0f172a;
-  font-size: 24px;
-  font-weight: 950;
-  word-break: break-word;
-}
-
-.modal-request-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
-  gap: 12px;
-  margin: 18px 0;
-}
-
-.modal-request-summary div {
-  padding: 14px;
-  border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-}
-
-.modal-request-summary span {
-  display: block;
-  margin-bottom: 5px;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.modal-request-summary strong {
-  display: block;
-  color: #0f172a;
-  font-size: 14px;
-  font-weight: 900;
-  word-break: break-word;
-}
-
-.firmaec-upload-zone {
-  margin-top: 18px;
-  min-height: 160px;
-  border: 2px dashed #93c5fd;
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at top, rgba(37, 99, 235, 0.08), transparent 45%),
-    #f8fafc;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  gap: 8px;
-  padding: 26px;
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    background 0.2s ease,
-    transform 0.2s ease;
-}
-
-.firmaec-upload-zone:hover {
-  transform: translateY(-2px);
-  border-color: #2563eb;
-  background:
-    radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 45%),
-    #eff6ff;
-}
-
-.firmaec-upload-zone input {
-  display: none;
-}
-
-.firmaec-upload-zone i {
-  color: #2563eb;
-  font-size: 42px;
-  line-height: 1;
-}
-
-.firmaec-upload-zone strong {
-  color: #0f172a;
-  font-size: 16px;
-  font-weight: 950;
-  word-break: break-word;
-}
-
-.firmaec-upload-zone span {
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 750;
-}
-
-.preview-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.preview-btn,
-.remove-selected-btn {
-  border: none;
-  cursor: pointer;
-  min-height: 44px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  font-weight: 950;
-  transition:
-    transform 0.2s ease,
-    filter 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.preview-btn {
-  color: #ffffff;
-  background: linear-gradient(135deg, #2563eb, #0284c7);
-  box-shadow: 0 14px 26px rgba(37, 99, 235, 0.22);
-}
-
-.remove-selected-btn {
-  color: #991b1b;
-  background: #fee2e2;
-  border: 1px solid #fecaca;
-}
-
-.preview-btn:hover:not(:disabled),
-.remove-selected-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  filter: brightness(1.04);
-}
-
-.preview-btn:disabled,
-.remove-selected-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.65;
-  box-shadow: none;
-}
-
-.firmaec-error,
-.firmaec-success {
-  margin-top: 16px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  font-weight: 850;
-  line-height: 1.45;
-}
-
-.firmaec-error {
-  color: #991b1b;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-}
-
-.firmaec-success {
-  color: #166534;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-}
-
-.firmaec-final-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.send-firmaec-btn {
-  border: none;
-  cursor: pointer;
-  min-height: 48px;
-  padding: 13px 20px;
-  border-radius: 16px;
-  color: #ffffff;
-  background: linear-gradient(135deg, #15803d, #22c55e);
-  box-shadow: 0 16px 32px rgba(21, 128, 61, 0.24);
-  font-weight: 950;
-  transition:
-    transform 0.2s ease,
-    filter 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.send-firmaec-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  filter: brightness(1.04);
-  box-shadow: 0 20px 38px rgba(21, 128, 61, 0.32);
-}
-
-.send-firmaec-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-  box-shadow: none;
-}
-
-/* =====================================================
-   MODAL RECHAZO
-===================================================== */
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 9000;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(15, 23, 42, 0.72);
-  backdrop-filter: blur(8px);
-}
-
-.modal-card {
-  width: min(620px, 100%);
-  padding: 26px;
-  border-radius: 24px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28);
-}
-
-.modal-card h2 {
-  margin: 0;
-  color: #0f172a;
-  font-size: 24px;
-  font-weight: 950;
-}
-
-.modal-card p {
-  margin: 10px 0 18px;
-  color: #64748b;
-  line-height: 1.55;
-  font-weight: 650;
-}
-
-.modal-card label {
-  display: grid;
-  gap: 8px;
-  color: #334155;
-  font-weight: 900;
-}
-
-.modal-card textarea {
-  width: 100%;
-  resize: vertical;
-  min-height: 130px;
-  border: 1px solid #cbd5e1;
-  border-radius: 16px;
-  padding: 14px;
-  outline: none;
-  color: #0f172a;
-  font-family: inherit;
-  font-size: 14px;
-}
-
-.modal-card textarea:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-}
-
-.counter {
-  margin-top: 8px;
-  text-align: right;
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.cancel-modal,
-.confirm-reject {
-  border: none;
-  cursor: pointer;
-  min-height: 44px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  font-weight: 950;
-  transition:
-    transform 0.2s ease,
-    filter 0.2s ease;
-}
-
-.cancel-modal {
-  color: #334155;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-}
-
-.confirm-reject {
-  color: #ffffff;
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
-}
-
-.cancel-modal:hover:not(:disabled),
-.confirm-reject:hover:not(:disabled) {
-  transform: translateY(-2px);
-  filter: brightness(1.04);
-}
-
-.cancel-modal:disabled,
-.confirm-reject:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
 /* =====================================================
    BOTONES SUPERIORES
 ===================================================== */
@@ -1618,13 +784,32 @@
   min-height: 42px;
   padding: 10px 14px;
   border-radius: 14px;
+  border: none;
+  cursor: pointer;
   color: #ffffff;
   background: linear-gradient(135deg, #2563eb, #0284c7);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.20);
   display: inline-flex;
   align-items: center;
   gap: 8px;
   text-decoration: none;
   font-weight: 950;
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.document-download-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.04);
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28);
+}
+
+.document-download-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
 }
 
 .empty-documents {
@@ -1660,6 +845,18 @@
    MODAL FIRMAEC
 ===================================================== */
 
+@keyframes modalFirmaEcIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .modal-backdrop-firmaec,
 .modal-backdrop-rechazo {
   position: fixed;
@@ -1686,6 +883,10 @@
   background: #ffffff;
   border: 1px solid #e2e8f0;
   box-shadow: 0 30px 80px rgba(15, 23, 42, 0.30);
+}
+
+.modal-firmaec-card {
+  animation: modalFirmaEcIn 0.25s ease;
 }
 
 .close-modal-firmaec,
@@ -2075,6 +1276,7 @@
   .cancel-modal-btn,
   .send-firmaec-btn,
   .confirm-reject-btn,
+  .document-download-btn,
   .back-btn,
   .refresh-btn,
   .logout-top-btn {
@@ -2084,11 +1286,6 @@
 }
 
 
-
-/* =====================================================
-   RESPONSIVE
-===================================================== */
-
 @media (max-width: 1150px) {
   .detail-page {
     grid-template-columns: 1fr;
@@ -2097,10 +1294,6 @@
   .sidebar {
     position: relative;
     min-height: auto;
-  }
-
-  .documents-flow {
-    grid-template-columns: 1fr;
   }
 
   .detail-grid {
@@ -2114,9 +1307,7 @@
   }
 
   .topbar,
-  .hero-card,
-  .actions-card,
-  .documents-header {
+  .hero-card {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -2125,52 +1316,8 @@
     justify-items: start;
   }
 
-  .actions,
-  .doc-actions,
-  .upload-buttons,
-  .modal-actions,
-  .preview-actions {
-    width: 100%;
-    flex-direction: column;
-  }
-
-  .approve-btn,
-  .finish-btn,
-  .reject-btn,
-  .signed-pdf-btn,
-  .btn-upload,
-  .btn-doc-secondary,
-  .cancel-modal,
-  .confirm-reject,
-  .preview-btn,
-  .remove-selected-btn,
-  .send-firmaec-btn,
-  .refresh-btn {
-    width: 100%;
-  }
-
-  .info-grid,
-  .modal-request-summary {
-    grid-template-columns: 1fr;
-  }
-
   .modal-backdrop-firmaec,
-  .modal-backdrop {
+  .modal-backdrop-rechazo {
     padding: 14px;
-  }
-
-  .modal-firmaec-card,
-  .modal-card {
-    padding: 22px;
-    border-radius: 22px;
-  }
-
-  .firmaec-modal-header {
-    flex-direction: column;
-    padding-right: 44px;
-  }
-
-  .firmaec-final-actions {
-    justify-content: stretch;
   }
 }

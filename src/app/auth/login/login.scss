@@ -162,28 +162,18 @@
 }
 
 /* =====================================================
-   LOGO INAMHI LOGIN
+   LOGO INAMHI
 ===================================================== */
 
 .login-logo-inamhi {
   display: block;
-
-  /*
-    AQUÍ CONTROLAS EL TAMAÑO DEL LOGO EN ESCRITORIO
-    mínimo: 270px
-    adaptable: 32vw
-    máximo: 420px
-  */
   width: clamp(270px, 32vw, 420px);
   height: auto;
-
   object-fit: contain;
   background: transparent;
   border: none;
   padding: 0;
-
   margin: 36px 0 28px;
-
   filter: drop-shadow(0 24px 34px rgba(0, 0, 0, 0.38));
   transition:
     transform 0.25s ease,
@@ -252,6 +242,7 @@
   font-size: 18px;
   line-height: 1.75;
 }
+
 /* =====================================================
    ROLES
 ===================================================== */
@@ -260,13 +251,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-
   margin-top: 32px;
 }
 
 .roles-box span {
   display: inline-flex;
   align-items: center;
+  gap: 7px;
 
   padding: 10px 15px;
   border-radius: 999px;
@@ -282,6 +273,11 @@
   transition:
     transform 0.2s ease,
     background 0.2s ease;
+}
+
+.roles-box span i {
+  font-size: 13px;
+  opacity: 0.85;
 }
 
 .roles-box span:hover {
@@ -313,6 +309,20 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.18);
 
   overflow: hidden;
+
+  animation: cardSlideIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .login-card::before {
@@ -367,29 +377,49 @@ form {
   gap: 18px;
 }
 
-label {
+/* =====================================================
+   GRUPOS DE CAMPO
+===================================================== */
+
+.field-group {
   display: grid;
-  gap: 8px;
-  width: 100%;
+  gap: 9px;
+}
+
+.field-group > label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
 
   color: #edf8ff;
   font-size: 14px;
   font-weight: 900;
 }
 
-input {
+.label-icon {
+  font-size: 14px;
+  color: #8da8bd;
+}
+
+/* =====================================================
+   WRAPPER DE INPUT
+===================================================== */
+
+.input-wrapper {
+  position: relative;
+}
+
+.input-wrapper input {
   width: 100%;
-  max-width: 100%;
   min-width: 0;
-
   display: block;
-
   padding: 15px 16px;
   border-radius: 17px;
 
   color: #ffffff;
   font-size: 15px;
   font-weight: 650;
+  font-family: inherit;
 
   outline: none;
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -403,11 +433,11 @@ input {
     background 0.2s ease;
 }
 
-input::placeholder {
+.input-wrapper input::placeholder {
   color: #8da8bd;
 }
 
-input:focus {
+.input-wrapper input:focus {
   border-color: rgba(247, 201, 72, 0.88);
   box-shadow:
     0 0 0 4px rgba(247, 201, 72, 0.13),
@@ -415,9 +445,177 @@ input:focus {
   background: rgba(0, 0, 0, 0.34);
 }
 
-.error-box {
-  width: 100%;
+.input-wrapper input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 
+/* Input de contraseña deja espacio para el botón ojo */
+.password-wrapper input {
+  padding-right: 52px;
+}
+
+/* =====================================================
+   BOTÓN VER / OCULTAR CONTRASEÑA
+===================================================== */
+
+.toggle-password-btn {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+
+  width: 34px;
+  height: 34px;
+
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+
+  background: transparent;
+  color: #8da8bd;
+
+  display: grid;
+  place-items: center;
+
+  font-size: 17px;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.toggle-password-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.11);
+  color: #f7c948;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.toggle-password-btn:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.96);
+}
+
+.toggle-password-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* =====================================================
+   AVISO BLOQ MAYÚS
+===================================================== */
+
+.caps-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 9px 13px;
+  border-radius: 12px;
+
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.10);
+  border: 1px solid rgba(251, 191, 36, 0.26);
+
+  font-size: 13px;
+  font-weight: 850;
+
+  animation: fadeSlideDown 0.2s ease;
+}
+
+.caps-warning i {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+@keyframes fadeSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =====================================================
+   RECORDAR USUARIO
+===================================================== */
+
+.remember-row {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  cursor: pointer;
+  color: #c2d9ea;
+  font-size: 14px;
+  font-weight: 750;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.checkbox-custom {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 7px;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.26);
+  display: grid;
+  place-items: center;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.checkbox-label input[type="checkbox"]:checked ~ .checkbox-custom,
+.checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
+  background: #f7c948;
+  border-color: #f7c948;
+  box-shadow: 0 0 12px rgba(247, 201, 72, 0.35);
+}
+
+.checkbox-label input[type="checkbox"]:checked ~ .checkbox-custom::after,
+.checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
+  content: "";
+  display: block;
+  width: 11px;
+  height: 7px;
+  border-left: 2.5px solid #102236;
+  border-bottom: 2.5px solid #102236;
+  transform: rotate(-45deg) translateY(-1px);
+}
+
+.checkbox-label:hover .checkbox-custom {
+  border-color: rgba(255, 255, 255, 0.38);
+}
+
+/* =====================================================
+   ERROR
+===================================================== */
+
+.error-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+
+  width: 100%;
   padding: 13px 14px;
   border-radius: 17px;
 
@@ -428,9 +626,21 @@ input:focus {
   font-size: 14px;
   font-weight: 750;
   line-height: 1.45;
+
+  animation: fadeSlideDown 0.22s ease;
 }
 
-button {
+.error-box i {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* =====================================================
+   BOTÓN ENVIAR
+===================================================== */
+
+.submit-btn {
   width: 100%;
   cursor: pointer;
 
@@ -443,6 +653,7 @@ button {
   color: #102236;
   font-size: 15px;
   font-weight: 950;
+  font-family: inherit;
   letter-spacing: 0.01em;
 
   background: linear-gradient(135deg, #f7c948, #ffdf77);
@@ -455,49 +666,79 @@ button {
     opacity 0.25s ease;
 }
 
-button:hover:not(:disabled) {
+.submit-btn:hover:not(:disabled) {
   transform: translateY(-3px);
   filter: brightness(1.045);
   box-shadow: 0 25px 44px rgba(247, 201, 72, 0.30);
 }
 
-button:active:not(:disabled) {
+.submit-btn:active:not(:disabled) {
   transform: translateY(-1px);
 }
 
-button:disabled {
+.submit-btn:disabled {
   cursor: not-allowed;
   opacity: 0.68;
   box-shadow: none;
 }
 
+.btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.btn-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
 /* =====================================================
-   USUARIOS DE PRUEBA
+   SPINNER DE CARGA
 ===================================================== */
 
-.test-users {
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(16, 34, 54, 0.28);
+  border-top-color: #102236;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =====================================================
+   PIE DE SEGURIDAD
+===================================================== */
+
+.security-footer {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
   margin-top: 22px;
-  padding: 16px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
 
-  display: grid;
-  gap: 7px;
-
-  border-radius: 20px;
-  color: #bfd8ea;
-  font-size: 13px;
-
-  background: rgba(0, 0, 0, 0.19);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #7aa3bc;
+  font-size: 12.5px;
+  font-weight: 750;
 }
 
-.test-users strong {
-  color: #ffffff;
-  margin-bottom: 3px;
-}
-
-.test-users span {
-  font-family: Consolas, "Courier New", monospace;
-  word-break: break-word;
+.security-footer i {
+  color: #22c55e;
+  font-size: 15px;
+  flex-shrink: 0;
 }
 
 /* =====================================================
@@ -554,6 +795,10 @@ button:disabled {
   .login-card {
     max-width: 520px;
     justify-self: center;
+  }
+
+  .field-group > label {
+    justify-content: flex-start;
   }
 }
 
@@ -612,13 +857,9 @@ button:disabled {
     font-size: 27px;
   }
 
-  input,
-  button {
+  .input-wrapper input,
+  .submit-btn {
     border-radius: 15px;
-  }
-
-  .test-users {
-    font-size: 12.5px;
   }
 }
 

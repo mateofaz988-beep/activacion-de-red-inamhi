@@ -3,10 +3,17 @@
   <div class="background-glow glow-two"></div>
 
   <main class="login-wrapper">
-    <section class="info-panel">
-      <a routerLink="/" class="back-link">← Volver al inicio</a>
 
-      <!-- LOGO PRINCIPAL INAMHI -->
+    <!-- =====================================================
+         PANEL INFORMATIVO IZQUIERDO
+    ====================================================== -->
+
+    <section class="info-panel">
+      <a routerLink="/" class="back-link">
+        <i class="bi bi-arrow-left"></i>
+        Volver al inicio
+      </a>
+
       <img
         src="/logo_inamhi.png"
         alt="Logo INAMHI"
@@ -14,7 +21,9 @@
       />
 
       <div class="info-content">
-        <span class="badge">Acceso administrativo</span>
+        <span class="badge">
+          Acceso administrativo
+        </span>
 
         <h2>Sistema de Liberación Web</h2>
 
@@ -25,57 +34,152 @@
         </p>
 
         <div class="roles-box">
-          <span>Administrador</span>
-          <span>Jefe inmediato</span>
-          <span>Máxima autoridad</span>
-          <span>Analista TICS</span>
+          <span>
+            <i class="bi bi-person-badge-fill"></i>
+            Administrador
+          </span>
+          <span>
+            <i class="bi bi-person-check-fill"></i>
+            Jefe inmediato
+          </span>
+          <span>
+            <i class="bi bi-shield-check"></i>
+            Máxima autoridad
+          </span>
+          <span>
+            <i class="bi bi-cpu-fill"></i>
+            Analista TICS
+          </span>
         </div>
       </div>
     </section>
+
+    <!-- =====================================================
+         TARJETA DE LOGIN
+    ====================================================== -->
 
     <section class="login-card">
       <div class="card-header">
         <span class="status-dot"></span>
-        <span>Portal seguro</span>
+        <span>Portal seguro · HTTPS</span>
       </div>
 
       <h3>Iniciar sesión</h3>
-      <p class="subtitle">Ingrese sus credenciales institucionales.</p>
+      <p class="subtitle">Ingrese sus credenciales institucionales para continuar.</p>
 
-      <form (ngSubmit)="ingresar()" #loginForm="ngForm">
-        <label>
-          Usuario
-          <input
-            type="text"
-            name="usuario"
-            [(ngModel)]="usuario"
-            placeholder="Ejemplo: admin"
-            autocomplete="username"
-          />
-        </label>
+      <form (ngSubmit)="ingresar()" #loginForm="ngForm" novalidate>
 
-        <label>
-          Contraseña
-          <input
-            type="password"
-            name="password"
-            [(ngModel)]="password"
-            placeholder="Ingrese su contraseña"
-            autocomplete="current-password"
-          />
-        </label>
+        <!-- CAMPO USUARIO -->
+        <div class="field-group">
+          <label for="campo-usuario">
+            <i class="bi bi-person-fill label-icon"></i>
+            Usuario
+          </label>
 
-        <div class="error-box" *ngIf="error">
-          {{ error }}
+          <div class="input-wrapper">
+            <input
+              id="campo-usuario"
+              type="text"
+              name="usuario"
+              [(ngModel)]="usuario"
+              placeholder="Ingrese su usuario"
+              autocomplete="username"
+              [disabled]="cargando"
+              spellcheck="false"
+              autocorrect="off"
+              autocapitalize="off"
+            />
+          </div>
         </div>
 
-        <button type="submit" [disabled]="cargando">
-          <span *ngIf="!cargando">Ingresar al sistema</span>
-          <span *ngIf="cargando">Validando acceso...</span>
+        <!-- CAMPO CONTRASEÑA -->
+        <div class="field-group">
+          <label for="campo-password">
+            <i class="bi bi-lock-fill label-icon"></i>
+            Contraseña
+          </label>
+
+          <div class="input-wrapper password-wrapper">
+            <input
+              id="campo-password"
+              [type]="mostrarPassword ? 'text' : 'password'"
+              name="password"
+              [(ngModel)]="password"
+              placeholder="Ingrese su contraseña"
+              autocomplete="current-password"
+              [disabled]="cargando"
+              (keydown)="detectarCapsLock($event)"
+              (keyup)="detectarCapsLock($event)"
+            />
+
+            <button
+              type="button"
+              class="toggle-password-btn"
+              (click)="toggleMostrarPassword()"
+              [attr.aria-label]="mostrarPassword ? 'Ocultar contraseña' : 'Ver contraseña'"
+              [disabled]="cargando"
+              tabindex="-1"
+            >
+              <i [class]="mostrarPassword ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+            </button>
+          </div>
+
+          <div class="caps-warning" *ngIf="capsLockActivo">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Bloq Mayús activo — puede afectar su contraseña</span>
+          </div>
+        </div>
+
+        <!-- RECORDAR USUARIO -->
+        <div class="remember-row">
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              name="recordarUsuario"
+              [(ngModel)]="recordarUsuario"
+              [disabled]="cargando"
+            />
+            <span class="checkbox-custom" aria-hidden="true"></span>
+            Recordar usuario
+          </label>
+        </div>
+
+        <!-- ERROR -->
+        <div
+          class="error-box"
+          *ngIf="error"
+          role="alert"
+          aria-live="assertive"
+        >
+          <i class="bi bi-exclamation-circle-fill"></i>
+          <span>{{ error }}</span>
+        </div>
+
+        <!-- BOTÓN ENVIAR -->
+        <button
+          type="submit"
+          class="submit-btn"
+          [disabled]="cargando"
+        >
+          <span class="btn-content" *ngIf="!cargando">
+            <i class="bi bi-box-arrow-in-right"></i>
+            Ingresar al sistema
+          </span>
+
+          <span class="btn-loading" *ngIf="cargando">
+            <span class="spinner"></span>
+            Validando acceso...
+          </span>
         </button>
+
       </form>
 
-     
+      <!-- PIE DE SEGURIDAD -->
+      <div class="security-footer">
+        <i class="bi bi-shield-lock-fill"></i>
+        <span>Sesión cifrada · Acceso registrado · Solo uso institucional</span>
+      </div>
     </section>
+
   </main>
 </section>

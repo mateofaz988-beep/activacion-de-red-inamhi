@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -12,7 +12,7 @@ import { AuthService } from '../../services/auth.service';
   templateUrl: './login.html',
   styleUrl: './login.scss'
 })
-export class Login {
+export class Login implements OnInit {
 
   usuario: string = '';
   password: string = '';
@@ -20,29 +20,61 @@ export class Login {
   cargando: boolean = false;
   error: string = '';
 
+  mostrarPassword: boolean = false;
+  recordarUsuario: boolean = false;
+  capsLockActivo: boolean = false;
+
   constructor(
     private authService: AuthService,
     private router: Router
   ) {}
 
+  ngOnInit(): void {
+    const usuarioGuardado = localStorage.getItem('login_recordar_usuario');
+
+    if (usuarioGuardado) {
+      this.usuario = usuarioGuardado;
+      this.recordarUsuario = true;
+    }
+  }
+
+  toggleMostrarPassword(): void {
+    this.mostrarPassword = !this.mostrarPassword;
+  }
+
+  detectarCapsLock(event: KeyboardEvent): void {
+    if (event.getModifierState) {
+      this.capsLockActivo = event.getModifierState('CapsLock');
+    }
+  }
+
   ingresar(): void {
     this.error = '';
 
-    if (!this.usuario.trim()) {
+    const usuarioTrimmed = this.usuario.trim();
+    const passwordTrimmed = this.password.trim();
+
+    if (!usuarioTrimmed) {
       this.error = 'Ingrese su usuario institucional.';
       return;
     }
 
-    if (!this.password.trim()) {
+    if (!passwordTrimmed) {
       this.error = 'Ingrese su contraseña.';
       return;
+    }
+
+    if (this.recordarUsuario) {
+      localStorage.setItem('login_recordar_usuario', usuarioTrimmed);
+    } else {
+      localStorage.removeItem('login_recordar_usuario');
     }
 
     this.cargando = true;
 
     this.authService.login({
-      usuario: this.usuario.trim(),
-      password: this.password.trim()
+      usuario: usuarioTrimmed,
+      password: passwordTrimmed
     }).subscribe({
       next: (response) => {
         this.cargando = false;
@@ -77,7 +109,7 @@ export class Login {
         if (err.error && err.error.mensaje) {
           this.error = err.error.mensaje;
         } else {
-          this.error = 'No se pudo conectar con el servidor.';
+          this.error = 'No se pudo conectar con el servidor. Intente nuevamente.';
         }
       }
     });

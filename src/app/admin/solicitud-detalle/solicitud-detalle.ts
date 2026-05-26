@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
@@ -9,6 +8,7 @@ import { AuthService } from '../../services/auth.service';
 import {
   DocumentoSolicitud,
   PaginaWebAdmin,
+  RolFirmante,
   SolicitudAdmin,
   SolicitudesAdminService
 } from '../../services/solicitudes-admin.service';
@@ -42,8 +42,6 @@ export class SolicitudDetalle implements OnInit {
 
   cargando = false;
   procesando = false;
-  procesandoAprobacion = false;
-  procesandoFinalizacion = false;
   procesandoRechazo = false;
 
   error = '';
@@ -71,7 +69,6 @@ export class SolicitudDetalle implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private http: HttpClient,
     private authService: AuthService,
     private solicitudesService: SolicitudesAdminService
   ) {}
@@ -260,6 +257,21 @@ export class SolicitudDetalle implements OnInit {
 
   estaFinalizada(): boolean {
     return this.solicitud?.estado === 'finalizada';
+  }
+
+  // El jefe ha subido su propio documento firmado (rol_firmante = 'jefe_inmediato')
+  get jefeHaSubidoDocumento(): boolean {
+    return this.documentos.some(d => d.rol_firmante === 'jefe_inmediato');
+  }
+
+  // La autoridad ha subido su propio documento firmado
+  get autoridadHaSubidoDocumento(): boolean {
+    return this.documentos.some(d => d.rol_firmante === 'maxima_autoridad');
+  }
+
+  // TICS ha subido al menos un documento firmado
+  get ticsHaSubidoDocumento(): boolean {
+    return this.documentos.some(d => d.rol_firmante === 'analista_tics');
   }
 
   // =====================================================
@@ -513,30 +525,6 @@ export class SolicitudDetalle implements OnInit {
   }
 
   // =====================================================
-  // URL DE SUBIDA SEGÚN ROL
-  // =====================================================
-
-  obtenerUrlSubidaFirmaElectronica(): string {
-    if (!this.solicitud?.id) {
-      return '';
-    }
-
-    if (this.esJefe()) {
-      return `${this.API_BASE}/solicitudes/${this.solicitud.id}/jefe/subir-firma`;
-    }
-
-    if (this.esAutoridad()) {
-      return `${this.API_BASE}/solicitudes/${this.solicitud.id}/autoridad/subir-firma`;
-    }
-
-    if (this.esTics()) {
-      return `${this.API_BASE}/solicitudes/${this.solicitud.id}/tics/subir-firma`;
-    }
-
-    return '';
-  }
-
-  // =====================================================
   // SUBIR FIRMA ELECTRÓNICA
   // JEFE / AUTORIDAD / TICS
   // =====================================================
@@ -562,16 +550,6 @@ export class SolicitudDetalle implements OnInit {
       this.mostrarError(
         'PDF requerido',
         'Debe seleccionar el PDF firmado electrónicamente con FirmaEC.'
-      );
-      return;
-    }
-
-    const url = this.obtenerUrlSubidaFirmaElectronica();
-
-    if (!url) {
-      this.mostrarError(
-        'Ruta no configurada',
-        'El rol actual no tiene una ruta configurada para subir firma electrónica.'
       );
       return;
     }
@@ -616,26 +594,21 @@ export class SolicitudDetalle implements OnInit {
       return;
     }
 
-    const token = this.authService.getToken();
-
-    if (!token) {
-      this.authService.logout();
-      this.router.navigate(['/auth/login']);
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('archivo', this.archivoFirmadoElectronico);
+    const rolFirmante: RolFirmante = this.esJefe()
+      ? 'jefe_inmediato'
+      : this.esAutoridad()
+        ? 'maxima_autoridad'
+        : 'analista_tics';
 
     this.procesando = true;
     this.error = '';
     this.mensajeOk = '';
 
-    this.http.post<any>(url, formData, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }).subscribe({
+    this.solicitudesService.subirPdfFirmadoElectronico(
+      this.solicitud.id,
+      this.archivoFirmadoElectronico,
+      rolFirmante
+    ).subscribe({
       next: (response) => {
         this.procesando = false;
 
@@ -693,33 +666,6 @@ export class SolicitudDetalle implements OnInit {
   }
 
   // =====================================================
-  // COMPATIBILIDAD CON HTML ANTERIOR
-  // =====================================================
-
-  seleccionarArchivoFirmaElectronica(event: Event): void {
-    this.seleccionarArchivoFirmadoElectronico(event);
-  }
-
-  verPdfFirmaElectronica(): void {
-    this.verPdfFirmadoElectronico();
-  }
-
-  quitarPdfFirmaElectronica(): void {
-    this.quitarPdfFirmadoElectronico();
-  }
-
-  liberarVistaPreviaFirmaElectronica(): void {
-    this.liberarVistaPreviaFirmadoElectronico();
-  }
-
-  subirPdfFirmadoElectronico(): void {
-    this.subirFirmaElectronica();
-  }
-
-  subirPdfFirmaElectronica(): void {
-    this.subirFirmaElectronica();
-  }
-    // =====================================================
   // APROBACIÓN GENERAL JEFE / AUTORIDAD
   // =====================================================
 
@@ -793,73 +739,49 @@ export class SolicitudDetalle implements OnInit {
   }
 
   // =====================================================
-  // TICS: APROBAR VALIDACIÓN
+  // TICS: APROBAR (valida + finaliza en un solo paso)
   // =====================================================
 
   async confirmarAprobacionTics(): Promise<void> {
-    if (this.esAdmin()) {
-      this.mostrarError(
-        'Acción no permitida',
-        'El administrador no aprueba validaciones TICS. Solo revisa el proceso.'
-      );
-      return;
-    }
-
-    if (!this.solicitud) {
+    if (!this.solicitud || this.esAdmin()) {
       return;
     }
 
     if (!this.puedeAprobarValidacionTics()) {
       this.mostrarError(
         'Acción no disponible',
-        'La solicitud no se encuentra en estado pendiente de validación TICS.'
+        'La solicitud no está en estado pendiente de validación TICS o falta subir el PDF firmado.'
       );
       return;
     }
 
-    if (!this.documentoFirmadoCargado) {
-      Swal.fire({
-        title: 'PDF firmado requerido',
-        text: 'Para aprobar la validación TICS debe subir el PDF firmado electrónicamente con FirmaEC.',
-        icon: 'warning',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#d97706',
-        background: '#ffffff',
-        color: '#0f172a'
-      });
-
-      return;
-    }
-
     const resultado = await Swal.fire({
-      title: 'Aprobar validación TICS',
+      title: 'Aprobar y finalizar proceso TICS',
       html: `
         <div style="text-align:center">
-          <p style="margin: 0 0 10px; color:#475569;">
-            Esta acción aprobará la validación técnica y habilitará la etapa de finalización.
+          <p style="margin:0 0 12px;color:#475569;line-height:1.6;">
+            Esta acción aprobará la validación técnica y
+            <strong>finalizará automáticamente</strong> la solicitud,
+            notificando al solicitante por correo.
           </p>
 
-          <strong style="display:inline-block; color:#1d4ed8; font-size:17px; margin-bottom:10px;">
+          <strong style="display:inline-block;color:#1d4ed8;font-size:17px;margin-bottom:12px;">
             ${this.solicitud.codigo_solicitud}
           </strong>
 
           <div style="
-            margin-top:14px;
-            padding:12px;
-            border-radius:14px;
-            background:#f8fafc;
-            border:1px solid #e2e8f0;
-            color:#334155;
-            font-size:14px;
+            padding:12px;border-radius:14px;
+            background:#f0fdf4;border:1px solid #bbf7d0;
+            color:#166534;font-size:14px;
           ">
-            Estado actual: <b>${this.getEstadoTexto(this.solicitud.estado)}</b><br>
-            Siguiente estado: <b>Pendiente ejecución TICS</b>
+            <b>Solicitante:</b> ${this.solicitud.nombres_completos}<br>
+            <b>Correo:</b> ${this.solicitud.correo_institucional}
           </div>
         </div>
       `,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Sí, aprobar validación',
+      confirmButtonText: 'Sí, aprobar y finalizar',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#15803d',
       cancelButtonColor: '#64748b',
@@ -869,75 +791,22 @@ export class SolicitudDetalle implements OnInit {
     });
 
     if (resultado.isConfirmed) {
-      this.aprobar('validacion_tics');
+      this.aprobarTicsCompleto();
     }
   }
 
   // =====================================================
-  // TICS: FINALIZAR PROCESO
+  // TICS: FINALIZAR (fallback si el estado quedó en pendiente_ejecucion_tics)
   // =====================================================
 
   async confirmarFinalizacionTics(): Promise<void> {
-    if (this.esAdmin()) {
-      this.mostrarError(
-        'Acción no permitida',
-        'El administrador no finaliza procesos. Solo revisa información y documentos.'
-      );
-      return;
-    }
-
-    if (!this.solicitud) {
-      return;
-    }
-
-    if (!this.puedeFinalizarTics()) {
-      this.mostrarError(
-        'Finalización no disponible',
-        'Primero debe aprobarse la validación TICS para poder finalizar el proceso.'
-      );
-      return;
-    }
-
-    if (!this.documentoFirmadoCargado) {
-      Swal.fire({
-        title: 'PDF firmado requerido',
-        text: 'Para finalizar el proceso TICS debe existir un PDF firmado electrónicamente cargado.',
-        icon: 'warning',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#d97706',
-        background: '#ffffff',
-        color: '#0f172a'
-      });
-
+    if (!this.solicitud || this.esAdmin() || !this.puedeFinalizarTics()) {
       return;
     }
 
     const resultado = await Swal.fire({
       title: 'Finalizar proceso TICS',
-      html: `
-        <div style="text-align:center">
-          <p style="margin: 0 0 10px; color:#475569;">
-            Esta acción marcará la solicitud como finalizada y notificará al solicitante.
-          </p>
-
-          <strong style="display:inline-block; color:#1d4ed8; font-size:17px; margin-bottom:10px;">
-            ${this.solicitud.codigo_solicitud}
-          </strong>
-
-          <div style="
-            margin-top:14px;
-            padding:12px;
-            border-radius:14px;
-            background:#f8fafc;
-            border:1px solid #e2e8f0;
-            color:#334155;
-            font-size:14px;
-          ">
-            Estado actual: <b>${this.getEstadoTexto(this.solicitud.estado)}</b><br>
-            Estado final: <b>Finalizada</b>
-          </div>
-        </div>
-      `,
+      text: '¿Confirma que desea finalizar la solicitud y notificar al solicitante?',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, finalizar',
@@ -955,10 +824,131 @@ export class SolicitudDetalle implements OnInit {
   }
 
   // =====================================================
+  // TICS: APROBAR EN DOS PASOS ENCADENADOS
+  // Paso 1: pendiente_tics → pendiente_ejecucion_tics
+  // Paso 2: pendiente_ejecucion_tics → finalizada + correo
+  // =====================================================
+
+  aprobarTicsCompleto(): void {
+    if (!this.solicitud) {
+      return;
+    }
+
+    const solicitudId = this.solicitud.id;
+
+    this.procesando = true;
+    this.error = '';
+    this.mensajeOk = '';
+
+    // Paso 1: validar
+    this.solicitudesService.aprobarSolicitud(solicitudId).subscribe({
+      next: () => {
+        // Paso 2: finalizar
+        this.solicitudesService.aprobarSolicitud(solicitudId).subscribe({
+          next: (response) => {
+            this.procesando = false;
+
+            const correoEnviado = response?.correo_enviado === true;
+            const correoDestino = response?.solicitud?.correo_destino
+              || this.solicitud?.correo_institucional || '';
+            const errorCorreo = response?.error_correo;
+
+            Swal.fire({
+              title: 'Proceso TICS finalizado',
+              html: `
+                <div style="text-align:center">
+                  <p style="margin:0 0 14px;color:#475569;line-height:1.6;">
+                    La solicitud <strong style="color:#1d4ed8;">
+                    ${this.solicitud?.codigo_solicitud}</strong>
+                    fue finalizada correctamente.
+                  </p>
+                  ${correoEnviado ? `
+                    <div style="
+                      display:flex;align-items:center;gap:10px;
+                      padding:14px 16px;border-radius:14px;
+                      background:#f0fdf4;border:1px solid #bbf7d0;
+                      text-align:left;
+                    ">
+                      <i class="bi bi-envelope-check-fill"
+                         style="color:#16a34a;font-size:20px;flex-shrink:0;"></i>
+                      <div>
+                        <div style="color:#166534;font-weight:900;font-size:13px;">
+                          Notificación enviada
+                        </div>
+                        <div style="color:#15803d;font-size:13px;margin-top:2px;">
+                          Correo enviado a <strong>${correoDestino}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  ` : `
+                    <div style="
+                      display:flex;align-items:center;gap:10px;
+                      padding:14px 16px;border-radius:14px;
+                      background:#fefce8;border:1px solid #fde047;
+                      text-align:left;
+                    ">
+                      <i class="bi bi-exclamation-triangle-fill"
+                         style="color:#ca8a04;font-size:20px;flex-shrink:0;"></i>
+                      <div>
+                        <div style="color:#854d0e;font-weight:900;font-size:13px;">
+                          Correo no enviado
+                        </div>
+                        <div style="color:#92400e;font-size:13px;margin-top:2px;">
+                          ${errorCorreo || 'No se pudo notificar al solicitante.'}
+                        </div>
+                      </div>
+                    </div>
+                  `}
+                </div>
+              `,
+              icon: 'success',
+              confirmButtonText: 'Entendido',
+              confirmButtonColor: '#15803d',
+              background: '#ffffff',
+              color: '#0f172a'
+            }).then(() => {
+              this.cargarDetalle();
+            });
+          },
+          error: (err: any) => {
+            this.procesando = false;
+
+            if (err.status === 401) {
+              this.authService.logout();
+              this.router.navigate(['/auth/login']);
+              return;
+            }
+
+            this.mostrarError(
+              'Error al finalizar',
+              err.error?.mensaje || 'La validación fue aprobada pero no se pudo finalizar el proceso. Use el botón "Finalizar" para completarlo.'
+            );
+            this.cargarDetalle();
+          }
+        });
+      },
+      error: (err: any) => {
+        this.procesando = false;
+
+        if (err.status === 401) {
+          this.authService.logout();
+          this.router.navigate(['/auth/login']);
+          return;
+        }
+
+        this.mostrarError(
+          'No se pudo aprobar',
+          err.error?.mensaje || 'No se pudo aprobar la validación TICS.'
+        );
+      }
+    });
+  }
+
+  // =====================================================
   // APROBAR / AVANZAR FLUJO
   // =====================================================
 
-  aprobar(tipoAccion: 'general' | 'validacion_tics' | 'finalizacion_tics' = 'general'): void {
+  aprobar(tipoAccion: 'general' | 'finalizacion_tics' = 'general'): void {
     if (this.esAdmin()) {
       this.mostrarError(
         'Acción no permitida',
@@ -974,16 +964,12 @@ export class SolicitudDetalle implements OnInit {
     const estadoAntes = this.solicitud.estado;
 
     this.procesando = true;
-    this.procesandoAprobacion = tipoAccion !== 'finalizacion_tics';
-    this.procesandoFinalizacion = tipoAccion === 'finalizacion_tics';
     this.error = '';
     this.mensajeOk = '';
 
     this.solicitudesService.aprobarSolicitud(this.solicitud.id).subscribe({
       next: (response) => {
         this.procesando = false;
-        this.procesandoAprobacion = false;
-        this.procesandoFinalizacion = false;
 
         const estadoNuevo = response?.solicitud?.estado_actual || '';
         const etapaNueva = response?.solicitud?.etapa_actual || '';
@@ -1012,18 +998,65 @@ export class SolicitudDetalle implements OnInit {
           this.limpiarDocumentoFirmadoLocal('finalizada');
         }
 
-        let titulo = 'Solicitud aprobada';
-        let texto = response?.mensaje || 'La solicitud avanzó correctamente a la siguiente etapa.';
-
-        if (tipoAccion === 'validacion_tics') {
-          titulo = 'Validación TICS aprobada';
-          texto = 'La validación técnica fue aprobada. Ya puede finalizar el proceso TICS.';
-        }
-
         if (tipoAccion === 'finalizacion_tics') {
-          titulo = 'Proceso TICS finalizado';
-          texto = response?.mensaje || 'La solicitud fue finalizada correctamente.';
+          const correoEnviado = response?.correo_enviado === true;
+          const correoDestino  = response?.solicitud?.correo_destino || this.solicitud?.correo_institucional || '';
+          const errorCorreo    = response?.error_correo;
+
+          Swal.fire({
+            title: 'Proceso TICS finalizado',
+            html: `
+              <div style="text-align:center">
+                <p style="margin:0 0 14px;color:#475569;line-height:1.6;">
+                  La solicitud <strong style="color:#1d4ed8;">${this.solicitud?.codigo_solicitud}</strong>
+                  fue finalizada correctamente.
+                </p>
+                ${correoEnviado ? `
+                  <div style="
+                    display:flex;align-items:center;gap:10px;
+                    padding:14px 16px;border-radius:14px;
+                    background:#f0fdf4;border:1px solid #bbf7d0;
+                    text-align:left;
+                  ">
+                    <i class="bi bi-envelope-check-fill" style="color:#16a34a;font-size:20px;flex-shrink:0;"></i>
+                    <div>
+                      <div style="color:#166534;font-weight:900;font-size:13px;">Notificación enviada</div>
+                      <div style="color:#15803d;font-size:13px;margin-top:2px;">
+                        Se envió un correo a <strong>${correoDestino}</strong>
+                      </div>
+                    </div>
+                  </div>
+                ` : `
+                  <div style="
+                    display:flex;align-items:center;gap:10px;
+                    padding:14px 16px;border-radius:14px;
+                    background:#fefce8;border:1px solid #fde047;
+                    text-align:left;
+                  ">
+                    <i class="bi bi-exclamation-triangle-fill" style="color:#ca8a04;font-size:20px;flex-shrink:0;"></i>
+                    <div>
+                      <div style="color:#854d0e;font-weight:900;font-size:13px;">Correo no enviado</div>
+                      <div style="color:#92400e;font-size:13px;margin-top:2px;">
+                        ${errorCorreo || 'No se pudo enviar la notificación al solicitante.'}
+                      </div>
+                    </div>
+                  </div>
+                `}
+              </div>
+            `,
+            icon: 'success',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#15803d',
+            background: '#ffffff',
+            color: '#0f172a'
+          }).then(() => {
+            this.cargarDetalle();
+          });
+          return;
         }
+
+        const titulo = 'Solicitud aprobada';
+        const texto = response?.mensaje || 'La solicitud avanzó correctamente a la siguiente etapa.';
 
         Swal.fire({
           title: titulo,
@@ -1039,8 +1072,6 @@ export class SolicitudDetalle implements OnInit {
       },
       error: (err: any) => {
         this.procesando = false;
-        this.procesandoAprobacion = false;
-        this.procesandoFinalizacion = false;
 
         if (err.status === 401) {
           this.authService.logout();
@@ -1178,22 +1209,18 @@ export class SolicitudDetalle implements OnInit {
   // =====================================================
 
   puedeAprobar(): boolean {
-    if (!this.solicitud) {
+    if (!this.solicitud || this.esAdmin()) {
       return false;
     }
 
     const estado = this.solicitud.estado;
 
-    if (this.esAdmin()) {
-      return false;
-    }
-
     if (this.esJefe()) {
-      return estado === 'pendiente_jefe_inmediato';
+      return estado === 'pendiente_jefe_inmediato' && this.jefeHaSubidoDocumento;
     }
 
     if (this.esAutoridad()) {
-      return estado === 'pendiente_maxima_autoridad';
+      return estado === 'pendiente_maxima_autoridad' && this.autoridadHaSubidoDocumento;
     }
 
     return false;
@@ -1204,7 +1231,7 @@ export class SolicitudDetalle implements OnInit {
       return false;
     }
 
-    return this.solicitud.estado === 'pendiente_tics';
+    return this.solicitud.estado === 'pendiente_tics' && this.ticsHaSubidoDocumento;
   }
 
   puedeFinalizarTics(): boolean {

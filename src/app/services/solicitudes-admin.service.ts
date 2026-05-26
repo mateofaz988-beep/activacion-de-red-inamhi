@@ -1,6 +1,10 @@
-import { Injectable } from '@angular/core';
+
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+
 import { Observable } from 'rxjs';
+
+
 
 /* =====================================================
    INTERFACES
@@ -125,7 +129,7 @@ export interface FlujoSolicitudResponse {
 export interface SubirDocumentoResponse {
   estado: string;
   mensaje: string;
-  documento: {
+  documento?: {
     id: number;
     solicitud_id: number;
     tipo_documento: string;
@@ -135,7 +139,10 @@ export interface SubirDocumentoResponse {
     firmado: boolean;
     firma_validada: boolean;
   };
+  correo_enviado?: boolean;
 }
+
+export type RolFirmante = 'jefe_inmediato' | 'maxima_autoridad' | 'analista_tics';
 
 /* =====================================================
    SERVICIO
@@ -185,20 +192,29 @@ export class SolicitudesAdminService {
 
     return this.http.get<SolicitudesAdminResponse>(
       `${this.API_URL}${query}`,
-      {
-        headers: this.getHeaders()
-      }
+      { headers: this.getHeaders() }
     );
   }
 
-  listarMisSolicitudes(q: string = ''): Observable<SolicitudesAdminResponse> {
-    const query = q ? `?q=${encodeURIComponent(q)}` : '';
+  listarMisSolicitudes(
+    q: string = '',
+    estado: string = ''
+  ): Observable<SolicitudesAdminResponse> {
+    const params: string[] = [];
+
+    if (q) {
+      params.push(`q=${encodeURIComponent(q)}`);
+    }
+
+    if (estado) {
+      params.push(`estado=${encodeURIComponent(estado)}`);
+    }
+
+    const query = params.length ? `?${params.join('&')}` : '';
 
     return this.http.get<SolicitudesAdminResponse>(
       `${this.API_BASE}/mis-solicitudes${query}`,
-      {
-        headers: this.getHeaders()
-      }
+      { headers: this.getHeaders() }
     );
   }
 
@@ -209,9 +225,7 @@ export class SolicitudesAdminService {
   obtenerSolicitudPorId(id: number): Observable<SolicitudDetalleResponse> {
     return this.http.get<SolicitudDetalleResponse>(
       `${this.API_URL}/${id}`,
-      {
-        headers: this.getHeaders()
-      }
+      { headers: this.getHeaders() }
     );
   }
 
@@ -223,9 +237,7 @@ export class SolicitudesAdminService {
     return this.http.put<FlujoSolicitudResponse>(
       `${this.API_URL}/${id}/aprobar`,
       {},
-      {
-        headers: this.getHeaders()
-      }
+      { headers: this.getHeaders() }
     );
   }
 
@@ -247,17 +259,13 @@ export class SolicitudesAdminService {
   ): Observable<FlujoSolicitudResponse> {
     return this.http.put<FlujoSolicitudResponse>(
       `${this.API_URL}/${id}/rechazar`,
-      {
-        motivo
-      },
-      {
-        headers: this.getHeaders()
-      }
+      { motivo },
+      { headers: this.getHeaders() }
     );
   }
 
   /* =====================================================
-     DESCARGA DE PDF GENERADO
+     DESCARGA DE PDF GENERADO (lleno con datos)
   ===================================================== */
 
   descargarPdfSolicitud(id: number): Observable<Blob> {
@@ -271,7 +279,7 @@ export class SolicitudesAdminService {
   }
 
   /* =====================================================
-     DESCARGA DE PDF FIRMADO ACTUAL
+     DESCARGA DEL ÚLTIMO DOCUMENTO FIRMADO
   ===================================================== */
 
   descargarDocumentoFirmadoActual(id: number): Observable<Blob> {
@@ -284,61 +292,76 @@ export class SolicitudesAdminService {
     );
   }
 
+  /* alias para compatibilidad con código existente */
   descargarDocumentoActualSolicitud(id: number): Observable<Blob> {
     return this.descargarDocumentoFirmadoActual(id);
   }
 
   /* =====================================================
-     SUBIDA DE PDF FIRMADO MANUALMENTE
+     SUBIR PDF FIRMADO CON FIRMAEC
+     Todos los roles usan /documentos (no auto-avanza el estado).
+     El estado avanza solo cuando el rol presiona "Aprobar".
+  ===================================================== */
+
+  subirPdfFirmadoElectronico(
+    solicitudId: number,
+    archivo: File,
+    _rolFirmante?: RolFirmante
+  ): Observable<SubirDocumentoResponse> {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    formData.append('tipo_documento', 'pdf_firmado_electronico');
+
+    return this.http.post<SubirDocumentoResponse>(
+      `${this.API_URL}/${solicitudId}/documentos`,
+      formData,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /* =====================================================
+     SUBIR PDF FIRMADO (admin — cualquier tipo)
+     Útil para cargas manuales del administrador.
   ===================================================== */
 
   subirDocumentoFirmado(
     solicitudId: number,
     archivo: File,
-    tipoDocumento: string,
+    tipoDocumento: string = 'pdf_firmado_electronico',
     observacion: string = ''
   ): Observable<SubirDocumentoResponse> {
     const formData = new FormData();
-
     formData.append('archivo', archivo);
     formData.append('tipo_documento', tipoDocumento);
-    formData.append('observacion', observacion);
+
+    if (observacion) {
+      formData.append('observacion', observacion);
+    }
 
     return this.http.post<SubirDocumentoResponse>(
       `${this.API_URL}/${solicitudId}/documentos`,
       formData,
-      {
-        headers: this.getHeaders()
-      }
+      { headers: this.getHeaders() }
     );
   }
 
   /* =====================================================
-     FIRMA ELECTRÓNICA AUTOMÁTICA
-     Envía imagen PNG/JPG/JPEG al backend.
-     El backend coloca la firma dentro del PDF.
+     SUBIR IMAGEN DE FIRMA ELECTRÓNICA AUTOMÁTICA
+     El backend inserta la imagen dentro del PDF.
+     Acepta PNG / JPG / JPEG — NO es un PDF.
   ===================================================== */
 
-  subirFirmaElectronica(
+  subirImagenFirmaAutomatica(
     solicitudId: number,
     imagenFirma: File
   ): Observable<SubirDocumentoResponse> {
     const formData = new FormData();
-
-    /*
-      IMPORTANTE:
-      El nombre del campo debe ser exactamente "firma",
-      porque así lo espera el endpoint Flask:
-      request.files["firma"]
-    */
     formData.append('firma', imagenFirma);
 
     return this.http.post<SubirDocumentoResponse>(
       `${this.API_URL}/${solicitudId}/firma-electronica`,
       formData,
-      {
-        headers: this.getHeaders()
-      }
+      { headers: this.getHeaders() }
     );
   }
 
@@ -376,7 +399,7 @@ export class SolicitudesAdminService {
   }
 
   /* =====================================================
-     UTILIDAD OPCIONAL PARA DESCARGAR BLOB
+     UTILIDAD: DESCARGAR BLOB COMO ARCHIVO
   ===================================================== */
 
   descargarBlob(

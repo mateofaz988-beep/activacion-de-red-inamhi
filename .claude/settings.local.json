@@ -4,7 +4,14 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Sistemas\\\\Documents\\\\sistema-liberacion-web-inamhi\\\\sistema-liberacion-web\" -MaxDepth 1 -File)",
       "Bash(Select-Object Name)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Sistemas\\\\Documents\\\\sistema-liberacion-web-inamhi\\\\sistema-liberacion-web\" -Recurse -Force)",
-      "Bash(Select-Object -First 50)"
+      "Bash(Select-Object -First 50)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\ItsqmetEstudiantes\\\\Documents\\\\liberacion web\\\\activacion-de-red-inamhi\" -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(r'c:\\\\Users\\\\ItsqmetEstudiantes\\\\Documents\\\\liberacion web\\\\activacion-de-red-inamhi\\\\backend\\\\app.py', encoding='utf-8'\\).read\\(\\)\\); print\\('SINTAXIS OK'\\)\")",
+      "Bash(Select-String -Path \"c:\\\\Users\\\\ItsqmetEstudiantes\\\\Documents\\\\liberacion web\\\\activacion-de-red-inamhi\\\\src\\\\app\\\\admin\\\\solicitud-detalle\\\\solicitud-detalle.ts\" -Pattern \"procesandoAprobacion|procesandoFinalizacion|seleccionarArchivoFirmaElectronica|subirPdfFirmadoElectronico|autoridad/subir-firma|tics/subir-firma\")",
+      "Bash(Select-Object LineNumber, Line)",
+      "Bash(npm install *)"
     ]
   }
 }

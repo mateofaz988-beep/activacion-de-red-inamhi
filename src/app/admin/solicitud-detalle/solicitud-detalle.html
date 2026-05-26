@@ -207,10 +207,27 @@
         <div>
           <h3>Acciones del flujo electrónico</h3>
 
-          <p>
-            Primero descargue el PDF firmado actual y súbalo nuevamente firmado
-            electrónicamente con FirmaEC. Luego podrá aprobar, rechazar o finalizar
-            según el rol autenticado.
+          <!-- Instrucción específica por rol -->
+          <p *ngIf="esJefe()">
+            Descargue el PDF firmado del solicitante, fírmelo con FirmaEC y súbalo.
+            Al subir su documento firmado, la solicitud pasará
+            <strong>automáticamente</strong> a Máxima Autoridad.
+          </p>
+
+          <p *ngIf="esAutoridad()">
+            Descargue el PDF firmado por el jefe inmediato, fírmelo con FirmaEC,
+            súbalo y luego presione <strong>Aprobar</strong> para enviarlo a TICS.
+          </p>
+
+          <p *ngIf="esTics() && solicitud?.estado === 'pendiente_tics'">
+            Descargue el PDF firmado por la máxima autoridad, fírmelo con FirmaEC,
+            súbalo y luego presione <strong>Aprobar validación TICS</strong>.
+          </p>
+
+          <p *ngIf="esTics() && solicitud?.estado === 'pendiente_ejecucion_tics'">
+            Ejecute la activación técnica de la red y presione
+            <strong>Finalizar proceso TICS</strong> para completar la solicitud
+            y notificar al solicitante.
           </p>
         </div>
 
@@ -236,20 +253,68 @@
           </button>
         </div>
 
+        <!-- Advertencia para jefe: aún no ha subido su firma -->
         <div
           class="document-warning"
-          *ngIf="!documentoFirmadoCargado && !estaFinalizada()"
+          *ngIf="esJefe() && !jefeHaSubidoDocumento"
         >
-          Para continuar con el flujo debe subir primero el PDF firmado
-          electrónicamente con FirmaEC.
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          Debe subir el PDF firmado con FirmaEC. Al hacerlo, la solicitud
+          se enviará automáticamente a Máxima Autoridad.
         </div>
 
+        <!-- Advertencia para autoridad: aún no ha subido su firma -->
+        <div
+          class="document-warning"
+          *ngIf="esAutoridad() && !autoridadHaSubidoDocumento"
+        >
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          Suba primero el PDF firmado con FirmaEC antes de aprobar.
+        </div>
+
+        <!-- Advertencia para TICS en validación: aún no ha subido su firma -->
+        <div
+          class="document-warning"
+          *ngIf="esTics() && solicitud?.estado === 'pendiente_tics' && !ticsHaSubidoDocumento"
+        >
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          Suba primero el PDF firmado con FirmaEC antes de aprobar la validación.
+        </div>
+
+        <!-- Éxito jefe: documento subido (estado ya avanzó automáticamente) -->
         <div
           class="document-success"
-          *ngIf="documentoFirmadoCargado && !estaFinalizada()"
+          *ngIf="esJefe() && jefeHaSubidoDocumento"
         >
-          El documento firmado electrónicamente fue registrado correctamente.
-          Ya puede continuar con la acción correspondiente.
+          <i class="bi bi-check-circle-fill"></i>
+          Su PDF firmado fue registrado. La solicitud ya fue enviada a Máxima Autoridad.
+        </div>
+
+        <!-- Éxito autoridad: listo para aprobar -->
+        <div
+          class="document-success"
+          *ngIf="esAutoridad() && autoridadHaSubidoDocumento"
+        >
+          <i class="bi bi-check-circle-fill"></i>
+          PDF firmado registrado. Ya puede aprobar para enviar la solicitud a TICS.
+        </div>
+
+        <!-- Éxito TICS validación: listo para aprobar -->
+        <div
+          class="document-success"
+          *ngIf="esTics() && solicitud?.estado === 'pendiente_tics' && ticsHaSubidoDocumento"
+        >
+          <i class="bi bi-check-circle-fill"></i>
+          PDF firmado registrado. Ya puede aprobar la validación TICS.
+        </div>
+
+        <!-- TICS ejecución: sin necesidad de subir otro PDF -->
+        <div
+          class="document-success"
+          *ngIf="esTics() && solicitud?.estado === 'pendiente_ejecucion_tics'"
+        >
+          <i class="bi bi-check-circle-fill"></i>
+          Validación TICS aprobada. Ejecute la activación técnica y finalice el proceso.
         </div>
       </section>
 
@@ -270,34 +335,38 @@
         </div>
 
         <div class="decision-actions">
+
+          <!-- Jefe/Autoridad: aparece solo cuando el rol ya subió su propio PDF -->
           <button
             type="button"
             class="approve-btn"
             *ngIf="puedeAprobar()"
             (click)="confirmarAprobacion()"
-            [disabled]="procesando || !documentoFirmadoCargado"
+            [disabled]="procesando"
           >
             <i class="bi bi-check-circle-fill"></i>
             {{ getTextoBotonAprobar() }}
           </button>
 
+          <!-- TICS: botón único que valida + finaliza en un paso -->
           <button
             type="button"
-            class="approve-btn"
+            class="approve-btn final"
             *ngIf="puedeAprobarValidacionTics()"
             (click)="confirmarAprobacionTics()"
-            [disabled]="procesando || !documentoFirmadoCargado"
+            [disabled]="procesando"
           >
-            <i class="bi bi-shield-check"></i>
-            Aprobar validación TICS
+            <i class="bi bi-check2-circle"></i>
+            Aprobar y finalizar proceso TICS
           </button>
 
+          <!-- TICS: fallback si el primer paso ya ocurrió pero no el segundo -->
           <button
             type="button"
             class="approve-btn final"
             *ngIf="puedeFinalizarTics()"
             (click)="confirmarFinalizacionTics()"
-            [disabled]="procesando || !documentoFirmadoCargado"
+            [disabled]="procesando"
           >
             <i class="bi bi-check2-circle"></i>
             Finalizar proceso TICS
@@ -566,15 +635,15 @@
               </p>
             </div>
 
-            <a
+            <button
+              type="button"
               class="document-download-btn"
-              [href]="API_BASE + '/documentos/' + documento.id + '/descargar'"
-              target="_blank"
-              rel="noopener noreferrer"
+              (click)="descargarDocumentoFirmadoActual()"
+              [disabled]="procesando"
             >
               <i class="bi bi-download"></i>
               Descargar
-            </a>
+            </button>
           </article>
         </div>
 

@@ -1,16 +1,10 @@
 from io import BytesIO
 import json
-import uuid 
+import uuid
 import smtplib
 import html
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import os
-import smtplib
-import html
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from dotenv import load_dotenv
 import os
 import re
 import ipaddress
@@ -164,31 +158,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(DOCUMENTOS_FOLDER, exist_ok=True)
 os.makedirs(FIRMADOS_FOLDER, exist_ok=True)
 os.makedirs(ESCANEADOS_FOLDER, exist_ok=True)
+os.makedirs(os.path.join(BASE_DIR, "logs"), exist_ok=True)
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["DOCUMENTOS_FOLDER"] = DOCUMENTOS_FOLDER
 app.config["FIRMADOS_FOLDER"] = FIRMADOS_FOLDER
 app.config["ESCANEADOS_FOLDER"] = ESCANEADOS_FOLDER
-
-# =====================================================
-# crear carpetas necesarias
-# =====================================================
-
-def crear_carpetas():
-    carpetas = [
-        UPLOAD_FOLDER,
-        DOCUMENTOS_FOLDER,
-        FIRMADOS_FOLDER,
-        ESCANEADOS_FOLDER,
-        "logs"
-    ]
-
-    for carpeta in carpetas:
-        if not os.path.exists(carpeta):
-            os.makedirs(carpeta)
-
-
-crear_carpetas()
 
 
 # =====================================================
@@ -3447,6 +3422,181 @@ def validar_solicitud_manual(uuid_solicitud):
 
 
 # =====================================================
+# correo de activación para proceso manual
+# =====================================================
+
+def enviar_correo_activacion_manual(nombres, apellidos, correo, uuid_solicitud):
+    if not SMTP_HOST or not SMTP_USER or not SMTP_PASSWORD:
+        print("configuración SMTP incompleta. No se envió el correo de activación manual.")
+        return False
+
+    correo_destino = limpiar_texto(correo).lower()
+    if not correo_destino:
+        print("no existe correo destinatario para activación manual.")
+        return False
+
+    nombre_completo = f"{nombres} {apellidos}".strip()
+    fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+    anio_actual = datetime.datetime.now().year
+
+    nombre_seguro = html.escape(nombre_completo)
+    uuid_seguro = html.escape(uuid_solicitud)
+    fecha_segura = html.escape(fecha_actual)
+
+    asunto = f"✅ Solicitud Manual Recibida - {uuid_solicitud}"
+
+    cuerpo_texto = f"""
+Estimado/a {nombre_completo},
+
+Hemos recibido su documento firmado para el proceso de Liberación Web INAMHI.
+
+ID de proceso: {uuid_solicitud}
+Fecha de recepción: {fecha_actual}
+
+Su solicitud ha sido registrada y está siendo procesada por el área de Tecnologías de la Información.
+Una vez que el acceso haya sido configurado, recibirá una notificación adicional.
+
+Atentamente,
+Sistema de Gestión de Solicitudes de Liberación Web - INAMHI
+"""
+
+    cuerpo_html = f"""
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#eef2f7;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="620" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.10);">
+
+          <!-- ENCABEZADO -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#0369a1 0%,#0c4a6e 100%);padding:36px 40px;text-align:center;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <div style="background:rgba(255,255,255,0.15);display:inline-block;border-radius:50%;padding:16px;margin-bottom:16px;">
+                      <span style="font-size:36px;">📋</span>
+                    </div>
+                    <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:700;letter-spacing:0.5px;">Documento Recibido</h1>
+                    <p style="color:#bae6fd;margin:8px 0 0;font-size:14px;font-weight:400;">Sistema de Liberación Web · INAMHI</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- BADGE DE ESTADO -->
+          <tr>
+            <td align="center" style="padding:24px 40px 0;">
+              <span style="display:inline-block;background:#dcfce7;color:#166534;font-size:13px;font-weight:700;padding:8px 22px;border-radius:50px;letter-spacing:0.5px;border:1px solid #bbf7d0;">
+                ✅ &nbsp; DOCUMENTO RECIBIDO CORRECTAMENTE
+              </span>
+            </td>
+          </tr>
+
+          <!-- SALUDO -->
+          <tr>
+            <td style="padding:28px 40px 0;color:#1e293b;">
+              <p style="font-size:17px;margin:0 0 12px;">Estimado/a <strong style="color:#0369a1;">{nombre_seguro}</strong>,</p>
+              <p style="font-size:15px;line-height:1.7;color:#475569;margin:0;">
+                Hemos recibido su documento firmado para el proceso de solicitud de acceso a la red institucional.
+                Su trámite ha sido registrado exitosamente y está siendo procesado por el área de
+                <strong>Tecnologías de la Información y Comunicación (TICS)</strong>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- DETALLES DEL PROCESO -->
+          <tr>
+            <td style="padding:28px 40px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
+                <tr style="background:#f8fafc;">
+                  <td style="padding:14px 18px;font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid #e2e8f0;" colspan="2">
+                    Detalles del proceso
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:14px 18px;font-size:14px;color:#64748b;font-weight:600;border-bottom:1px solid #f1f5f9;width:45%;">ID de proceso</td>
+                  <td style="padding:14px 18px;font-size:14px;color:#0f172a;font-family:monospace;font-weight:700;border-bottom:1px solid #f1f5f9;">{uuid_seguro}</td>
+                </tr>
+                <tr style="background:#fafafa;">
+                  <td style="padding:14px 18px;font-size:14px;color:#64748b;font-weight:600;border-bottom:1px solid #f1f5f9;">Solicitante</td>
+                  <td style="padding:14px 18px;font-size:14px;color:#0f172a;font-weight:600;border-bottom:1px solid #f1f5f9;">{nombre_seguro}</td>
+                </tr>
+                <tr>
+                  <td style="padding:14px 18px;font-size:14px;color:#64748b;font-weight:600;border-bottom:1px solid #f1f5f9;">Tipo de proceso</td>
+                  <td style="padding:14px 18px;font-size:14px;color:#0f172a;border-bottom:1px solid #f1f5f9;">Solicitud Manual</td>
+                </tr>
+                <tr style="background:#fafafa;">
+                  <td style="padding:14px 18px;font-size:14px;color:#64748b;font-weight:600;">Fecha de recepción</td>
+                  <td style="padding:14px 18px;font-size:14px;color:#0f172a;">{fecha_segura}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- CAJA INFORMATIVA -->
+          <tr>
+            <td style="padding:24px 40px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#eff6ff;border-left:4px solid #3b82f6;border-radius:0 12px 12px 0;">
+                <tr>
+                  <td style="padding:18px 20px;">
+                    <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#1d4ed8;">ℹ️ &nbsp;¿Qué sigue ahora?</p>
+                    <p style="margin:0;font-size:14px;line-height:1.7;color:#1e40af;">
+                      El equipo de TICS revisará su documento y procederá con la configuración de acceso a la red.
+                      Este proceso puede tardar hasta <strong>24 horas hábiles</strong>. En caso de alguna
+                      observación, nos contactaremos con usted a través de este correo electrónico.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- FIRMA -->
+          <tr>
+            <td style="padding:28px 40px 32px;">
+              <p style="margin:0 0 4px;font-size:14px;color:#64748b;">Atentamente,</p>
+              <p style="margin:0;font-size:15px;font-weight:700;color:#0f172a;">Sistema de Gestión de Solicitudes de Liberación Web</p>
+              <p style="margin:4px 0 0;font-size:14px;color:#0369a1;font-weight:600;">Instituto Nacional de Meteorología e Hidrología · INAMHI</p>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background:#f8fafc;padding:16px 40px;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#94a3b8;">
+                &copy; {anio_actual} Instituto Nacional de Meteorología e Hidrología &mdash; Ecuador
+                <br>Este es un mensaje automático, por favor no responda a este correo.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
+
+    try:
+        enviar_correo(
+            destinatario=correo_destino,
+            asunto=asunto,
+            cuerpo=cuerpo_texto,
+            cuerpo_html=cuerpo_html
+        )
+        print(f"correo de activación manual enviado a {correo_destino}")
+        return True
+    except Exception as error:
+        print("error al enviar correo de activación manual:", error)
+        return False
+
+
+# =====================================================
 # subir documento manual firmado y finalizar proceso
 # =====================================================
 
@@ -3598,9 +3748,22 @@ def subir_documento_manual_firmado(uuid_solicitud):
         except Exception as error_auditoria:
             print("advertencia: no se pudo registrar auditoría de subida manual:", error_auditoria)
 
+        # enviar correo de activación automático al correo registrado en el formulario manual
+        correo_enviado = False
+        try:
+            correo_enviado = enviar_correo_activacion_manual(
+                nombres=solicitud["nombres"],
+                apellidos=solicitud["apellidos"],
+                correo=solicitud["correo"],
+                uuid_solicitud=uuid_solicitud
+            )
+        except Exception as error_correo:
+            print("advertencia: no se pudo enviar correo de activación manual:", error_correo)
+
         return jsonify({
             "estado": "ok",
             "mensaje": "documento manual subido correctamente. el proceso manual quedó finalizado.",
+            "correo_enviado": correo_enviado,
             "solicitud": {
                 "uuid_solicitud": uuid_solicitud,
                 "estado": "FINALIZADO",
@@ -3727,18 +3890,18 @@ def listar_procesos_manuales_admin():
                 apellidos,
                 correo,
                 estado,
-                documento_firmado_nombre,
-                documento_firmado_ruta,
+                documento_vacio,
+                documento_escaneado,
                 fecha_registro,
                 hora_registro,
                 created_at,
                 case
-                    when documento_firmado_ruta is not null
-                         and documento_firmado_ruta <> ''
+                    when documento_escaneado is not null
+                         and documento_escaneado <> ''
                     then true
                     else false
                 end as tiene_documento_firmado
-            from solicitudes_manuales
+            from solicitudes_manual
             order by id desc;
         """)
 
@@ -4406,14 +4569,6 @@ def obtener_siguiente_estado_por_rol(estado_actual, rol_actual):
     }
 
     return reglas.get((estado_actual, rol_actual))
-
-    if regla is None:
-        return None
-
-    if regla["rol"] != rol_actual:
-        return None
-
-    return regla
 
 
 def obtener_estado_rechazo_por_rol(estado_actual, rol_actual):
@@ -5411,7 +5566,7 @@ def enviar_correo_rechazo_solicitud(solicitud, motivo, rol_rechazo):
     rol_seguro = html.escape(str(rol_rechazo))
     fecha_segura = html.escape(str(fecha_actual))
 
-    asunto = f"Solicitud rechazada - {codigo_solicitud}"
+    asunto = f"❌ Solicitud Rechazada - {codigo_solicitud}"
 
     cuerpo_texto = f"""
 Solicitud de Liberación Web Rechazada
@@ -5433,74 +5588,142 @@ Sistema de Gestión de Solicitudes de Liberación Web - INAMHI
 """
 
     cuerpo_html = f"""
-    <html>
-      <body style="margin:0; padding:0; background:#f1f5f9; font-family:Arial, sans-serif;">
-        <div style="max-width:720px; margin:32px auto; background:#ffffff; border-radius:18px; overflow:hidden; border:1px solid #e2e8f0;">
-          
-          <div style="background:#991b1b; color:#ffffff; padding:24px;">
-            <h2 style="margin:0; font-size:22px;">Solicitud de Liberación Web Rechazada</h2>
-            <p style="margin:8px 0 0; font-size:14px;">
-              Sistema de Gestión de Solicitudes de Liberación Web - INAMHI
-            </p>
-          </div>
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#eef2f7;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="620" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.10);">
 
-          <div style="padding:26px; color:#0f172a;">
-            <p style="font-size:16px;">Estimado/a <strong>{nombres_seguro}</strong>,</p>
+          <!-- ENCABEZADO ROJO -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#b91c1c 0%,#7f1d1d 100%);padding:40px;text-align:center;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <div style="background:rgba(255,255,255,0.2);display:inline-block;border-radius:50%;width:72px;height:72px;line-height:72px;text-align:center;font-size:36px;margin-bottom:16px;">❌</div>
+                    <h1 style="color:#ffffff;margin:0;font-size:26px;font-weight:700;letter-spacing:0.5px;">Solicitud Rechazada</h1>
+                    <p style="color:#fecaca;margin:8px 0 0;font-size:14px;">Por favor revise el motivo e ingrese una nueva solicitud corregida</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-            <p style="font-size:15px; line-height:1.7;">
-              Se informa que su solicitud de liberación web ha sido 
-              <strong style="color:#991b1b;">rechazada</strong>.
-            </p>
+          <!-- BADGE ESTADO -->
+          <tr>
+            <td align="center" style="padding:28px 40px 0;">
+              <span style="display:inline-block;background:#fef2f2;color:#991b1b;font-size:13px;font-weight:700;padding:10px 28px;border-radius:50px;letter-spacing:0.6px;border:1px solid #fecaca;">
+                🚫 &nbsp; PROCESO DETENIDO - ACCIÓN REQUERIDA
+              </span>
+            </td>
+          </tr>
 
-            <table style="width:100%; border-collapse:collapse; margin:22px 0; font-size:14px;">
-              <tr>
-                <td style="padding:12px; border:1px solid #e2e8f0; background:#f8fafc;"><strong>Código de solicitud</strong></td>
-                <td style="padding:12px; border:1px solid #e2e8f0;">{codigo_seguro}</td>
-              </tr>
-              <tr>
-                <td style="padding:12px; border:1px solid #e2e8f0; background:#f8fafc;"><strong>Rechazado por</strong></td>
-                <td style="padding:12px; border:1px solid #e2e8f0;">{rol_seguro}</td>
-              </tr>
-              <tr>
-                <td style="padding:12px; border:1px solid #e2e8f0; background:#f8fafc;"><strong>Fecha</strong></td>
-                <td style="padding:12px; border:1px solid #e2e8f0;">{fecha_segura}</td>
-              </tr>
-            </table>
+          <!-- SALUDO -->
+          <tr>
+            <td style="padding:28px 40px 0;color:#1e293b;">
+              <p style="font-size:17px;margin:0 0 12px;">Estimado/a <strong style="color:#b91c1c;">{nombres_seguro}</strong>,</p>
+              <p style="font-size:15px;line-height:1.75;color:#475569;margin:0;">
+                Le informamos que su solicitud de liberación web ha sido
+                <strong style="color:#b91c1c;">rechazada</strong> en la etapa de revisión.
+                A continuación encontrará los detalles del rechazo y el motivo registrado.
+              </p>
+            </td>
+          </tr>
 
-            <div style="background:#fef2f2; border:1px solid #fecaca; color:#7f1d1d; border-radius:14px; padding:18px;">
-              <strong>Motivo del rechazo:</strong>
-              <p style="margin:10px 0 0; line-height:1.7;">{motivo_seguro}</p>
-            </div>
+          <!-- TABLA DE DATOS -->
+          <tr>
+            <td style="padding:28px 40px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #fee2e2;">
+                <tr style="background:#fef2f2;">
+                  <td style="padding:14px 18px;font-size:13px;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid #fee2e2;" colspan="2">
+                    Detalle del rechazo
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:14px 18px;font-size:14px;color:#64748b;font-weight:600;border-bottom:1px solid #fef2f2;width:45%;">Código de solicitud</td>
+                  <td style="padding:14px 18px;font-size:14px;color:#0f172a;font-family:monospace;font-weight:700;border-bottom:1px solid #fef2f2;">{codigo_seguro}</td>
+                </tr>
+                <tr style="background:#fffbfb;">
+                  <td style="padding:14px 18px;font-size:14px;color:#64748b;font-weight:600;border-bottom:1px solid #fef2f2;">Rechazado por</td>
+                  <td style="padding:14px 18px;font-size:14px;color:#0f172a;border-bottom:1px solid #fef2f2;">{rol_seguro}</td>
+                </tr>
+                <tr>
+                  <td style="padding:14px 18px;font-size:14px;color:#64748b;font-weight:600;">Fecha del rechazo</td>
+                  <td style="padding:14px 18px;font-size:14px;color:#0f172a;">{fecha_segura}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-            <p style="margin-top:24px; font-size:15px; line-height:1.7;">
-              Puede revisar la observación y registrar una nueva solicitud con la información corregida.
-            </p>
+          <!-- CAJA MOTIVO -->
+          <tr>
+            <td style="padding:20px 40px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border-left:5px solid #ef4444;border-radius:0 12px 12px 0;">
+                <tr>
+                  <td style="padding:20px 22px;">
+                    <p style="margin:0 0 10px;font-size:15px;font-weight:700;color:#7f1d1d;">⚠️ &nbsp;Motivo del rechazo</p>
+                    <p style="margin:0;font-size:14px;line-height:1.7;color:#991b1b;font-style:italic;">&ldquo;{motivo_seguro}&rdquo;</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-            <p style="margin-top:28px; color:#475569; font-size:14px;">
-              Atentamente,<br>
-              <strong>Sistema de Gestión de Solicitudes de Liberación Web - INAMHI</strong>
-            </p>
-          </div>
-        </div>
-      </body>
-    </html>
-    """
+          <!-- CAJA ACCIÓN -->
+          <tr>
+            <td style="padding:20px 40px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border-left:5px solid #f59e0b;border-radius:0 12px 12px 0;">
+                <tr>
+                  <td style="padding:18px 22px;">
+                    <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#92400e;">💡 &nbsp;¿Qué puede hacer?</p>
+                    <p style="margin:0;font-size:14px;line-height:1.7;color:#b45309;">
+                      Revise con detenimiento el motivo indicado, corrija la información y
+                      <strong>registre una nueva solicitud</strong> con los datos actualizados.
+                      Si tiene dudas, comuníquese con el área de TICS.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- FIRMA -->
+          <tr>
+            <td style="padding:32px 40px 28px;">
+              <p style="margin:0 0 4px;font-size:14px;color:#94a3b8;">Atentamente,</p>
+              <p style="margin:0;font-size:15px;font-weight:700;color:#0f172a;">Sistema de Gestión de Solicitudes de Liberación Web</p>
+              <p style="margin:4px 0 0;font-size:14px;color:#b91c1c;font-weight:600;">Instituto Nacional de Meteorología e Hidrología · INAMHI</p>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background:#f8fafc;padding:18px 40px;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#94a3b8;">
+                &copy; {datetime.datetime.now().year} Instituto Nacional de Meteorología e Hidrología &mdash; Ecuador
+                <br>Este es un mensaje automático, por favor no responda a este correo.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
 
     try:
-        mensaje = MIMEMultipart("alternative")
-        mensaje["Subject"] = asunto
-        mensaje["From"] = SMTP_FROM
-        mensaje["To"] = correo_destino
-
-        mensaje.attach(MIMEText(cuerpo_texto, "plain", "utf-8"))
-        mensaje.attach(MIMEText(cuerpo_html, "html", "utf-8"))
-
-        servidor = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
-        servidor.starttls()
-        servidor.login(SMTP_USER, SMTP_PASSWORD)
-        servidor.sendmail(SMTP_USER, [correo_destino], mensaje.as_string())
-        servidor.quit()
-
+        enviar_correo(
+            destinatario=correo_destino,
+            asunto=asunto,
+            cuerpo=cuerpo_texto,
+            cuerpo_html=cuerpo_html
+        )
         print(f"correo de rechazo enviado a {correo_destino}")
         return True
 
@@ -5537,62 +5760,122 @@ Atentamente,
 Sistema de Gestión de Solicitudes - INAMHI
 """
 
-    # Versión HTML con diseño profesional
+    # Versión HTML con diseño profesional mejorado
     cuerpo_html = f"""
-<html>
-<body style="margin:0; padding:0; background:#f1f5f9; font-family:Segoe UI, Arial, sans-serif;">
-  <div style="max-width:720px; margin:32px auto; background:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e2e8f0; box-shadow:0 4px 6px rgba(0,0,0,0.05);">
-    
-    <!-- Encabezado -->
-    <div style="background:#0f172a; color:#ffffff; padding:24px; text-align:center;">
-      <h2 style="margin:0; font-size:22px; letter-spacing:0.5px;">✅ Solicitud Finalizada</h2>
-      <p style="margin:8px 0 0; font-size:14px; opacity:0.9;">Sistema de Gestión de Solicitudes - INAMHI</p>
-    </div>
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#eef2f7;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="620" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.10);">
 
-    <!-- Cuerpo -->
-    <div style="padding:32px; color:#0f172a; line-height:1.6;">
-      <p style="font-size:16px; margin-bottom:20px;">Estimado/a <strong>{nombres_seguro}</strong>,</p>
-      <p style="font-size:15px; color:#334155;">
-        Nos complace informarle que su solicitud de liberación web ha sido 
-        <strong style="color:#10b981;">aprobada y finalizada</strong> satisfactoriamente por la Unidad de Tecnologías de la Información.
-      </p>
+          <!-- ENCABEZADO VERDE -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#059669 0%,#064e3b 100%);padding:40px;text-align:center;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <div style="background:rgba(255,255,255,0.2);display:inline-block;border-radius:50%;width:72px;height:72px;line-height:72px;text-align:center;font-size:36px;margin-bottom:16px;">✅</div>
+                    <h1 style="color:#ffffff;margin:0;font-size:26px;font-weight:700;letter-spacing:0.5px;">¡Solicitud Aprobada!</h1>
+                    <p style="color:#a7f3d0;margin:8px 0 0;font-size:14px;">Su acceso a la red ha sido configurado exitosamente</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      <!-- Tabla de Datos -->
-      <table style="width:100%; border-collapse:collapse; margin:28px 0; font-size:14px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
-        <tr style="background:#f8fafc;">
-          <td style="padding:14px; border:1px solid #e2e8f0; font-weight:bold; color:#475569; width:40%;">Código de solicitud</td>
-          <td style="padding:14px; border:1px solid #e2e8f0; font-family:monospace; font-size:15px;">{codigo_seguro}</td>
-        </tr>
-        <tr>
-          <td style="padding:14px; border:1px solid #e2e8f0; font-weight:bold; color:#475569; background:#f8fafc;">Estado actual</td>
-          <td style="padding:14px; border:1px solid #e2e8f0;">
-            <span style="background:#dcfce7; color:#166534; padding:6px 12px; border-radius:20px; font-weight:bold; font-size:12px; text-transform:uppercase;">Finalizada</span>
-          </td>
-        </tr>
-        <tr style="background:#f8fafc;">
-          <td style="padding:14px; border:1px solid #e2e8f0; font-weight:bold; color:#475569;">Fecha de finalización</td>
-          <td style="padding:14px; border:1px solid #e2e8f0;">{fecha_segura}</td>
-        </tr>
-      </table>
+          <!-- BADGE ESTADO -->
+          <tr>
+            <td align="center" style="padding:28px 40px 0;">
+              <span style="display:inline-block;background:#dcfce7;color:#166534;font-size:13px;font-weight:700;padding:10px 28px;border-radius:50px;letter-spacing:0.6px;border:1px solid #86efac;">
+                🎉 &nbsp; PROCESO FINALIZADO CORRECTAMENTE
+              </span>
+            </td>
+          </tr>
 
-      <!-- Caja de Nota -->
-      <div style="background:#f0fdf4; border-left:4px solid #10b981; color:#15803d; padding:18px; border-radius:0 8px 8px 0;">
-        <strong style="display:block; margin-bottom:6px;">¿Qué sigue?</strong>
-        Los accesos solicitados han sido configurados en los sistemas correspondientes. 
-        En caso de no visualizar los cambios en las próximas 2 horas, por favor contacte a la mesa de ayuda.
-      </div>
+          <!-- SALUDO -->
+          <tr>
+            <td style="padding:28px 40px 0;color:#1e293b;">
+              <p style="font-size:17px;margin:0 0 12px;">Estimado/a <strong style="color:#059669;">{nombres_seguro}</strong>,</p>
+              <p style="font-size:15px;line-height:1.75;color:#475569;margin:0;">
+                Nos complace informarle que su solicitud de liberación web ha sido
+                <strong style="color:#059669;">aprobada y finalizada</strong> satisfactoriamente.
+                Los accesos solicitados han sido procesados por la Unidad de
+                <strong>Tecnologías de la Información y Comunicación (TICS)</strong>.
+              </p>
+            </td>
+          </tr>
 
-      <p style="margin-top:32px; color:#64748b; font-size:14px;">
-        Atentamente,<br>
-        <strong style="color:#0f172a;">Sistema de Gestión de Solicitudes de Liberación Web - INAMHI</strong>
-      </p>
-    </div>
-    
-    <!-- Footer -->
-    <div style="background:#f8fafc; padding:16px; text-align:center; font-size:12px; color:#94a3b8; border-top:1px solid #e2e8f0;">
-      &copy; {datetime.datetime.now().year} Instituto Nacional de Meteorología e Hidrología.
-    </div>
-  </div>
+          <!-- TABLA DE DATOS -->
+          <tr>
+            <td style="padding:28px 40px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #d1fae5;">
+                <tr style="background:#ecfdf5;">
+                  <td style="padding:14px 18px;font-size:13px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid #d1fae5;" colspan="2">
+                    Resumen de la solicitud
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:14px 18px;font-size:14px;color:#64748b;font-weight:600;border-bottom:1px solid #f0fdf4;width:45%;">Código</td>
+                  <td style="padding:14px 18px;font-size:14px;color:#0f172a;font-family:monospace;font-weight:700;border-bottom:1px solid #f0fdf4;">{codigo_seguro}</td>
+                </tr>
+                <tr style="background:#f9fefe;">
+                  <td style="padding:14px 18px;font-size:14px;color:#64748b;font-weight:600;border-bottom:1px solid #f0fdf4;">Estado</td>
+                  <td style="padding:14px 18px;border-bottom:1px solid #f0fdf4;">
+                    <span style="background:#dcfce7;color:#166534;font-size:12px;font-weight:700;padding:5px 14px;border-radius:50px;text-transform:uppercase;">✓ Finalizada</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:14px 18px;font-size:14px;color:#64748b;font-weight:600;">Fecha</td>
+                  <td style="padding:14px 18px;font-size:14px;color:#0f172a;">{fecha_segura}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- CAJA ¿QUÉ SIGUE? -->
+          <tr>
+            <td style="padding:24px 40px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border-left:5px solid #10b981;border-radius:0 12px 12px 0;">
+                <tr>
+                  <td style="padding:20px 22px;">
+                    <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#065f46;">🌐 &nbsp;Sus accesos están activos</p>
+                    <p style="margin:0;font-size:14px;line-height:1.7;color:#047857;">
+                      Los accesos web solicitados han sido <strong>configurados en los sistemas institucionales</strong>.
+                      Si en las próximas <strong>2 horas hábiles</strong> no puede acceder a las páginas autorizadas,
+                      comuníquese con la mesa de ayuda de TICS para soporte.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- FIRMA -->
+          <tr>
+            <td style="padding:32px 40px 28px;">
+              <p style="margin:0 0 4px;font-size:14px;color:#94a3b8;">Atentamente,</p>
+              <p style="margin:0;font-size:15px;font-weight:700;color:#0f172a;">Sistema de Gestión de Solicitudes de Liberación Web</p>
+              <p style="margin:4px 0 0;font-size:14px;color:#059669;font-weight:600;">Instituto Nacional de Meteorología e Hidrología · INAMHI</p>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background:#f8fafc;padding:18px 40px;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#94a3b8;">
+                &copy; {datetime.datetime.now().year} Instituto Nacional de Meteorología e Hidrología &mdash; Ecuador
+                <br>Este es un mensaje automático, por favor no responda a este correo.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
 """
@@ -5897,7 +6180,7 @@ def error_405(error):
 def error_413(error):
     return jsonify({
         "estado": "error",
-        "mensaje": "el archivo supera el tamaño máximo permitido de 10 MB."
+        "mensaje": "el archivo supera el tamaño máximo permitido de 15 MB."
     }), 413
 
 
@@ -8020,77 +8303,6 @@ def jefe_subir_pdf_firmado(solicitud_id):
             "mensaje": "error inesperado al subir el PDF firmado por el jefe.",
             "error": str(error)
         }), 500
-        # =====================================================
-# DESCARGAR DOCUMENTO MANUAL FIRMADO (ADMIN)
-# =====================================================
-@app.route("/api/admin/manuales/<uuid_solicitud>/documento-firmado", methods=["GET"])
-@token_requerido
-@roles_permitidos("administrador")
-def descargar_documento_manual_firmado_admin_final(uuid_solicitud):
-    uuid_solicitud = limpiar_texto(uuid_solicitud)
-    if not uuid_solicitud:
-        return jsonify({"estado": "error", "mensaje": "el identificador del proceso manual es obligatorio."}), 400
-
-    conexion = get_db_connection()
-    if conexion is None:
-        return jsonify({"estado": "error", "mensaje": "no se pudo conectar con la base de datos."}), 500
-
-    try:
-        cursor = conexion.cursor(dictionary=True)
-        cursor.execute("""
-            select uuid_solicitud, documento_firmado_nombre, documento_firmado_ruta
-            from solicitudes_manuales
-            where uuid_solicitud = %s
-            limit 1;
-        """, (uuid_solicitud,))
-        solicitud = cursor.fetchone()
-        cursor.close()
-        conexion.close()
-
-        if solicitud is None:
-            return jsonify({"estado": "error", "mensaje": "no se encontró el proceso manual."}), 404
-
-        ruta_relativa = solicitud.get("documento_firmado_ruta")
-        if not ruta_relativa:
-            return jsonify({"estado": "error", "mensaje": "este proceso manual no tiene documento firmado subido."}), 404
-
-        ruta_absoluta = os.path.join(BASE_DIR, ruta_relativa.replace("/", os.sep))
-        if not os.path.exists(ruta_absoluta):
-            return jsonify({"estado": "error", "mensaje": "el archivo firmado no existe en el servidor."}), 404
-
-        nombre_descarga = solicitud.get("documento_firmado_nombre") or f"{uuid_solicitud}_firmado.pdf"
-        return send_file(ruta_absoluta, mimetype="application/pdf", as_attachment=True, download_name=nombre_descarga, max_age=0)
-
-    except Error as error:
-        print("ERROR AL DESCARGAR DOCUMENTO MANUAL:", error)
-        try:
-            conexion.close()
-        except Exception:
-            pass
-        return jsonify({"estado": "error", "mensaje": "error al descargar el documento firmado.", "error": str(error)}), 500
-
-# =====================================================
-# MANEJO DE ERRORES GLOBALES
-# =====================================================
-@app.errorhandler(404)
-def error_404(error):
-    return jsonify({"estado": "error", "mensaje": "ruta no encontrada."}), 404
-
-@app.errorhandler(405)
-def error_405(error):
-    return jsonify({"estado": "error", "mensaje": "método no permitido para esta ruta."}), 405
-
-@app.errorhandler(413)
-def error_413(error):
-    return jsonify({"estado": "error", "mensaje": "el archivo supera el tamaño máximo permitido de 15 MB."}), 413
-
-@app.errorhandler(500)
-def error_500(error):
-    return jsonify({"estado": "error", "mensaje": "error interno del servidor."}), 500
-    
-    
-
-
 
 
 
