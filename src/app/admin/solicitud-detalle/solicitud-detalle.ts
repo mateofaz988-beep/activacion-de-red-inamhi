@@ -456,7 +456,10 @@ export class SolicitudDetalle implements OnInit {
 
     const nombreArchivo = archivo.name.toLowerCase();
     const esPdfPorExtension = nombreArchivo.endsWith('.pdf');
-    const esPdfPorMime = archivo.type === 'application/pdf' || archivo.type === '';
+    const esPdfPorMime =
+      archivo.type === 'application/pdf' ||
+      archivo.type === 'application/octet-stream' ||
+      archivo.type === '';
 
     if (!esPdfPorExtension || !esPdfPorMime) {
       this.mostrarError(
@@ -529,7 +532,7 @@ export class SolicitudDetalle implements OnInit {
   // JEFE / AUTORIDAD / TICS
   // =====================================================
 
-  async subirFirmaElectronica(): Promise<void> {
+  subirFirmaElectronica(): void {
     if (this.esAdmin()) {
       this.mostrarError(
         'Acción no permitida',
@@ -551,46 +554,6 @@ export class SolicitudDetalle implements OnInit {
         'PDF requerido',
         'Debe seleccionar el PDF firmado electrónicamente con FirmaEC.'
       );
-      return;
-    }
-
-    const resultado = await Swal.fire({
-      title: 'Enviar PDF firmado',
-      html: `
-        <div style="text-align:center">
-          <p style="margin:0 0 12px;color:#475569;">
-            Verifique que el documento seleccionado sea el PDF correcto y que esté firmado electrónicamente con FirmaEC.
-          </p>
-
-          <strong style="display:inline-block;color:#1d4ed8;font-size:16px;margin-bottom:10px;">
-            ${this.solicitud.codigo_solicitud}
-          </strong>
-
-          <div style="
-            margin-top:12px;
-            padding:12px;
-            border-radius:14px;
-            background:#f8fafc;
-            border:1px solid #e2e8f0;
-            color:#334155;
-            font-size:14px;
-          ">
-            Archivo: <b>${this.nombreArchivoFirmadoElectronico}</b>
-          </div>
-        </div>
-      `,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, enviar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#15803d',
-      cancelButtonColor: '#64748b',
-      reverseButtons: true,
-      background: '#ffffff',
-      color: '#0f172a'
-    });
-
-    if (!resultado.isConfirmed) {
       return;
     }
 

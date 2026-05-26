@@ -219,12 +219,12 @@
             súbalo y luego presione <strong>Aprobar</strong> para enviarlo a TICS.
           </p>
 
-          <p *ngIf="esTics() && solicitud?.estado === 'pendiente_tics'">
+          <p *ngIf="esTics() && solicitud.estado === 'pendiente_tics'">
             Descargue el PDF firmado por la máxima autoridad, fírmelo con FirmaEC,
             súbalo y luego presione <strong>Aprobar validación TICS</strong>.
           </p>
 
-          <p *ngIf="esTics() && solicitud?.estado === 'pendiente_ejecucion_tics'">
+          <p *ngIf="esTics() && solicitud.estado === 'pendiente_ejecucion_tics'">
             Ejecute la activación técnica de la red y presione
             <strong>Finalizar proceso TICS</strong> para completar la solicitud
             y notificar al solicitante.
@@ -275,7 +275,7 @@
         <!-- Advertencia para TICS en validación: aún no ha subido su firma -->
         <div
           class="document-warning"
-          *ngIf="esTics() && solicitud?.estado === 'pendiente_tics' && !ticsHaSubidoDocumento"
+          *ngIf="esTics() && solicitud.estado === 'pendiente_tics' && !ticsHaSubidoDocumento"
         >
           <i class="bi bi-exclamation-triangle-fill"></i>
           Suba primero el PDF firmado con FirmaEC antes de aprobar la validación.
@@ -302,7 +302,7 @@
         <!-- Éxito TICS validación: listo para aprobar -->
         <div
           class="document-success"
-          *ngIf="esTics() && solicitud?.estado === 'pendiente_tics' && ticsHaSubidoDocumento"
+          *ngIf="esTics() && solicitud.estado === 'pendiente_tics' && ticsHaSubidoDocumento"
         >
           <i class="bi bi-check-circle-fill"></i>
           PDF firmado registrado. Ya puede aprobar la validación TICS.
@@ -311,7 +311,7 @@
         <!-- TICS ejecución: sin necesidad de subir otro PDF -->
         <div
           class="document-success"
-          *ngIf="esTics() && solicitud?.estado === 'pendiente_ejecucion_tics'"
+          *ngIf="esTics() && solicitud.estado === 'pendiente_ejecucion_tics'"
         >
           <i class="bi bi-check-circle-fill"></i>
           Validación TICS aprobada. Ejecute la activación técnica y finalice el proceso.

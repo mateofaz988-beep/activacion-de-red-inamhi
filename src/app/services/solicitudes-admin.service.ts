@@ -308,14 +308,15 @@ export class SolicitudesAdminService {
     archivo: File,
     _rolFirmante?: RolFirmante
   ): Observable<SubirDocumentoResponse> {
-    const formData = new FormData();
-    formData.append('archivo', archivo);
-    formData.append('tipo_documento', 'pdf_firmado_electronico');
+    const params = new URLSearchParams({
+      tipo_documento: 'pdf_firmado_electronico',
+      nombre_archivo: archivo.name || 'documento.pdf'
+    }).toString();
 
     return this.http.post<SubirDocumentoResponse>(
-      `${this.API_URL}/${solicitudId}/documentos`,
-      formData,
-      { headers: this.getHeaders() }
+      `${this.API_URL}/${solicitudId}/documentos?${params}`,
+      archivo,
+      { headers: this.getHeaders().set('Content-Type', 'application/octet-stream') }
     );
   }
 
@@ -330,18 +331,19 @@ export class SolicitudesAdminService {
     tipoDocumento: string = 'pdf_firmado_electronico',
     observacion: string = ''
   ): Observable<SubirDocumentoResponse> {
-    const formData = new FormData();
-    formData.append('archivo', archivo);
-    formData.append('tipo_documento', tipoDocumento);
-
+    const paramsObj: Record<string, string> = {
+      tipo_documento: tipoDocumento,
+      nombre_archivo: archivo.name || 'documento.pdf'
+    };
     if (observacion) {
-      formData.append('observacion', observacion);
+      paramsObj['observacion'] = observacion;
     }
+    const params = new URLSearchParams(paramsObj).toString();
 
     return this.http.post<SubirDocumentoResponse>(
-      `${this.API_URL}/${solicitudId}/documentos`,
-      formData,
-      { headers: this.getHeaders() }
+      `${this.API_URL}/${solicitudId}/documentos?${params}`,
+      archivo,
+      { headers: this.getHeaders().set('Content-Type', 'application/octet-stream') }
     );
   }
 
