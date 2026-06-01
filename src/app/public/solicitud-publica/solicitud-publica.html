@@ -25,7 +25,7 @@
   </header>
 
   <main class="page-content">
-    <section class="summary-card">
+    <section class="summary-card" *ngIf="!enviado">
       <div>
         <span class="eyebrow">Acceso Superior a Internet</span>
 
@@ -38,12 +38,7 @@
         </p>
       </div>
 
-      <div class="process-box">
-        <span>Flujo electrónico</span>
-        <strong>
-          Formulario → ID automático → Descargar PDF → Firmar externamente en FirmaEC → Subir PDF firmado → Enviar al jefe
-        </strong>
-      </div>
+      
     </section>
 
     <section class="success-card" *ngIf="enviado">
@@ -153,7 +148,7 @@
           <input
             type="email"
             formControlName="correo_institucional"
-            placeholder="Ejemplo: usuario@gmail.com, usuario@outlook.com o usuario@inamhi.gob.ec"
+            placeholder="Ejemplo: usuario@inamhi.gob.ec usuario@gmail.com, usuario@outlook.com o "
             maxlength="150"
             autocomplete="email"
             (input)="limpiarCorreoInstitucional()"
@@ -249,15 +244,11 @@
         </label>
 
         <label>
-          Fecha de solicitud *
-          <input
-            type="date"
-            formControlName="fecha_solicitud"
-          />
-
-          <small *ngIf="campoInvalido('fecha_solicitud')">
-            {{ obtenerMensajeCampo('fecha_solicitud') }}
-          </small>
+          Fecha de solicitud
+          <div class="fecha-hoy-display">
+            <i class="bi bi-calendar-check-fill"></i>
+            {{ fechaHoyTexto }}
+          </div>
         </label>
       </div>
 
@@ -767,3 +758,49 @@
     </section>
   </div>
 </section>
+
+<div class="toast-enviado" *ngIf="mostrarToastEnviado">
+  <span class="toast-enviado-icon">✓</span>
+  Documento enviado al jefe inmediato
+</div>
+
+<!-- =====================================================
+     MODAL CONFIRMACIÓN DE ENVÍO
+====================================================== -->
+<div class="modal-backdrop-confirm" *ngIf="mostrarConfirmEnvio">
+  <div class="modal-confirm-card">
+
+    <div class="confirm-icon-wrap">
+      <span class="confirm-icon-inner">!</span>
+    </div>
+
+    <h3 class="confirm-title">Confirmar envío</h3>
+
+   
+    <p class="confirm-body">
+      Al enviarlo, la solicitud pasará únicamente al jefe responsable del
+      área seleccionada.
+    </p>
+
+    <div class="confirm-actions">
+      <button
+        type="button"
+        class="confirm-cancel-btn"
+        (click)="cancelarConfirmEnvio()"
+        [disabled]="subiendoFirmaEc"
+      >
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="confirm-ok-btn"
+        (click)="confirmarEnvioFirmaEc()"
+        [disabled]="subiendoFirmaEc"
+      >
+        <span *ngIf="!subiendoFirmaEc">Confirmar envío</span>
+        <span *ngIf="subiendoFirmaEc">Enviando...</span>
+      </button>
+    </div>
+
+  </div>
+</div>

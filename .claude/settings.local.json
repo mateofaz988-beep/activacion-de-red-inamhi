@@ -11,7 +11,17 @@
       "Bash(python -c \"import ast; ast.parse\\(open\\(r'c:\\\\Users\\\\ItsqmetEstudiantes\\\\Documents\\\\liberacion web\\\\activacion-de-red-inamhi\\\\backend\\\\app.py', encoding='utf-8'\\).read\\(\\)\\); print\\('SINTAXIS OK'\\)\")",
       "Bash(Select-String -Path \"c:\\\\Users\\\\ItsqmetEstudiantes\\\\Documents\\\\liberacion web\\\\activacion-de-red-inamhi\\\\src\\\\app\\\\admin\\\\solicitud-detalle\\\\solicitud-detalle.ts\" -Pattern \"procesandoAprobacion|procesandoFinalizacion|seleccionarArchivoFirmaElectronica|subirPdfFirmadoElectronico|autoridad/subir-firma|tics/subir-firma\")",
       "Bash(Select-Object LineNumber, Line)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash('C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe' -uroot -proot inamhi_liberacion_web -e ' *)",
+      "Bash(\"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -uroot -proot inamhi_liberacion_web -e \"SELECT a.id, a.nombre FROM areas WHERE direccion_id=3 ORDER BY id;\")",
+      "Bash(\"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe\" -uroot -proot inamhi_liberacion_web -e \"SELECT a.id, a.nombre FROM areas WHERE direccion_id=3 ORDER BY id;\")",
+      "Bash(cmd /c '\"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -uroot -proot inamhi_liberacion_web -e \"SELECT a.id, a.nombre FROM areas WHERE direccion_id=3 ORDER BY id;\" 2>nul')",
+      "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -uroot -proot inamhi_liberacion_web -e \"SELECT a.id, a.nombre FROM areas WHERE direccion_id=3 ORDER BY id;\")",
+      "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -uroot -proot inamhi_liberacion_web -e \"SELECT id, nombre FROM areas WHERE direccion_id=3 ORDER BY id;\")",
+      "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -uroot -proot inamhi_liberacion_web -e \"SELECT a.id, a.nombre as area, c.nombre as cargo FROM areas a LEFT JOIN cargos c ON c.area_id = a.id WHERE a.direccion_id = 3 ORDER BY a.id, c.nombre;\")",
+      "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -uroot -proot inamhi_liberacion_web -e \"SELECT id, nombres, apellidos, usuario, cedula, correo, estado FROM usuarios WHERE usuario = 'myriam.quinchimba';\")",
+      "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -uroot -proot inamhi_liberacion_web -e \"SELECT u.nombres, u.apellidos, u.usuario, u.cedula as contrasena, u.estado FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE r.nombre = 'jefe_inmediato' ORDER BY u.apellidos;\")",
+      "Bash(/c/Users/Sistemas/Documents/sistema-liberacion-web-inamhi/sistema-liberacion-web/backend/venv/Scripts/python.exe -c ' *)"
     ]
   }
 }

@@ -426,70 +426,151 @@
   margin-bottom: 24px;
 }
 
-.manual-warning,
-.tics-recommendation,
-.final-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 15px;
-  margin-top: 20px;
-  padding: 18px;
-  border-radius: 20px;
-}
-
-.manual-warning {
-  color: #78350f;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-}
-
-.tics-recommendation {
-  color: #1e3a8a;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-}
-
-.warning-icon,
-.recommendation-icon {
-  width: 46px;
-  height: 46px;
-  min-width: 46px;
-  border-radius: 16px;
-  display: grid;
-  place-items: center;
-  color: #ffffff;
-}
-
-.warning-icon {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-
-.recommendation-icon {
-  background: linear-gradient(135deg, #2563eb, #0284c7);
-}
-
-.manual-warning i,
-.tics-recommendation i {
-  font-size: 23px;
-}
-
-.manual-warning h4,
-.tics-recommendation h4,
-.upload-card h4,
-.final-card h4 {
+.upload-card h4 {
   margin: 0 0 8px;
   color: #0f172a;
   font-size: 18px;
   font-weight: 900;
 }
 
-.manual-warning p,
-.tics-recommendation p,
-.upload-card p,
-.final-card p {
+.upload-card p {
   margin: 0 0 8px;
   line-height: 1.7;
   color: #475569;
+}
+
+.upload-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+
+  div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #166534;
+    font-weight: 700;
+  }
+
+  i {
+    font-size: 18px;
+    color: #16a34a;
+    flex-shrink: 0;
+  }
+}
+
+.process-complete {
+  margin-top: 24px;
+  padding: 40px 28px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1px solid #bbf7d0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.process-complete-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 16px 32px rgba(22, 163, 74, 0.30);
+
+  i {
+    font-size: 40px;
+    color: #ffffff;
+  }
+}
+
+.process-complete h3 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 950;
+  color: #14532d;
+  letter-spacing: -0.3px;
+}
+
+.process-complete > p {
+  margin: 0;
+  font-size: 15px;
+  color: #166534;
+  font-weight: 700;
+}
+
+.process-complete-code {
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  span {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  strong {
+    font-size: 16px;
+    color: #0f172a;
+    font-weight: 900;
+    font-family: monospace;
+  }
+}
+
+.process-complete-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.btn-nueva-sol,
+.btn-inicio-sol {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 12px 22px;
+  border-radius: 14px;
+  font-weight: 900;
+  font-size: 14px;
+  text-decoration: none;
+  transition: transform 0.2s ease, filter 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+  }
+}
+
+.btn-nueva-sol {
+  background: linear-gradient(135deg, #15803d, #16a34a);
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(22, 163, 74, 0.28);
+}
+
+.btn-inicio-sol {
+  background: #ffffff;
+  color: #15803d;
+  border: 2px solid #86efac;
 }
 
 .upload-card {
@@ -570,16 +651,6 @@
   }
 }
 
-.final-card {
-  color: #166534;
-  background: #dcfce7;
-  border: 1px solid #bbf7d0;
-
-  i {
-    font-size: 38px;
-    color: #16a34a;
-  }
-}
 
 @media (max-width: 900px) {
   .search-card {
@@ -612,9 +683,13 @@
     width: fit-content;
   }
 
-  .manual-warning,
-  .tics-recommendation,
-  .final-card {
+  .process-complete-actions {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-nueva-sol,
+  .btn-inicio-sol {
+    justify-content: center;
   }
 }

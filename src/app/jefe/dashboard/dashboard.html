@@ -17,6 +17,7 @@
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
       >
+        <i class="bi bi-speedometer2"></i>
         Solicitudes asignadas
       </a>
 
@@ -24,6 +25,7 @@
         routerLink="/jefe/historial"
         routerLinkActive="active"
       >
+        <i class="bi bi-clock-history"></i>
         Historial
       </a>
 
@@ -31,14 +33,20 @@
         routerLink="/jefe/reportes"
         routerLinkActive="active"
       >
+        <i class="bi bi-bar-chart-fill"></i>
         Reportes
       </a>
     </nav>
+
+    <button type="button" class="logout" (click)="logout()">
+      <i class="bi bi-box-arrow-right"></i>
+      Cerrar sesión
+    </button>
   </aside>
 
   <main class="content">
     <header class="topbar">
-      <div>
+      <div class="topbar-left">
         <span class="eyebrow">Panel del jefe inmediato</span>
 
         <h1>Solicitudes pendientes de revisión</h1>

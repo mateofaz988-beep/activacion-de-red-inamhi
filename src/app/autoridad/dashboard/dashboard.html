@@ -20,17 +20,25 @@
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
       >
+        <i class="bi bi-speedometer2"></i>
         Solicitudes asignadas
       </a>
 
       <a routerLink="/autoridad/historial" routerLinkActive="active">
+        <i class="bi bi-clock-history"></i>
         Historial
       </a>
 
       <a routerLink="/autoridad/reportes" routerLinkActive="active">
+        <i class="bi bi-bar-chart-fill"></i>
         Reportes
       </a>
     </nav>
+
+    <button type="button" class="logout" (click)="logout()">
+      <i class="bi bi-box-arrow-right"></i>
+      Cerrar sesión
+    </button>
   </aside>
 
   <!-- =====================================================

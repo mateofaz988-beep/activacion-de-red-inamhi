@@ -148,6 +148,36 @@
       </section>
 
       <!-- =====================================================
+           GUÍA DEL PROCESO
+      ====================================================== -->
+
+      <div class="process-guide" *ngIf="!esAdmin() && !estaFinalizada()">
+        <div class="process-step">
+          <div class="process-step-num">1</div>
+          <div class="process-step-body">
+            <strong>Descargar</strong>
+            <span>Descargue el PDF firmado actual desde la sección de acciones.</span>
+          </div>
+        </div>
+        <div class="process-step-arrow">→</div>
+        <div class="process-step">
+          <div class="process-step-num">2</div>
+          <div class="process-step-body">
+            <strong>Firmar con FirmaEC</strong>
+            <span>Abra el PDF en la aplicación FirmaEC de su equipo y fírmelo electrónicamente.</span>
+          </div>
+        </div>
+        <div class="process-step-arrow">→</div>
+        <div class="process-step">
+          <div class="process-step-num">3</div>
+          <div class="process-step-body">
+            <strong>Subir</strong>
+            <span>Suba el PDF firmado para avanzar con el proceso.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- =====================================================
            AVISO ADMIN REVISOR
       ====================================================== -->
 
@@ -172,147 +202,103 @@
       </section>
 
       <!-- =====================================================
-           ADVERTENCIA FIRMA ELECTRÓNICA OBLIGATORIA
-      ====================================================== -->
-
-      <section
-        class="actions-card firmaec-required-card"
-        *ngIf="!esAdmin() && !estaFinalizada()"
-      >
-        <div>
-          <h3>Firma electrónica obligatoria con FirmaEC</h3>
-
-          <p>
-            Para continuar con el trámite debe descargar el PDF firmado actual,
-            abrirlo externamente en FirmaEC, firmarlo electrónicamente y subir
-            el nuevo PDF firmado. En este flujo no se permite subir documentos
-            firmados manualmente ni imágenes de firma.
-          </p>
-        </div>
-
-        <div class="completed-badge warning">
-          <i class="bi bi-shield-lock-fill"></i>
-          FirmaEC obligatorio
-        </div>
-      </section>
-
-      <!-- =====================================================
            ACCIONES DEL FLUJO ELECTRÓNICO
       ====================================================== -->
 
       <section
-        class="actions-card"
+        class="panel-section"
         *ngIf="!estaFinalizada() && !esAdmin()"
       >
-        <div>
-          <h3>Acciones del flujo electrónico</h3>
-
-          <!-- Instrucción específica por rol -->
-          <p *ngIf="esJefe()">
-            Descargue el PDF firmado del solicitante, fírmelo con FirmaEC y súbalo.
-            Al subir su documento firmado, la solicitud pasará
-            <strong>automáticamente</strong> a Máxima Autoridad.
-          </p>
-
-          <p *ngIf="esAutoridad()">
-            Descargue el PDF firmado por el jefe inmediato, fírmelo con FirmaEC,
-            súbalo y luego presione <strong>Aprobar</strong> para enviarlo a TICS.
-          </p>
-
-          <p *ngIf="esTics() && solicitud.estado === 'pendiente_tics'">
-            Descargue el PDF firmado por la máxima autoridad, fírmelo con FirmaEC,
-            súbalo y luego presione <strong>Aprobar validación TICS</strong>.
-          </p>
-
-          <p *ngIf="esTics() && solicitud.estado === 'pendiente_ejecucion_tics'">
-            Ejecute la activación técnica de la red y presione
-            <strong>Finalizar proceso TICS</strong> para completar la solicitud
-            y notificar al solicitante.
-          </p>
+        <div class="section-heading">
+          <div>
+            <span>Firma electrónica</span>
+            <h3>Acciones del flujo</h3>
+          </div>
+          <i class="bi bi-shield-lock-fill"></i>
         </div>
 
-        <div class="actions-grid">
-          <button
-            type="button"
-            class="signed-pdf-btn"
-            (click)="descargarDocumentoFirmadoActual()"
-            [disabled]="procesando"
-          >
-            <i class="bi bi-file-earmark-arrow-down-fill"></i>
-            Descargar PDF firmado actual
-          </button>
+        <div class="documents-grid">
 
-          <button
-            type="button"
-            class="firmaec-open-btn"
-            (click)="abrirModalFirmaElectronica()"
-            [disabled]="procesando || estaFinalizada()"
-          >
-            <i class="bi bi-cloud-arrow-up-fill"></i>
-            Subir PDF firmado con FirmaEC
-          </button>
+          <!-- Paso 1: Descargar -->
+          <div class="document-card">
+            <div class="document-icon">
+              <i class="bi bi-file-earmark-pdf-fill"></i>
+            </div>
+
+            <div class="document-info">
+              <span> Descargar</span>
+              <h4>PDF firmado actual</h4>
+             
+            </div>
+
+            <button
+              type="button"
+              class="document-download-btn"
+              (click)="descargarDocumentoFirmadoActual()"
+              [disabled]="procesando"
+            >
+              <i class="bi bi-download"></i>
+              Descargar
+            </button>
+          </div>
+
+          <!-- Paso 2: Subir -->
+          <div class="document-card">
+            <div class="document-icon action-upload-icon">
+              <i class="bi bi-cloud-arrow-up-fill"></i>
+            </div>
+
+            <div class="document-info">
+              <span> Subir</span>
+              <h4>PDF firmado con FirmaEC</h4>
+             
+            </div>
+
+            <button
+              type="button"
+              class="document-download-btn action-upload-btn"
+              (click)="abrirModalFirmaElectronica()"
+              [disabled]="procesando || estaFinalizada()"
+            >
+              <i class="bi bi-cloud-arrow-up-fill"></i>
+              Subir
+            </button>
+          </div>
+
         </div>
 
-        <!-- Advertencia para jefe: aún no ha subido su firma -->
-        <div
-          class="document-warning"
-          *ngIf="esJefe() && !jefeHaSubidoDocumento"
-        >
+        <!-- Estados de advertencia y éxito -->
+        <div class="document-warning" *ngIf="esJefe() && !jefeHaSubidoDocumento">
           <i class="bi bi-exclamation-triangle-fill"></i>
-          Debe subir el PDF firmado con FirmaEC. Al hacerlo, la solicitud
-          se enviará automáticamente a Máxima Autoridad.
+          Debe subir el PDF firmado con FirmaEC. La solicitud pasará automáticamente a Máxima Autoridad.
         </div>
 
-        <!-- Advertencia para autoridad: aún no ha subido su firma -->
-        <div
-          class="document-warning"
-          *ngIf="esAutoridad() && !autoridadHaSubidoDocumento"
-        >
+        <div class="document-warning" *ngIf="esAutoridad() && !autoridadHaSubidoDocumento">
           <i class="bi bi-exclamation-triangle-fill"></i>
-          Suba primero el PDF firmado con FirmaEC antes de aprobar.
+          Suba el PDF firmado antes de aprobar.
         </div>
 
-        <!-- Advertencia para TICS en validación: aún no ha subido su firma -->
-        <div
-          class="document-warning"
-          *ngIf="esTics() && solicitud.estado === 'pendiente_tics' && !ticsHaSubidoDocumento"
-        >
+        <div class="document-warning" *ngIf="esTics() && solicitud.estado === 'pendiente_tics' && !ticsHaSubidoDocumento">
           <i class="bi bi-exclamation-triangle-fill"></i>
-          Suba primero el PDF firmado con FirmaEC antes de aprobar la validación.
+          Suba el PDF firmado antes de aprobar la validación.
         </div>
 
-        <!-- Éxito jefe: documento subido (estado ya avanzó automáticamente) -->
-        <div
-          class="document-success"
-          *ngIf="esJefe() && jefeHaSubidoDocumento"
-        >
+        <div class="document-success" *ngIf="esJefe() && jefeHaSubidoDocumento">
           <i class="bi bi-check-circle-fill"></i>
-          Su PDF firmado fue registrado. La solicitud ya fue enviada a Máxima Autoridad.
+          PDF registrado. La solicitud fue enviada automáticamente a Máxima Autoridad.
         </div>
 
-        <!-- Éxito autoridad: listo para aprobar -->
-        <div
-          class="document-success"
-          *ngIf="esAutoridad() && autoridadHaSubidoDocumento"
-        >
+        <div class="document-success" *ngIf="esAutoridad() && autoridadHaSubidoDocumento">
           <i class="bi bi-check-circle-fill"></i>
-          PDF firmado registrado. Ya puede aprobar para enviar la solicitud a TICS.
+          PDF registrado. Ya puede aprobar para enviar a TICS.
         </div>
 
-        <!-- Éxito TICS validación: listo para aprobar -->
-        <div
-          class="document-success"
-          *ngIf="esTics() && solicitud.estado === 'pendiente_tics' && ticsHaSubidoDocumento"
-        >
+        <div class="document-success" *ngIf="esTics() && solicitud.estado === 'pendiente_tics' && ticsHaSubidoDocumento">
           <i class="bi bi-check-circle-fill"></i>
-          PDF firmado registrado. Ya puede aprobar la validación TICS.
+          PDF registrado. Ya puede aprobar la validación TICS.
         </div>
 
-        <!-- TICS ejecución: sin necesidad de subir otro PDF -->
-        <div
-          class="document-success"
-          *ngIf="esTics() && solicitud.estado === 'pendiente_ejecucion_tics'"
-        >
+        <div class="document-success" *ngIf="esTics() && solicitud.estado === 'pendiente_ejecucion_tics'">
           <i class="bi bi-check-circle-fill"></i>
           Validación TICS aprobada. Ejecute la activación técnica y finalice el proceso.
         </div>
@@ -388,7 +374,23 @@
            INFORMACIÓN PRINCIPAL DE LA SOLICITUD
       ====================================================== -->
 
-      <section class="detail-grid">
+      <div class="collapsible-block">
+        <button
+          type="button"
+          class="collapsible-toggle"
+          (click)="seccionDatosVisible = !seccionDatosVisible"
+        >
+          <div class="collapsible-toggle-left">
+            <i class="bi bi-info-circle-fill"></i>
+            <div>
+              <span>Datos de la solicitud</span>
+              <p>Solicitante, institución, acceso y estado del proceso.</p>
+            </div>
+          </div>
+          <i class="bi collapsible-chevron" [ngClass]="seccionDatosVisible ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+        </button>
+
+        <section class="detail-grid" *ngIf="seccionDatosVisible">
         <article class="info-panel">
           <div class="panel-title">
             <i class="bi bi-person-vcard-fill"></i>
@@ -520,26 +522,35 @@
             </div>
           </div>
         </article>
-      </section>
+        </section>
+      </div>
 
       <!-- =====================================================
            JUSTIFICACIÓN
       ====================================================== -->
 
-      <section class="panel-section">
-        <div class="section-heading">
-          <div>
-            <span>Justificación</span>
-            <h3>Necesidad institucional</h3>
+      <div class="collapsible-block">
+        <button
+          type="button"
+          class="collapsible-toggle"
+          (click)="seccionJustificacionVisible = !seccionJustificacionVisible"
+        >
+          <div class="collapsible-toggle-left">
+            <i class="bi bi-card-text"></i>
+            <div>
+              <span>Justificación</span>
+              <p>Necesidad institucional declarada por el solicitante.</p>
+            </div>
           </div>
+          <i class="bi collapsible-chevron" [ngClass]="seccionJustificacionVisible ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+        </button>
 
-          <i class="bi bi-card-text"></i>
-        </div>
-
-        <div class="justification-box">
-          {{ solicitud.justificacion_necesidad_institucional || 'No se registró justificación.' }}
-        </div>
-      </section>
+        <section class="panel-section collapsible-body" *ngIf="seccionJustificacionVisible">
+          <div class="justification-box">
+            {{ solicitud.justificacion_necesidad_institucional || 'No se registró justificación.' }}
+          </div>
+        </section>
+      </div>
 
       <!-- =====================================================
            PÁGINAS WEB SOLICITADAS
@@ -595,69 +606,6 @@
         </div>
       </section>
 
-      <!-- =====================================================
-           DOCUMENTOS REGISTRADOS
-      ====================================================== -->
-
-      <section class="panel-section">
-        <div class="section-heading">
-          <div>
-            <span>Documentación</span>
-            <h3>PDFs cargados durante el proceso</h3>
-          </div>
-
-          <i class="bi bi-file-earmark-pdf-fill"></i>
-        </div>
-
-        <div class="documents-grid" *ngIf="documentos.length > 0">
-          <article
-            class="document-card"
-            *ngFor="let documento of documentos; trackBy: trackByDocumento"
-          >
-            <div class="document-icon">
-              <i class="bi bi-file-earmark-pdf-fill"></i>
-            </div>
-
-            <div class="document-info">
-              <span>{{ documento.etapa || 'Etapa no registrada' }}</span>
-
-              <h4>{{ documento.nombre_archivo || 'Documento PDF' }}</h4>
-
-              <p>
-                Tipo: {{ documento.tipo_documento || 'No registrado' }}
-              </p>
-
-              <p>
-                Firmado:
-                <strong>{{ documento.firmado ? 'Sí' : 'No' }}</strong>
-                · Firma validada:
-                <strong>{{ documento.firma_validada ? 'Sí' : 'No' }}</strong>
-              </p>
-            </div>
-
-            <button
-              type="button"
-              class="document-download-btn"
-              (click)="descargarDocumentoFirmadoActual()"
-              [disabled]="procesando"
-            >
-              <i class="bi bi-download"></i>
-              Descargar
-            </button>
-          </article>
-        </div>
-
-        <div class="empty-documents" *ngIf="documentos.length === 0">
-          <i class="bi bi-folder2-open"></i>
-
-          <strong>No existen documentos cargados todavía.</strong>
-
-          <p>
-            Cuando el solicitante, jefe inmediato, máxima autoridad o TICS suban
-            documentos firmados, aparecerán en esta sección.
-          </p>
-        </div>
-      </section>
             <!-- =====================================================
            MODAL FIRMA ELECTRÓNICA FIRMAEC
       ====================================================== -->
@@ -687,62 +635,9 @@
 
             <div>
               <span>Firma electrónica</span>
-
-              <h3 id="modal-firmaec-titulo">Subir PDF firmado con FirmaEC</h3>
-
-              <p>
-                Descargue el PDF firmado actual, fírmelo externamente con FirmaEC
-                y suba aquí el nuevo documento firmado electrónicamente.
-              </p>
+              <h3 id="modal-firmaec-titulo">Subir PDF firmado</h3>
+              <p>Seleccione el PDF que firmó electrónicamente con FirmaEC.</p>
             </div>
-          </div>
-
-          <div class="firmaec-warning">
-            <i class="bi bi-exclamation-triangle-fill"></i>
-
-            <div>
-              <h4>FirmaEC obligatorio</h4>
-
-              <p>
-                No se aceptan documentos firmados manualmente, imágenes pegadas,
-                capturas de pantalla ni archivos distintos a PDF. El documento debe
-                estar firmado electrónicamente desde la aplicación FirmaEC.
-              </p>
-            </div>
-          </div>
-
-          <div class="firmaec-selected-info" *ngIf="solicitud">
-            <div>
-              <span>Código</span>
-              <strong>{{ solicitud.codigo_solicitud }}</strong>
-            </div>
-
-            <div>
-              <span>Solicitante</span>
-              <strong>{{ solicitud.nombres_completos }}</strong>
-            </div>
-
-            <div>
-              <span>Estado actual</span>
-              <strong>{{ getEstadoTexto(solicitud.estado) }}</strong>
-            </div>
-
-            <div>
-              <span>Etapa actual</span>
-              <strong>{{ getEtapaTexto(solicitud.etapa_actual) }}</strong>
-            </div>
-          </div>
-
-          <div class="firmaec-guide">
-            <h4>Pasos para continuar</h4>
-
-            <ol>
-              <li>Descargue el PDF firmado actual desde el detalle de la solicitud.</li>
-              <li>Abra la aplicación FirmaEC instalada en su equipo.</li>
-              <li>Seleccione el PDF descargado y realice su firma electrónica.</li>
-              <li>Guarde el nuevo PDF firmado en su computadora.</li>
-              <li>Seleccione aquí el PDF firmado, revíselo y envíelo.</li>
-            </ol>
           </div>
 
           <label class="firmaec-upload-zone">
@@ -853,39 +748,11 @@
           </button>
 
           <div class="rechazo-modal-header">
-            <div class="rechazo-modal-icon">
-              <i class="bi bi-x-octagon-fill"></i>
-            </div>
+            <img src="inamhi-logo-LETRA-AZUL.png" alt="INAMHI" class="rechazo-logo">
 
             <div>
-              <span>Rechazo de solicitud</span>
-
-              <h3 id="modal-rechazo-titulo">Registrar motivo de rechazo</h3>
-
-              <p>
-                Ingrese un motivo claro y específico. Este motivo quedará registrado
-                en el historial del proceso.
-              </p>
-            </div>
-          </div>
-
-          <div
-            class="rechazo-info"
-            *ngIf="solicitud"
-          >
-            <div>
-              <span>Código</span>
-              <strong>{{ solicitud.codigo_solicitud }}</strong>
-            </div>
-
-            <div>
-              <span>Solicitante</span>
-              <strong>{{ solicitud.nombres_completos }}</strong>
-            </div>
-
-            <div>
-              <span>Estado actual</span>
-              <strong>{{ getEstadoTexto(solicitud.estado) }}</strong>
+              <h3 id="modal-rechazo-titulo">¿Rechazar solicitud?</h3>
+              <p>{{ solicitud?.codigo_solicitud }}</p>
             </div>
           </div>
 

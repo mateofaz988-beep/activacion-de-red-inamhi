@@ -57,6 +57,9 @@ export class SolicitudDetalle implements OnInit {
   mostrarModalRechazo = false;
   mostrarModalFirmaElectronica = false;
 
+  seccionDatosVisible = false;
+  seccionJustificacionVisible = false;
+
   // =====================================================
   // PDF FIRMADO ELECTRÓNICAMENTE CON FIRMAEC
   // JEFE / AUTORIDAD / TICS
@@ -660,34 +663,15 @@ export class SolicitudDetalle implements OnInit {
     }
 
     const resultado = await Swal.fire({
-      title: 'Confirmar aprobación',
       html: `
-        <div style="text-align:center">
-          <p style="margin: 0 0 10px; color:#475569;">
-            ¿Está seguro de continuar con esta acción?
-          </p>
-
-          <strong style="display:inline-block; color:#1d4ed8; font-size:17px; margin-bottom:10px;">
-            ${this.solicitud.codigo_solicitud}
-          </strong>
-
-          <div style="
-            margin-top:14px;
-            padding:12px;
-            border-radius:14px;
-            background:#f8fafc;
-            border:1px solid #e2e8f0;
-            color:#334155;
-            font-size:14px;
-          ">
-            Acción: <b>${this.getTextoBotonAprobar()}</b><br>
-            Estado actual: <b>${this.getEstadoTexto(this.solicitud.estado)}</b>
-          </div>
+        <div style="text-align:center;padding:8px 0">
+          <img src="logo_inamhi.png" alt="INAMHI" style="height:52px;margin-bottom:16px;object-fit:contain;">
+          <p style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 6px;">¿Confirmar aprobación?</p>
+          <p style="font-size:14px;color:#64748b;margin:0;">${this.solicitud.codigo_solicitud}</p>
         </div>
       `,
-      icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Sí, continuar',
+      confirmButtonText: 'Aprobar',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#15803d',
       cancelButtonColor: '#64748b',
@@ -719,32 +703,15 @@ export class SolicitudDetalle implements OnInit {
     }
 
     const resultado = await Swal.fire({
-      title: 'Aprobar y finalizar proceso TICS',
       html: `
-        <div style="text-align:center">
-          <p style="margin:0 0 12px;color:#475569;line-height:1.6;">
-            Esta acción aprobará la validación técnica y
-            <strong>finalizará automáticamente</strong> la solicitud,
-            notificando al solicitante por correo.
-          </p>
-
-          <strong style="display:inline-block;color:#1d4ed8;font-size:17px;margin-bottom:12px;">
-            ${this.solicitud.codigo_solicitud}
-          </strong>
-
-          <div style="
-            padding:12px;border-radius:14px;
-            background:#f0fdf4;border:1px solid #bbf7d0;
-            color:#166534;font-size:14px;
-          ">
-            <b>Solicitante:</b> ${this.solicitud.nombres_completos}<br>
-            <b>Correo:</b> ${this.solicitud.correo_institucional}
-          </div>
+        <div style="text-align:center;padding:8px 0">
+          <img src="logo_inamhi.png" alt="INAMHI" style="height:52px;margin-bottom:16px;object-fit:contain;">
+          <p style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 6px;">¿Aprobar y finalizar proceso TICS?</p>
+          <p style="font-size:14px;color:#64748b;margin:0;">${this.solicitud.codigo_solicitud}</p>
         </div>
       `,
-      icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Sí, aprobar y finalizar',
+      confirmButtonText: 'Aprobar',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#15803d',
       cancelButtonColor: '#64748b',
@@ -768,11 +735,15 @@ export class SolicitudDetalle implements OnInit {
     }
 
     const resultado = await Swal.fire({
-      title: 'Finalizar proceso TICS',
-      text: '¿Confirma que desea finalizar la solicitud y notificar al solicitante?',
-      icon: 'warning',
+      html: `
+        <div style="text-align:center;padding:8px 0">
+          <img src="logo_inamhi.png" alt="INAMHI" style="height:52px;margin-bottom:16px;object-fit:contain;">
+          <p style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 6px;">¿Finalizar proceso TICS?</p>
+          <p style="font-size:14px;color:#64748b;margin:0;">${this.solicitud.codigo_solicitud}</p>
+        </div>
+      `,
       showCancelButton: true,
-      confirmButtonText: 'Sí, finalizar',
+      confirmButtonText: 'Finalizar',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#15803d',
       cancelButtonColor: '#64748b',

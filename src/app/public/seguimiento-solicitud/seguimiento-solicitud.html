@@ -130,52 +130,15 @@
         </div>
       </div>
 
-      <div class="manual-warning">
-        <div class="warning-icon">
-          <i class="bi bi-exclamation-triangle-fill"></i>
-        </div>
-
-        <div>
-          <h4>Advertencia importante antes de subir el documento</h4>
-
-          <p>
-            El documento que suba debe estar completamente lleno y firmado
-            físicamente por todas las autoridades correspondientes:
-            solicitante, jefe inmediato, máxima autoridad y TICS.
-          </p>
-
-          <p>
-            Al subir el PDF firmado, el proceso manual quedará marcado como
-            <strong>FINALIZADO</strong>. Verifique el archivo antes de enviarlo.
-          </p>
-        </div>
-      </div>
-
-      <div class="tics-recommendation">
-        <div class="recommendation-icon">
-          <i class="bi bi-info-circle-fill"></i>
-        </div>
-
-        <div>
-          <h4>Recomendación institucional</h4>
-          <p>
-            Después de completar las firmas físicas, comuníquese con el área de
-            TICS para coordinar la activación del acceso solicitado y la firma
-            correspondiente dentro del documento.
-          </p>
-        </div>
-      </div>
-
       <section
         class="upload-card"
         *ngIf="resultadoManual.estado !== 'FINALIZADO'"
       >
-        <h4>Subir documento manual finalizado</h4>
-
-        <p>
-          Seleccione el PDF escaneado, lleno y firmado. Solo se permite formato
-          <strong>.pdf</strong>.
-        </p>
+        <div class="upload-checklist">
+          <div><i class="bi bi-check2-circle"></i><span>PDF con todas las firmas físicas (solicitante, jefe, autoridad y TICS)</span></div>
+          <div><i class="bi bi-check2-circle"></i><span>Formato <strong>.pdf</strong> · máximo 10 MB</span></div>
+          <div><i class="bi bi-check2-circle"></i><span>Al subir, el proceso quedará <strong>FINALIZADO</strong></span></div>
+        </div>
 
         <label class="file-zone">
           <input
@@ -186,25 +149,13 @@
 
           <i class="bi bi-cloud-arrow-up-fill"></i>
 
-          <strong *ngIf="!nombreArchivoManual">
-            Seleccionar PDF firmado
-          </strong>
-
-          <strong *ngIf="nombreArchivoManual">
-            {{ nombreArchivoManual }}
-          </strong>
-
-          <span>
-            Tamaño máximo permitido: 10 MB
-          </span>
+          <strong *ngIf="!nombreArchivoManual">Seleccionar PDF firmado</strong>
+          <strong *ngIf="nombreArchivoManual">{{ nombreArchivoManual }}</strong>
+          <span>Solo PDF · máximo 10 MB</span>
         </label>
 
         <div class="error-box upload-error" *ngIf="errorArchivoManual">
           {{ errorArchivoManual }}
-        </div>
-
-        <div class="success-box" *ngIf="exitoManual">
-          {{ exitoManual }}
         </div>
 
         <button
@@ -214,27 +165,39 @@
           (click)="subirDocumentoManual()"
         >
           <span *ngIf="!subiendoManual">
-            Subir PDF y finalizar proceso manual
+            <i class="bi bi-send-check-fill"></i>
+            Subir y finalizar proceso
           </span>
-
-          <span *ngIf="subiendoManual">
-            Subiendo documento...
-          </span>
+          <span *ngIf="subiendoManual">Subiendo documento...</span>
         </button>
       </section>
 
+      <!-- ── PANTALLA DE ÉXITO ── -->
       <section
-        class="final-card"
+        class="process-complete"
         *ngIf="resultadoManual.estado === 'FINALIZADO'"
       >
-        <i class="bi bi-check-circle-fill"></i>
+        <div class="process-complete-icon">
+          <i class="bi bi-check-circle-fill"></i>
+        </div>
 
-        <div>
-          <h4>Proceso manual finalizado</h4>
-          <p>
-            El documento manual fue recibido correctamente. El archivo quedará
-            disponible para revisión administrativa en los paneles internos.
-          </p>
+        <h3>¡Proceso manual finalizado!</h3>
+        <p>El documento fue recibido correctamente por TICS.</p>
+
+        <div class="process-complete-code">
+          <span>ID del proceso</span>
+          <strong>{{ resultadoManual.uuid_solicitud }}</strong>
+        </div>
+
+        <div class="process-complete-actions">
+          <a routerLink="/public/solicitud" class="btn-nueva-sol">
+            <i class="bi bi-plus-circle-fill"></i>
+            Nueva solicitud
+          </a>
+          <a routerLink="/" class="btn-inicio-sol">
+            <i class="bi bi-house-fill"></i>
+            Volver al inicio
+          </a>
         </div>
       </section>
     </section>

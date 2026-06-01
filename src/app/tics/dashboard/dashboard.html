@@ -6,8 +6,8 @@
       </div>
 
       <div>
-        <h2>TICS</h2>
-        <span>Panel técnico</span>
+        <h2>INAMHI</h2>
+        <span>Panel técnico TICS</span>
       </div>
     </div>
 
@@ -17,6 +17,7 @@
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
       >
+        <i class="bi bi-speedometer2"></i>
         Solicitudes asignadas
       </a>
 
@@ -24,6 +25,7 @@
         routerLink="/tics/historial"
         routerLinkActive="active"
       >
+        <i class="bi bi-clock-history"></i>
         Historial
       </a>
 
@@ -31,96 +33,133 @@
         routerLink="/tics/reportes"
         routerLinkActive="active"
       >
+        <i class="bi bi-bar-chart-fill"></i>
         Reportes
       </a>
     </nav>
 
     <button type="button" class="logout" (click)="logout()">
+      <i class="bi bi-box-arrow-right"></i>
       Cerrar sesión
     </button>
   </aside>
 
   <main class="content">
     <header class="topbar">
-      <div>
-        <span class="eyebrow">Unidad de Tecnologías de la Información</span>
+      <div class="topbar-left">
+        <span class="eyebrow">
+          Unidad de Tecnologías de la Información
+        </span>
 
         <h1>Dashboard TICS</h1>
 
         <p>
-          Panel exclusivo para validación técnica, ejecución y cierre de solicitudes
-          de liberación web aprobadas por la máxima autoridad.
+          Validación técnica, ejecución y cierre de solicitudes aprobadas
+          por la máxima autoridad.
         </p>
       </div>
 
-     
       <div class="user-actions">
-  <div class="user-card">
+        <div class="user-card" *ngIf="usuario">
+          <strong>{{ usuario.nombres }} {{ usuario.apellidos }}</strong>
+          <span>{{ usuario.rol }}</span>
+        </div>
 
-    
-  </div>
+        <button
+          type="button"
+          class="refresh-btn"
+          (click)="cargarSolicitudesTics()"
+          [disabled]="cargando"
+        >
+          <i class="bi bi-arrow-clockwise"></i>
+          Actualizar
+        </button>
 
-  <button type="button" class="logout-top-btn" (click)="logout()">
-    <i class="bi bi-box-arrow-right"></i>
-    Cerrar sesión
-  </button>
-</div>
+        <button type="button" class="logout-top-btn" (click)="logout()">
+          <i class="bi bi-box-arrow-right"></i>
+          Cerrar sesión
+        </button>
+      </div>
     </header>
+
+    <!-- =====================================================
+         ESTADÍSTICAS
+    ====================================================== -->
 
     <section class="stats-grid">
       <article class="stat-card pendiente">
+        <div class="stat-icon stat-icon-pendiente">
+          <i class="bi bi-hourglass-split"></i>
+        </div>
         <span>Pendientes TICS</span>
         <strong>{{ totalPendientes }}</strong>
-        <p>Solicitudes listas para validación técnica.</p>
+        <p>Listos para validación técnica.</p>
       </article>
 
       <article class="stat-card ejecucion">
+        <div class="stat-icon stat-icon-ejecucion">
+          <i class="bi bi-gear-wide-connected"></i>
+        </div>
         <span>En ejecución</span>
         <strong>{{ totalEjecucion }}</strong>
-        <p>Solicitudes aprobadas técnicamente y pendientes de cierre.</p>
+        <p>Aprobados, pendientes de cierre.</p>
       </article>
 
       <article class="stat-card finalizada">
+        <div class="stat-icon stat-icon-finalizada">
+          <i class="bi bi-check-circle-fill"></i>
+        </div>
         <span>Finalizadas</span>
         <strong>{{ totalFinalizadas }}</strong>
-        <p>Solicitudes cerradas correctamente por TICS.</p>
+        <p>Cerradas correctamente.</p>
       </article>
 
       <article class="stat-card rechazada">
+        <div class="stat-icon stat-icon-rechazada">
+          <i class="bi bi-x-circle-fill"></i>
+        </div>
         <span>Rechazadas</span>
         <strong>{{ totalRechazadas }}</strong>
-        <p>Solicitudes rechazadas durante la validación técnica.</p>
+        <p>Rechazadas en validación técnica.</p>
       </article>
     </section>
 
+    <!-- =====================================================
+         FLUJO OPERATIVO
+    ====================================================== -->
+
     <section class="workflow-card">
       <div>
-        <span class="workflow-label">Flujo técnico</span>
+        <span class="workflow-label">
+          <i class="bi bi-diagram-3-fill"></i>
+          Flujo técnico
+        </span>
 
         <h2>Proceso operativo TICS</h2>
 
         <p>
-          TICS recibe únicamente solicitudes aprobadas por la máxima autoridad.
-          Primero se realiza la validación técnica; luego, si procede, se ejecuta
-          la liberación web institucional y se finaliza el proceso.
+          TICS recibe solicitudes aprobadas por la máxima autoridad.
+          Valide técnicamente, ejecute la liberación web y finalice el proceso.
         </p>
       </div>
 
       <div class="workflow-steps">
-        <span>1. Revisar</span>
-        <span>2. Validar</span>
-        <span>3. Ejecutar</span>
-        <span>4. Finalizar</span>
+        <span><i class="bi bi-search"></i> 1. Revisar</span>
+        <span><i class="bi bi-shield-check"></i> 2. Validar</span>
+        <span><i class="bi bi-terminal-fill"></i> 3. Ejecutar</span>
+        <span><i class="bi bi-check2-all"></i> 4. Finalizar</span>
       </div>
     </section>
+
+    <!-- =====================================================
+         TABLA DE SOLICITUDES
+    ====================================================== -->
 
     <section class="table-card">
       <div class="table-header">
         <div>
           <h2>Solicitudes asignadas a TICS</h2>
-          <p>
-            Se muestran únicamente solicitudes en validación técnica o ejecución TICS.
-          </p>
+          <p>Solicitudes en validación técnica o ejecución TICS.</p>
         </div>
       </div>
 
@@ -167,20 +206,15 @@
 
               <td>
                 <strong>{{ solicitud.nombres_completos }}</strong>
-                <span>{{ solicitud.cedula }}</span>
+                <br>
+                <span style="color:#64748b;font-size:12px;">{{ solicitud.cedula }}</span>
               </td>
 
-              <td>
-                {{ solicitud.correo_institucional }}
-              </td>
+              <td>{{ solicitud.correo_institucional }}</td>
 
-              <td>
-                {{ solicitud.dependencia }}
-              </td>
+              <td>{{ solicitud.dependencia }}</td>
 
-              <td>
-                {{ solicitud.area_unidad }}
-              </td>
+              <td>{{ solicitud.area_unidad }}</td>
 
               <td>
                 <span
@@ -196,7 +230,6 @@
                   <strong class="date-text">
                     {{ formatearFecha(solicitud.created_at) }}
                   </strong>
-
                   <span class="time-text">
                     <i class="bi bi-clock-fill"></i>
                     {{ formatearHora(solicitud.created_at) }}
@@ -209,6 +242,7 @@
                   class="detail-btn"
                   [routerLink]="['/tics/solicitudes', solicitud.id]"
                 >
+                  <i class="bi bi-eye-fill"></i>
                   Revisar
                 </a>
 
@@ -217,6 +251,7 @@
                   class="pdf-btn"
                   (click)="descargarPdf(solicitud)"
                 >
+                  <i class="bi bi-file-earmark-pdf-fill"></i>
                   PDF
                 </button>
               </td>

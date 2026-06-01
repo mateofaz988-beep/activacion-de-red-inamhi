@@ -123,6 +123,9 @@ export class SolicitudPublica implements OnInit {
   preparandoFirmaEc = false;
   subiendoFirmaEc = false;
 
+  mostrarToastEnviado = false;
+  mostrarConfirmEnvio = false;
+
   codigoFirmaEc = '';
   urlDescargaFirmaEc = '';
 
@@ -163,6 +166,18 @@ export class SolicitudPublica implements OnInit {
   ngOnInit(): void {
     this.crearFormulario();
     this.cargarDirecciones();
+  }
+
+  // =====================================================
+  // FECHA ACTUAL
+  // =====================================================
+
+  get fechaHoyTexto(): string {
+    return new Date().toLocaleDateString('es-EC', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
   }
 
   // =====================================================
@@ -743,16 +758,18 @@ export class SolicitudPublica implements OnInit {
       return;
     }
 
-    const confirmar = window.confirm(
-      'Verifique que el PDF seleccionado sea el documento correcto y que esté firmado electrónicamente con FirmaEC.\n\nAl enviarlo, la solicitud pasará únicamente al jefe responsable del área seleccionada.'
-    );
+    this.mostrarConfirmEnvio = true;
+  }
 
-    if (!confirmar) {
-      return;
-    }
+  cancelarConfirmEnvio(): void {
+    this.mostrarConfirmEnvio = false;
+  }
+
+  confirmarEnvioFirmaEc(): void {
+    this.mostrarConfirmEnvio = false;
 
     const formData = new FormData();
-    formData.append('archivo', this.archivoFirmado);
+    formData.append('archivo', this.archivoFirmado!);
 
     this.subiendoFirmaEc = true;
 
@@ -772,9 +789,6 @@ export class SolicitudPublica implements OnInit {
         this.enviado = true;
         this.codigoGenerado = this.codigoFirmaEc;
 
-        this.exitoFirmaEc =
-          'PDF firmado subido correctamente. La solicitud fue enviada al jefe inmediato asignado.';
-
         this.formulario.reset();
         this.crearFormulario();
         this.cargarDirecciones();
@@ -783,6 +797,10 @@ export class SolicitudPublica implements OnInit {
         this.archivoFirmado = null;
         this.nombreArchivoFirmado = '';
         this.liberarVistaPreviaFirmado();
+
+        this.mostrarModalFirmaEc = false;
+        this.mostrarToastEnviado = true;
+        setTimeout(() => { this.mostrarToastEnviado = false; }, 3500);
       },
       error: (err) => {
         this.subiendoFirmaEc = false;
