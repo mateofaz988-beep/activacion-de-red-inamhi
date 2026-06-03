@@ -477,197 +477,228 @@
        MODAL FIRMAEC ASISTIDO
   ====================================================== -->
 
-  <div class="modal-backdrop-firmaec" *ngIf="mostrarModalFirmaEc">
-    <section class="modal-firmaec-card">
-      <button
-        type="button"
-        class="close-modal-firmaec"
-        (click)="cerrarModalFirmaEc()"
-        [disabled]="preparandoFirmaEc || subiendoFirmaEc"
-        aria-label="Cerrar ventana FirmaEC"
-      >
-        ×
-      </button>
+  <!-- =====================================================
+       MODAL FIRMA DIGITAL CON CERTIFICADO (.p12/.pfx)
+  ====================================================== -->
+  <div
+    class="modal-backdrop-firmaec"
+    *ngIf="mostrarModalFirmaEc"
+    role="dialog"
+    aria-modal="true"
+    (click)="cerrarModalFirmaEc()"
+  >
+    <section class="modal-firma-digital-pub" (click)="$event.stopPropagation()">
 
-      <div class="firmaec-modal-header">
-        <div class="firmaec-modal-icon">
-          <i class="bi bi-shield-lock-fill"></i>
+      <!-- Encabezado -->
+      <div class="mfd-header">
+        <div class="mfd-icon">
+          <i class="bi bi-pen-fill"></i>
         </div>
-
-        <div>
-          <span>Firma electrónica asistida</span>
-          <h3>Descargar, firmar y subir documento</h3>
-          <p>
-            El sistema genera automáticamente el ID único y el formato PDF.
-            La firma se realiza externamente desde la aplicación FirmaEC.
-          </p>
+        <div class="mfd-header-text">
+          <span>Firma electrónica institucional</span>
+          <h3>Firmar solicitud como solicitante</h3>
+          <p>Su firma digital se colocará automáticamente en el documento</p>
         </div>
-      </div>
-
-      <div class="firmaec-steps">
-        <div
-          class="firmaec-step"
-          [class.active]="pasoFirmaEc === 'generando' || pasoFirmaEc === 'descarga' || pasoFirmaEc === 'subida' || pasoFirmaEc === 'finalizado'"
-        >
-          <span>1</span>
-          <p>ID automático</p>
-        </div>
-
-        <div class="firmaec-line"></div>
-
-        <div
-          class="firmaec-step"
-          [class.active]="pasoFirmaEc === 'descarga' || pasoFirmaEc === 'subida' || pasoFirmaEc === 'finalizado'"
-        >
-          <span>2</span>
-          <p>Descargar PDF</p>
-        </div>
-
-        <div class="firmaec-line"></div>
-
-        <div
-          class="firmaec-step"
-          [class.active]="pasoFirmaEc === 'subida' || pasoFirmaEc === 'finalizado'"
-        >
-          <span>3</span>
-          <p>Subir firmado</p>
-        </div>
-
-        <div class="firmaec-line"></div>
-
-        <div
-          class="firmaec-step"
-          [class.active]="pasoFirmaEc === 'finalizado'"
-        >
-          <span>4</span>
-          <p>Enviar al jefe</p>
-        </div>
-      </div>
-
-      <div class="firmaec-warning">
-        <i class="bi bi-info-circle-fill"></i>
-
-        <div>
-          <h4>Guía para firmar externamente con FirmaEC</h4>
-          <p>
-            1. Descargue el formato PDF generado por el sistema.<br />
-            2. Abra la aplicación FirmaEC instalada en su equipo.<br />
-            3. Seleccione el PDF descargado y realice la firma electrónica.<br />
-            4. Guarde el PDF firmado en su computadora.<br />
-            5. Regrese a esta ventana, seleccione el PDF firmado, verifíquelo y envíelo al jefe inmediato.
-          </p>
-        </div>
-      </div>
-
-      <div class="firmaec-generated" *ngIf="codigoFirmaEc">
-        <span>Código generado automáticamente</span>
-        <strong>{{ codigoFirmaEc }}</strong>
-      </div>
-
-      <div class="firmaec-generated loading-code" *ngIf="preparandoFirmaEc">
-        <span>Generando automáticamente</span>
-        <strong>Preparando ID y formato PDF...</strong>
-      </div>
-
-      <div class="firmaec-selected-info" *ngIf="jefeAsignado">
-        <div>
-          <span>Dirección</span>
-          <strong>{{ nombreDireccionSeleccionada || 'No registrada' }}</strong>
-        </div>
-
-        <div>
-          <span>Área / Unidad</span>
-          <strong>{{ nombreAreaSeleccionada || 'No registrada' }}</strong>
-        </div>
-
-        <div>
-          <span>Cargo</span>
-          <strong>{{ nombreCargoSeleccionado || 'No registrado' }}</strong>
-        </div>
-
-        <div>
-          <span>Jefe responsable</span>
-          <strong>
-            {{ jefeAsignado.nombres }} {{ jefeAsignado.apellidos || '' }}
-          </strong>
-        </div>
-      </div>
-
-      <div class="firmaec-actions-grid one-action">
         <button
           type="button"
-          class="firmaec-secondary-btn"
-          (click)="descargarFormatoFirmaEc()"
-          [disabled]="!codigoFirmaEc || preparandoFirmaEc"
+          class="mfd-close"
+          (click)="cerrarModalFirmaEc()"
+          [disabled]="preparandoFirmaEc || firmandoDocumento || validandoCertificado"
+          aria-label="Cerrar"
         >
-          Descargar formato PDF
+          <i class="bi bi-x-lg"></i>
         </button>
       </div>
 
-      <label
-        class="firmaec-upload-zone"
-        [class.disabled]="!codigoFirmaEc"
-      >
-        <input
-          type="file"
-          accept=".pdf,application/pdf"
-          [disabled]="!codigoFirmaEc || subiendoFirmaEc"
-          (change)="seleccionarArchivoFirmado($event)"
-        />
-
-        <i class="bi bi-cloud-arrow-up-fill"></i>
-
-        <strong *ngIf="!nombreArchivoFirmado">
-          Seleccionar PDF firmado electrónicamente
-        </strong>
-
-        <strong *ngIf="nombreArchivoFirmado">
-          {{ nombreArchivoFirmado }}
-        </strong>
-
-        <span *ngIf="codigoFirmaEc">
-          Solo PDF · Máximo 15 MB
-        </span>
-
-        <span *ngIf="!codigoFirmaEc">
-          Espere a que se genere automáticamente el ID único
-        </span>
-      </label>
-
-      <div class="preview-actions" *ngIf="archivoFirmado">
-        <button type="button" class="preview-btn" (click)="verPdfSubido()">
-          Ver PDF seleccionado
-        </button>
-
-        <button type="button" class="remove-selected-btn" (click)="quitarPdfFirmado()">
-          Quitar y seleccionar otro
-        </button>
+      <!-- Progreso -->
+      <div class="mfd-progress">
+        <div class="mfd-step" [class.active]="pasoFirma === 'preparando' || pasoFirma === 'cert' || pasoFirma === 'firmando' || pasoFirma === 'finalizado'">
+          <span class="mfd-step-num">1</span>
+          <p>Registrar solicitud</p>
+        </div>
+        <div class="mfd-line" [class.done]="pasoFirma === 'cert' || pasoFirma === 'firmando' || pasoFirma === 'finalizado'"></div>
+        <div class="mfd-step" [class.active]="pasoFirma === 'cert' || pasoFirma === 'firmando' || pasoFirma === 'finalizado'">
+          <span class="mfd-step-num">2</span>
+          <p>Certificado</p>
+        </div>
+        <div class="mfd-line" [class.done]="pasoFirma === 'firmando' || pasoFirma === 'finalizado'"></div>
+        <div class="mfd-step" [class.active]="pasoFirma === 'firmando' || pasoFirma === 'finalizado'">
+          <span class="mfd-step-num">3</span>
+          <p>Firmar</p>
+        </div>
       </div>
 
-      <div class="firmaec-error" *ngIf="errorFirmaEc">
-        {{ errorFirmaEc }}
+      <!-- ══ PASO 1: Preparando solicitud ══ -->
+      <div class="mfd-body" *ngIf="pasoFirma === 'preparando'">
+        <div class="mfd-loading">
+          <div class="mfd-spinner-lg"></div>
+          <p>Registrando solicitud en el sistema...</p>
+          <span>Por favor espere</span>
+        </div>
+        <div class="mfd-alert mfd-alert-error" *ngIf="errorCertificado">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          {{ errorCertificado }}
+        </div>
       </div>
 
-      <div class="firmaec-success" *ngIf="exitoFirmaEc">
-        {{ exitoFirmaEc }}
+      <!-- ══ PASO 2: Subir certificado ══ -->
+      <div class="mfd-body" *ngIf="pasoFirma === 'cert'">
+
+        <!-- Código generado -->
+        <div class="mfd-codigo" *ngIf="codigoFirmaEc">
+          <i class="bi bi-qr-code"></i>
+          <div>
+            <span>Código de solicitud</span>
+            <strong>{{ codigoFirmaEc }}</strong>
+          </div>
+        </div>
+
+        <!-- Info del proceso -->
+        <div class="mfd-info-row" *ngIf="jefeAsignado">
+          <div class="mfd-info-item">
+            <span>Firmante</span>
+            <strong>{{ formulario.get('nombres_completos')?.value || 'Solicitante' }}</strong>
+          </div>
+          <div class="mfd-info-item">
+            <span>Rol en el documento</span>
+            <strong>Solicitante</strong>
+          </div>
+          <div class="mfd-info-item">
+            <span>Jefe inmediato</span>
+            <strong>{{ jefeAsignado.nombres }} {{ jefeAsignado.apellidos || '' }}</strong>
+          </div>
+        </div>
+
+        <!-- Certificado -->
+        <div class="mfd-field">
+          <label class="mfd-label">
+            <i class="bi bi-file-earmark-lock2-fill"></i>
+            Certificado digital *
+          </label>
+          <label class="mfd-upload-zone" [class.has-file]="certificadoPublico">
+            <input
+              type="file"
+              accept=".p12,.pfx"
+              (change)="seleccionarCertificadoPublico($event)"
+              [disabled]="firmandoDocumento || validandoCertificado"
+            />
+            <i class="bi" [ngClass]="certificadoPublico ? 'bi-file-earmark-check-fill' : 'bi-cloud-arrow-up'"></i>
+            <strong>{{ nombreCertificadoPublico || 'Seleccionar certificado .p12 o .pfx' }}</strong>
+            <span>Solo .p12 o .pfx · Máximo 5 MB</span>
+          </label>
+        </div>
+
+        <!-- Contraseña -->
+        <div class="mfd-field">
+          <label class="mfd-label">
+            <i class="bi bi-lock-fill"></i>
+            Contraseña del certificado *
+          </label>
+          <div class="mfd-pass-wrap">
+            <input
+              [type]="mostrarPassword ? 'text' : 'password'"
+              class="mfd-input"
+              placeholder="Contraseña de su certificado"
+              [(ngModel)]="passwordCertificado"
+              [disabled]="firmandoDocumento || validandoCertificado"
+              autocomplete="current-password"
+            />
+            <button type="button" class="mfd-eye" (click)="toggleMostrarPassword()">
+              <i class="bi" [ngClass]="mostrarPassword ? 'bi-eye-slash-fill' : 'bi-eye-fill'"></i>
+            </button>
+          </div>
+          <p class="mfd-hint">La contraseña no se almacena ni se registra en el sistema.</p>
+        </div>
+
+        <!-- Observación -->
+        <div class="mfd-field">
+          <label class="mfd-label">
+            <i class="bi bi-chat-left-text"></i>
+            Observación (opcional)
+          </label>
+          <textarea
+            class="mfd-textarea"
+            rows="2"
+            maxlength="500"
+            placeholder="Observación sobre esta firma..."
+            [(ngModel)]="observacionFirma"
+            [disabled]="firmandoDocumento"
+          ></textarea>
+        </div>
+
+        <!-- Error -->
+        <div class="mfd-alert mfd-alert-error" *ngIf="errorCertificado">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          {{ errorCertificado }}
+        </div>
+
+        <!-- Info certificado validado -->
+        <div class="mfd-cert-info" *ngIf="infoCertificado && certificadoValidado">
+          <div class="mfd-cert-ok">
+            <i class="bi bi-patch-check-fill"></i>
+            Certificado verificado
+            <span class="mfd-cert-badge">
+              {{ infoCertificado.vigente ? 'Vigente — ' + infoCertificado.dias_restantes + ' días' : 'EXPIRADO' }}
+            </span>
+          </div>
+          <table class="mfd-cert-table">
+            <tr><td>Titular</td><td>{{ infoCertificado.subject_cn }}</td></tr>
+            <tr><td>Emisor</td><td>{{ infoCertificado.issuer_cn }}</td></tr>
+            <tr><td>Serie</td><td class="mono">{{ infoCertificado.numero_serie }}</td></tr>
+            <tr><td>Válido hasta</td><td>{{ infoCertificado.fecha_expiracion }}</td></tr>
+          </table>
+        </div>
+
+        <!-- Acciones -->
+        <div class="mfd-actions">
+          <button
+            type="button"
+            class="mfd-btn-secondary"
+            (click)="cerrarModalFirmaEc()"
+            [disabled]="firmandoDocumento || validandoCertificado"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            class="mfd-btn-outline"
+            (click)="validarCertificadoPublico()"
+            [disabled]="!certificadoPublico || !passwordCertificado || validandoCertificado || firmandoDocumento"
+          >
+            <span *ngIf="!validandoCertificado">
+              <i class="bi bi-shield-check"></i> Verificar certificado
+            </span>
+            <span *ngIf="validandoCertificado" class="mfd-loading-inline">
+              <span class="mfd-spinner-sm"></span> Verificando...
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="mfd-btn-primary"
+            (click)="firmarComoSolicitante()"
+            [disabled]="!certificadoPublico || !passwordCertificado || firmandoDocumento || validandoCertificado"
+          >
+            <span *ngIf="!firmandoDocumento">
+              <i class="bi bi-pen-fill"></i> Firmar electrónicamente
+            </span>
+            <span *ngIf="firmandoDocumento" class="mfd-loading-inline">
+              <span class="mfd-spinner-sm"></span> Firmando documento...
+            </span>
+          </button>
+        </div>
       </div>
 
-      <div class="firmaec-final-actions">
-        <button
-          type="button"
-          class="send-firmaec-btn"
-          [disabled]="!archivoFirmado || !codigoFirmaEc || subiendoFirmaEc"
-          (click)="subirPdfFirmadoFirmaEc()"
-        >
-          <span *ngIf="!subiendoFirmaEc">
-            Enviar PDF firmado al jefe inmediato
-          </span>
-
-          <span *ngIf="subiendoFirmaEc">
-            Enviando PDF firmado...
-          </span>
-        </button>
+      <!-- ══ PASO 3: Firmando ══ -->
+      <div class="mfd-body" *ngIf="pasoFirma === 'firmando'">
+        <div class="mfd-loading">
+          <div class="mfd-spinner-lg signing"></div>
+          <p>Aplicando firma digital criptográfica...</p>
+          <span>El sistema está firmando su documento en la columna SOLICITANTE</span>
+        </div>
       </div>
+
     </section>
   </div>
 

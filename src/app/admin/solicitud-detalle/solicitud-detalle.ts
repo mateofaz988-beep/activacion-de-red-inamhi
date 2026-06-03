@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
@@ -12,6 +12,14 @@ import {
   SolicitudAdmin,
   SolicitudesAdminService
 } from '../../services/solicitudes-admin.service';
+import {
+  FirmaElectronicaService,
+  InformacionCertificado,
+  FirmaRegistrada,
+  VersionDocumento
+} from '../../services/firma-electronica.service';
+
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-solicitud-detalle',
@@ -27,14 +35,7 @@ import {
 })
 export class SolicitudDetalle implements OnInit {
 
-  /*
-    LOCAL:
-    http://localhost:5050/api
-
-    SERVIDOR CON NGINX:
-    /api
-  */
-  readonly API_BASE = 'http://localhost:5050/api';
+  readonly API_BASE = environment.apiUrl;
 
   solicitud: SolicitudAdmin | null = null;
   paginasWeb: PaginaWebAdmin[] = [];
@@ -62,18 +63,42 @@ export class SolicitudDetalle implements OnInit {
 
   // =====================================================
   // PDF FIRMADO ELECTRÓNICAMENTE CON FIRMAEC
-  // JEFE / AUTORIDAD / TICS
   // =====================================================
 
   archivoFirmadoElectronico: File | null = null;
   nombreArchivoFirmadoElectronico = '';
   urlVistaPreviaFirmadoElectronico = '';
 
+  // =====================================================
+  // MODAL FIRMA DIGITAL CON CERTIFICADO (.p12/.pfx)
+  // =====================================================
+
+  mostrarModalFirmaDigital = false;
+  modoFirma: 'pyhanko' | 'firmaec' = 'pyhanko';
+
+  // pyHanko
+  certificadoSeleccionado: File | null = null;
+  nombreCertificado = '';
+  passwordCertificado = '';
+  mostrarPassword = false;
+  observacionFirma = '';
+  validandoCertificado = false;
+  firmandoConCertificado = false;
+  infoCertificado: InformacionCertificado | null = null;
+  certificadoValidado = false;
+  errorCertificado = '';
+
+  // historial de firmas
+  firmasRegistradas: FirmaRegistrada[] = [];
+  versionesDocumento: VersionDocumento[] = [];
+  cargandoFirmas = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private authService: AuthService,
-    private solicitudesService: SolicitudesAdminService
+    private solicitudesService: SolicitudesAdminService,
+    private firmaService: FirmaElectronicaService
   ) {}
 
   ngOnInit(): void {
@@ -299,9 +324,8 @@ export class SolicitudDetalle implements OnInit {
 
         Swal.fire({
           title: 'PDF descargado',
-          text: 'El PDF generado por el sistema se descargó correctamente.',
           icon: 'success',
-          confirmButtonText: 'Entendido',
+          confirmButtonText: 'OK',
           confirmButtonColor: '#1d4ed8',
           background: '#ffffff',
           color: '#0f172a'
@@ -356,9 +380,8 @@ export class SolicitudDetalle implements OnInit {
 
         Swal.fire({
           title: 'Documento descargado',
-          text: 'El PDF firmado actual se descargó correctamente.',
           icon: 'success',
-          confirmButtonText: 'Entendido',
+          confirmButtonText: 'OK',
           confirmButtonColor: '#15803d',
           background: '#ffffff',
           color: '#0f172a'
@@ -382,10 +405,10 @@ export class SolicitudDetalle implements OnInit {
         }
 
         Swal.fire({
-          title: 'Documento firmado no disponible',
-          text: err.error?.mensaje || 'Todavía no existe un PDF firmado cargado para esta solicitud.',
+          title: 'Sin PDF firmado',
+          text: err.error?.mensaje || 'No hay documento firmado disponible.',
           icon: 'warning',
-          confirmButtonText: 'Entendido',
+          confirmButtonText: 'OK',
           confirmButtonColor: '#d97706',
           background: '#ffffff',
           color: '#0f172a'
@@ -594,9 +617,8 @@ export class SolicitudDetalle implements OnInit {
 
         Swal.fire({
           title: 'PDF firmado enviado',
-          text: response.mensaje || 'El PDF firmado electrónicamente fue subido correctamente.',
           icon: 'success',
-          confirmButtonText: 'Entendido',
+          confirmButtonText: 'OK',
           confirmButtonColor: '#15803d',
           background: '#ffffff',
           color: '#0f172a'
@@ -639,7 +661,7 @@ export class SolicitudDetalle implements OnInit {
     if (this.esAdmin()) {
       this.mostrarError(
         'Acción no permitida',
-        'El administrador no aprueba solicitudes. Solo revisa el proceso.'
+        'El administrador no puede aprobar solicitudes.'
       );
       return;
     }
@@ -651,9 +673,9 @@ export class SolicitudDetalle implements OnInit {
     if (!this.documentoFirmadoCargado) {
       Swal.fire({
         title: 'PDF firmado requerido',
-        text: 'Antes de aprobar debe subir el PDF firmado electrónicamente con FirmaEC.',
+        text: 'Suba el PDF firmado con FirmaEC antes de aprobar.',
         icon: 'warning',
-        confirmButtonText: 'Entendido',
+        confirmButtonText: 'OK',
         confirmButtonColor: '#d97706',
         background: '#ffffff',
         color: '#0f172a'
@@ -665,9 +687,9 @@ export class SolicitudDetalle implements OnInit {
     const resultado = await Swal.fire({
       html: `
         <div style="text-align:center;padding:8px 0">
-          <img src="logo_inamhi.png" alt="INAMHI" style="height:52px;margin-bottom:16px;object-fit:contain;">
-          <p style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 6px;">¿Confirmar aprobación?</p>
-          <p style="font-size:14px;color:#64748b;margin:0;">${this.solicitud.codigo_solicitud}</p>
+          <img src="/inamhi-logo-LETRA-AZUL.png" alt="INAMHI" style="height:80px;width:auto;display:block;margin:0 auto 16px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.12));">
+          <p style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 4px;">¿Confirmar aprobación?</p>
+          <p style="font-size:13px;color:#64748b;margin:0;">${this.solicitud.codigo_solicitud}</p>
         </div>
       `,
       showCancelButton: true,
@@ -697,7 +719,7 @@ export class SolicitudDetalle implements OnInit {
     if (!this.puedeAprobarValidacionTics()) {
       this.mostrarError(
         'Acción no disponible',
-        'La solicitud no está en estado pendiente de validación TICS o falta subir el PDF firmado.'
+        'Estado incorrecto o falta el PDF firmado.'
       );
       return;
     }
@@ -705,9 +727,9 @@ export class SolicitudDetalle implements OnInit {
     const resultado = await Swal.fire({
       html: `
         <div style="text-align:center;padding:8px 0">
-          <img src="logo_inamhi.png" alt="INAMHI" style="height:52px;margin-bottom:16px;object-fit:contain;">
-          <p style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 6px;">¿Aprobar y finalizar proceso TICS?</p>
-          <p style="font-size:14px;color:#64748b;margin:0;">${this.solicitud.codigo_solicitud}</p>
+          <img src="/inamhi-logo-LETRA-AZUL.png" alt="INAMHI" style="height:80px;width:auto;display:block;margin:0 auto 16px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.12));">
+          <p style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 4px;">¿Aprobar y finalizar TICS?</p>
+          <p style="font-size:13px;color:#64748b;margin:0;">${this.solicitud.codigo_solicitud}</p>
         </div>
       `,
       showCancelButton: true,
@@ -737,9 +759,9 @@ export class SolicitudDetalle implements OnInit {
     const resultado = await Swal.fire({
       html: `
         <div style="text-align:center;padding:8px 0">
-          <img src="logo_inamhi.png" alt="INAMHI" style="height:52px;margin-bottom:16px;object-fit:contain;">
-          <p style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 6px;">¿Finalizar proceso TICS?</p>
-          <p style="font-size:14px;color:#64748b;margin:0;">${this.solicitud.codigo_solicitud}</p>
+          <img src="/inamhi-logo-LETRA-AZUL.png" alt="INAMHI" style="height:80px;width:auto;display:block;margin:0 auto 16px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.12));">
+          <p style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 4px;">¿Finalizar proceso TICS?</p>
+          <p style="font-size:13px;color:#64748b;margin:0;">${this.solicitud.codigo_solicitud}</p>
         </div>
       `,
       showCancelButton: true,
@@ -788,55 +810,26 @@ export class SolicitudDetalle implements OnInit {
             const errorCorreo = response?.error_correo;
 
             Swal.fire({
-              title: 'Proceso TICS finalizado',
+              title: 'TICS finalizado',
               html: `
                 <div style="text-align:center">
-                  <p style="margin:0 0 14px;color:#475569;line-height:1.6;">
-                    La solicitud <strong style="color:#1d4ed8;">
-                    ${this.solicitud?.codigo_solicitud}</strong>
-                    fue finalizada correctamente.
+                  <p style="margin:0 0 10px;font-size:13px;color:#64748b;">
+                    <strong style="color:#0f172a;">${this.solicitud?.codigo_solicitud}</strong> completada.
                   </p>
-                  ${correoEnviado ? `
-                    <div style="
-                      display:flex;align-items:center;gap:10px;
-                      padding:14px 16px;border-radius:14px;
-                      background:#f0fdf4;border:1px solid #bbf7d0;
-                      text-align:left;
-                    ">
-                      <i class="bi bi-envelope-check-fill"
-                         style="color:#16a34a;font-size:20px;flex-shrink:0;"></i>
-                      <div>
-                        <div style="color:#166534;font-weight:900;font-size:13px;">
-                          Notificación enviada
-                        </div>
-                        <div style="color:#15803d;font-size:13px;margin-top:2px;">
-                          Correo enviado a <strong>${correoDestino}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  ` : `
-                    <div style="
-                      display:flex;align-items:center;gap:10px;
-                      padding:14px 16px;border-radius:14px;
-                      background:#fefce8;border:1px solid #fde047;
-                      text-align:left;
-                    ">
-                      <i class="bi bi-exclamation-triangle-fill"
-                         style="color:#ca8a04;font-size:20px;flex-shrink:0;"></i>
-                      <div>
-                        <div style="color:#854d0e;font-weight:900;font-size:13px;">
-                          Correo no enviado
-                        </div>
-                        <div style="color:#92400e;font-size:13px;margin-top:2px;">
-                          ${errorCorreo || 'No se pudo notificar al solicitante.'}
-                        </div>
-                      </div>
-                    </div>
-                  `}
+                  ${correoEnviado
+                    ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:#f0fdf4;border:1px solid #bbf7d0;text-align:left;">
+                        <i class="bi bi-envelope-check-fill" style="color:#16a34a;font-size:18px;flex-shrink:0;"></i>
+                        <span style="color:#166534;font-size:13px;">Notificado a <strong>${correoDestino}</strong></span>
+                      </div>`
+                    : `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:#fefce8;border:1px solid #fde047;text-align:left;">
+                        <i class="bi bi-exclamation-triangle-fill" style="color:#ca8a04;font-size:18px;flex-shrink:0;"></i>
+                        <span style="color:#854d0e;font-size:13px;">${errorCorreo || 'Correo no enviado.'}</span>
+                      </div>`
+                  }
                 </div>
               `,
               icon: 'success',
-              confirmButtonText: 'Entendido',
+              confirmButtonText: 'OK',
               confirmButtonColor: '#15803d',
               background: '#ffffff',
               color: '#0f172a'
@@ -855,7 +848,7 @@ export class SolicitudDetalle implements OnInit {
 
             this.mostrarError(
               'Error al finalizar',
-              err.error?.mensaje || 'La validación fue aprobada pero no se pudo finalizar el proceso. Use el botón "Finalizar" para completarlo.'
+              err.error?.mensaje || 'Validación aprobada, use "Finalizar" para completar el proceso.'
             );
             this.cargarDetalle();
           }
@@ -886,7 +879,7 @@ export class SolicitudDetalle implements OnInit {
     if (this.esAdmin()) {
       this.mostrarError(
         'Acción no permitida',
-        'El administrador no puede avanzar el flujo. Solo revisa información y documentos.'
+        'El administrador no puede avanzar el flujo.'
       );
       return;
     }
@@ -938,48 +931,26 @@ export class SolicitudDetalle implements OnInit {
           const errorCorreo    = response?.error_correo;
 
           Swal.fire({
-            title: 'Proceso TICS finalizado',
+            title: 'TICS finalizado',
             html: `
               <div style="text-align:center">
-                <p style="margin:0 0 14px;color:#475569;line-height:1.6;">
-                  La solicitud <strong style="color:#1d4ed8;">${this.solicitud?.codigo_solicitud}</strong>
-                  fue finalizada correctamente.
+                <p style="margin:0 0 10px;font-size:13px;color:#64748b;">
+                  <strong style="color:#0f172a;">${this.solicitud?.codigo_solicitud}</strong> completada.
                 </p>
-                ${correoEnviado ? `
-                  <div style="
-                    display:flex;align-items:center;gap:10px;
-                    padding:14px 16px;border-radius:14px;
-                    background:#f0fdf4;border:1px solid #bbf7d0;
-                    text-align:left;
-                  ">
-                    <i class="bi bi-envelope-check-fill" style="color:#16a34a;font-size:20px;flex-shrink:0;"></i>
-                    <div>
-                      <div style="color:#166534;font-weight:900;font-size:13px;">Notificación enviada</div>
-                      <div style="color:#15803d;font-size:13px;margin-top:2px;">
-                        Se envió un correo a <strong>${correoDestino}</strong>
-                      </div>
-                    </div>
-                  </div>
-                ` : `
-                  <div style="
-                    display:flex;align-items:center;gap:10px;
-                    padding:14px 16px;border-radius:14px;
-                    background:#fefce8;border:1px solid #fde047;
-                    text-align:left;
-                  ">
-                    <i class="bi bi-exclamation-triangle-fill" style="color:#ca8a04;font-size:20px;flex-shrink:0;"></i>
-                    <div>
-                      <div style="color:#854d0e;font-weight:900;font-size:13px;">Correo no enviado</div>
-                      <div style="color:#92400e;font-size:13px;margin-top:2px;">
-                        ${errorCorreo || 'No se pudo enviar la notificación al solicitante.'}
-                      </div>
-                    </div>
-                  </div>
-                `}
+                ${correoEnviado
+                  ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:#f0fdf4;border:1px solid #bbf7d0;text-align:left;">
+                      <i class="bi bi-envelope-check-fill" style="color:#16a34a;font-size:18px;flex-shrink:0;"></i>
+                      <span style="color:#166534;font-size:13px;">Notificado a <strong>${correoDestino}</strong></span>
+                    </div>`
+                  : `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:#fefce8;border:1px solid #fde047;text-align:left;">
+                      <i class="bi bi-exclamation-triangle-fill" style="color:#ca8a04;font-size:18px;flex-shrink:0;"></i>
+                      <span style="color:#854d0e;font-size:13px;">${errorCorreo || 'Correo no enviado.'}</span>
+                    </div>`
+                }
               </div>
             `,
             icon: 'success',
-            confirmButtonText: 'Entendido',
+            confirmButtonText: 'OK',
             confirmButtonColor: '#15803d',
             background: '#ffffff',
             color: '#0f172a'
@@ -989,14 +960,10 @@ export class SolicitudDetalle implements OnInit {
           return;
         }
 
-        const titulo = 'Solicitud aprobada';
-        const texto = response?.mensaje || 'La solicitud avanzó correctamente a la siguiente etapa.';
-
         Swal.fire({
-          title: titulo,
-          text: texto,
+          title: 'Solicitud aprobada',
           icon: 'success',
-          confirmButtonText: 'Entendido',
+          confirmButtonText: 'OK',
           confirmButtonColor: '#1d4ed8',
           background: '#ffffff',
           color: '#0f172a'
@@ -1100,11 +1067,9 @@ export class SolicitudDetalle implements OnInit {
 
         Swal.fire({
           title: 'Solicitud rechazada',
-          text: correoEnviado
-            ? 'La solicitud fue rechazada correctamente y se notificó al correo del solicitante.'
-            : response?.mensaje || 'La solicitud fue rechazada correctamente.',
+          text: correoEnviado ? 'Solicitante notificado por correo.' : undefined,
           icon: 'success',
-          confirmButtonText: 'Entendido',
+          confirmButtonText: 'OK',
           confirmButtonColor: '#1d4ed8',
           background: '#ffffff',
           color: '#0f172a'
@@ -1296,7 +1261,7 @@ export class SolicitudDetalle implements OnInit {
       title: titulo,
       text: mensaje,
       icon: 'error',
-      confirmButtonText: 'Entendido',
+      confirmButtonText: 'OK',
       confirmButtonColor: '#dc2626',
       background: '#ffffff',
       color: '#0f172a'
@@ -1306,5 +1271,278 @@ export class SolicitudDetalle implements OnInit {
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/auth/login']);
+  }
+
+  // =====================================================
+  // MODAL FIRMA DIGITAL CON CERTIFICADO
+  // =====================================================
+
+  abrirModalFirmaDigital(): void {
+    if (this.esAdmin()) {
+      this.mostrarError('Acción no permitida', 'El administrador solo puede revisar documentos.');
+      return;
+    }
+    if (!this.solicitud) return;
+    if (this.estaFinalizada()) {
+      this.mostrarError('Proceso finalizado', 'Esta solicitud ya fue finalizada.');
+      return;
+    }
+
+    this.modoFirma = 'pyhanko';
+    this.certificadoSeleccionado = null;
+    this.nombreCertificado = '';
+    this.passwordCertificado = '';
+    this.mostrarPassword = false;
+    this.observacionFirma = '';
+    this.infoCertificado = null;
+    this.certificadoValidado = false;
+    this.errorCertificado = '';
+    this.limpiarPdfFirmadoElectronico();
+
+    this.mostrarModalFirmaDigital = true;
+    this.cargarHistorialFirmas();
+  }
+
+  cerrarModalFirmaDigital(): void {
+    if (this.validandoCertificado || this.firmandoConCertificado || this.procesando) return;
+    this.mostrarModalFirmaDigital = false;
+    this.certificadoSeleccionado = null;
+    this.nombreCertificado = '';
+    this.passwordCertificado = '';
+    this.mostrarPassword = false;
+    this.infoCertificado = null;
+    this.certificadoValidado = false;
+    this.errorCertificado = '';
+    this.limpiarPdfFirmadoElectronico();
+  }
+
+  cambiarModoFirma(modo: 'pyhanko' | 'firmaec'): void {
+    this.modoFirma = modo;
+    this.certificadoSeleccionado = null;
+    this.nombreCertificado = '';
+    this.passwordCertificado = '';
+    this.infoCertificado = null;
+    this.certificadoValidado = false;
+    this.errorCertificado = '';
+    this.limpiarPdfFirmadoElectronico();
+  }
+
+  toggleMostrarPassword(): void {
+    this.mostrarPassword = !this.mostrarPassword;
+  }
+
+  // =====================================================
+  // SELECCIÓN DEL CERTIFICADO
+  // =====================================================
+
+  seleccionarCertificado(event: Event): void {
+    this.errorCertificado = '';
+    this.infoCertificado = null;
+    this.certificadoValidado = false;
+
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const archivo = input.files[0];
+    const nombre = archivo.name.toLowerCase();
+
+    if (!nombre.endsWith('.p12') && !nombre.endsWith('.pfx')) {
+      this.errorCertificado = 'Solo se aceptan archivos .p12 o .pfx.';
+      input.value = '';
+      return;
+    }
+
+    if (archivo.size > 5 * 1024 * 1024) {
+      this.errorCertificado = 'El certificado no puede superar 5 MB.';
+      input.value = '';
+      return;
+    }
+
+    this.certificadoSeleccionado = archivo;
+    this.nombreCertificado = archivo.name;
+  }
+
+  // =====================================================
+  // VALIDAR CERTIFICADO ANTES DE FIRMAR
+  // =====================================================
+
+  validarCertificado(): void {
+    if (!this.certificadoSeleccionado) {
+      this.errorCertificado = 'Seleccione un certificado .p12 o .pfx.';
+      return;
+    }
+    if (!this.passwordCertificado.trim()) {
+      this.errorCertificado = 'Ingrese la contraseña del certificado.';
+      return;
+    }
+    if (!this.solicitud?.id) return;
+
+    this.validandoCertificado = true;
+    this.errorCertificado = '';
+    this.infoCertificado = null;
+    this.certificadoValidado = false;
+
+    this.firmaService.validarCertificado(
+      this.solicitud.id,
+      this.certificadoSeleccionado,
+      this.passwordCertificado
+    ).subscribe({
+      next: (response) => {
+        this.validandoCertificado = false;
+        if (response.estado === 'ok' && response.info) {
+          this.infoCertificado = response.info;
+          this.certificadoValidado = true;
+        } else {
+          this.errorCertificado = response.mensaje || 'Error al validar el certificado.';
+        }
+      },
+      error: (err: any) => {
+        this.validandoCertificado = false;
+        if (err.status === 401) { this.authService.logout(); this.router.navigate(['/auth/login']); return; }
+        this.errorCertificado = err.error?.mensaje || 'No se pudo validar el certificado.';
+      }
+    });
+  }
+
+  // =====================================================
+  // FIRMAR CON CERTIFICADO DIGITAL (pyHanko)
+  // =====================================================
+
+  firmarConCertificado(): void {
+    if (!this.certificadoSeleccionado) {
+      this.errorCertificado = 'Seleccione un certificado .p12 o .pfx.';
+      return;
+    }
+    if (!this.passwordCertificado.trim()) {
+      this.errorCertificado = 'Ingrese la contraseña del certificado.';
+      return;
+    }
+    if (!this.solicitud?.id) return;
+
+    this.firmandoConCertificado = true;
+    this.errorCertificado = '';
+
+    this.firmaService.firmarConPyhanko(
+      this.solicitud.id,
+      this.certificadoSeleccionado,
+      this.passwordCertificado,
+      this.observacionFirma
+    ).subscribe({
+      next: (response) => {
+        this.firmandoConCertificado = false;
+
+        if (response.estado !== 'ok') {
+          this.errorCertificado = response.mensaje || 'No se pudo firmar el documento.';
+          return;
+        }
+
+        this.documentoFirmadoCargado = true;
+        this.guardarDocumentoFirmadoLocal();
+        this.cerrarModalFirmaDigital();
+
+        const cert = response.firma?.certificado;
+
+        Swal.fire({
+          title: 'Documento firmado digitalmente',
+          html: `
+            <div style="text-align:left;font-size:13px;line-height:1.7">
+              <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:12px;">
+                <p style="margin:0 0 4px;color:#166534;font-weight:700;font-size:14px;">
+                  <i class="bi bi-patch-check-fill"></i> Firma criptográfica aplicada
+                </p>
+                <p style="margin:0;color:#15803d;">PDF firmado con certificado digital real compatible con FirmaEC y Adobe Acrobat.</p>
+              </div>
+              ${cert ? `
+              <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <tr><td style="padding:3px 0;color:#64748b;">Titular:</td><td style="padding:3px 0;font-weight:600;color:#0f172a;">${cert.subject_cn}</td></tr>
+                <tr><td style="padding:3px 0;color:#64748b;">Emisor:</td><td style="padding:3px 0;color:#334155;">${cert.issuer_cn}</td></tr>
+                <tr><td style="padding:3px 0;color:#64748b;">Serie:</td><td style="padding:3px 0;color:#334155;font-family:monospace;font-size:11px;">${cert.numero_serie}</td></tr>
+              </table>` : ''}
+            </div>
+          `,
+          icon: 'success',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#15803d',
+          background: '#ffffff',
+          color: '#0f172a'
+        }).then(() => this.cargarDetalle());
+      },
+      error: (err: any) => {
+        this.firmandoConCertificado = false;
+        if (err.status === 401) { this.authService.logout(); this.router.navigate(['/auth/login']); return; }
+        if (err.status === 409) {
+          this.errorCertificado = 'Ya existe una firma digital registrada para su rol en esta solicitud.';
+          return;
+        }
+        this.errorCertificado = err.error?.mensaje || err.error?.error || 'Error al firmar el documento.';
+      }
+    });
+  }
+
+  // =====================================================
+  // CARGAR HISTORIAL DE FIRMAS
+  // =====================================================
+
+  cargarHistorialFirmas(): void {
+    if (!this.solicitud?.id) return;
+    this.cargandoFirmas = true;
+
+    this.firmaService.obtenerHistorialFirmas(this.solicitud.id).subscribe({
+      next: (response) => {
+        this.cargandoFirmas = false;
+        if (response.estado === 'ok') {
+          this.firmasRegistradas = response.firmas;
+          this.versionesDocumento = response.versiones;
+        }
+      },
+      error: () => {
+        this.cargandoFirmas = false;
+      }
+    });
+  }
+
+  // =====================================================
+  // HELPERS PARA LA VISTA
+  // =====================================================
+
+  get yaFirmoEsteRol(): boolean {
+    if (!this.solicitud) return false;
+    const miRol = this.authService.getRol() || '';
+    return this.firmasRegistradas.some(f => f.rol_firmante === miRol);
+  }
+
+  getRolTexto(rol: string): string {
+    const roles: Record<string, string> = {
+      jefe_inmediato: 'Jefe inmediato',
+      maxima_autoridad: 'Máxima autoridad',
+      analista_tics: 'Analista TICS',
+      solicitante: 'Solicitante'
+    };
+    return roles[rol] || rol;
+  }
+
+  getMiRolTexto(): string {
+    return this.getRolTexto(this.authService.getRol() || '');
+  }
+
+  getModoFirmaTexto(modo: string): string {
+    return modo === 'pyhanko' ? 'Firma digital (pyHanko)' : 'FirmaEC';
+  }
+
+  descargarVersionDocumento(versionId: number): void {
+    if (!this.solicitud?.id) return;
+    this.firmaService.descargarVersion(this.solicitud.id, versionId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `version_${versionId}_${this.solicitud?.codigo_solicitud}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.mostrarError('Error', 'No se pudo descargar la versión del documento.');
+      }
+    });
   }
 }

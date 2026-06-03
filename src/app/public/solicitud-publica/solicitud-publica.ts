@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import {
@@ -6,6 +6,7 @@ import {
   FormArray,
   FormBuilder,
   FormGroup,
+  FormsModule,
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
@@ -74,21 +75,15 @@ interface PrepararFirmaResponse {
   url_descarga?: string;
 }
 
-interface SubidaFirmaResponse {
-  estado: string;
-  mensaje: string;
-  solicitud?: {
-    codigo_solicitud: string;
-    estado: string;
-    etapa_actual: string;
-  };
-}
+
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-solicitud-publica',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
     HttpClientModule,
     RouterLink
@@ -99,13 +94,10 @@ interface SubidaFirmaResponse {
 export class SolicitudPublica implements OnInit {
 
   /*
-    LOCAL:
-    http://localhost:5050/api
 
-    SERVIDOR CON NGINX:
     /api
   */
-  private readonly API_BASE = 'http://localhost:5050/api';
+  private readonly API_BASE = environment.apiUrl;
 
   private readonly API_PREPARAR_ELECTRONICO =
     `${this.API_BASE}/public/electronico/preparar`;
@@ -119,24 +111,41 @@ export class SolicitudPublica implements OnInit {
 
   mostrarModalIp = false;
 
-  mostrarModalFirmaEc = false;
-  preparandoFirmaEc = false;
-  subiendoFirmaEc = false;
+  // =====================================================
+  // MODAL FIRMA DIGITAL (pyHanko)
+  // =====================================================
 
-  mostrarToastEnviado = false;
-  mostrarConfirmEnvio = false;
+  mostrarModalFirmaEc   = false;   // nombre mantenido para compatibilidad HTML
+  preparandoFirmaEc     = false;   // generando la solicitud en BD
+  subiendoFirmaEc       = false;   // (no usado en pyHanko, solo compatibilidad)
 
-  codigoFirmaEc = '';
-  urlDescargaFirmaEc = '';
+  mostrarToastEnviado   = false;
+  mostrarConfirmEnvio   = false;   // no se usa en el nuevo flujo
 
-  archivoFirmado: File | null = null;
+  codigoFirmaEc         = '';
+  urlDescargaFirmaEc    = '';      // mantenido para compatibilidad
+
+  // pyHanko — certificado del solicitante
+  certificadoPublico       : File | null = null;
+  nombreCertificadoPublico = '';
+  passwordCertificado      = '';
+  mostrarPassword          = false;
+  observacionFirma         = '';
+  validandoCertificado     = false;
+  firmandoDocumento        = false;
+  infoCertificado          : any = null;
+  certificadoValidado      = false;
+  errorCertificado         = '';
+
+  pasoFirma: 'preparando' | 'cert' | 'firmando' | 'finalizado' = 'preparando';
+
+  // compat — campos de FirmaEC ya no usados
+  archivoFirmado       : File | null = null;
   nombreArchivoFirmado = '';
-  urlVistaPreviaFirmado = '';
-
-  errorFirmaEc = '';
-  exitoFirmaEc = '';
-
-  pasoFirmaEc: 'generando' | 'descarga' | 'subida' | 'finalizado' = 'generando';
+  urlVistaPreviaFirmado= '';
+  errorFirmaEc         = '';
+  exitoFirmaEc         = '';
+  pasoFirmaEc: 'generando'|'descarga'|'subida'|'finalizado' = 'generando';
 
   // =====================================================
   // CATÁLOGOS ORGANIZACIONALES
@@ -297,8 +306,7 @@ export class SolicitudPublica implements OnInit {
         '',
         [
           Validators.required,
-          Validators.maxLength(255),
-          Validators.pattern(/^https?:\/\/.+/i)
+          Validators.maxLength(255)
         ]
       ],
       descripcion: [
@@ -549,14 +557,17 @@ export class SolicitudPublica implements OnInit {
   // MODAL FIRMAEC ASISTIDO
   // =====================================================
 
+  // =====================================================
+  // ABRIR / CERRAR MODAL FIRMA DIGITAL
+  // =====================================================
+
   abrirModalFirmaEc(): void {
-    this.errorGeneral = '';
-    this.errorFirmaEc = '';
-    this.exitoFirmaEc = '';
+    this.errorGeneral    = '';
+    this.errorCertificado = '';
 
     if (this.formulario.invalid) {
       this.marcarFormularioComoTocado();
-      this.errorGeneral = 'Revise los campos marcados antes de generar el formato para FirmaEC.';
+      this.errorGeneral = 'Revise los campos marcados antes de continuar.';
       return;
     }
 
@@ -571,30 +582,36 @@ export class SolicitudPublica implements OnInit {
     }
 
     this.mostrarModalFirmaEc = true;
+    this.pasoFirma = 'preparando';
 
     if (!this.codigoFirmaEc) {
-      this.generarFormatoAutomaticoFirmaEc();
+      this.generarSolicitudParaFirma();
+    } else {
+      this.pasoFirma = 'cert';
     }
   }
 
   cerrarModalFirmaEc(): void {
-    if (this.preparandoFirmaEc || this.subiendoFirmaEc) {
+    if (this.preparandoFirmaEc || this.firmandoDocumento || this.validandoCertificado) {
       return;
     }
-
-    this.mostrarModalFirmaEc = false;
-    this.errorFirmaEc = '';
-    this.exitoFirmaEc = '';
+    this.mostrarModalFirmaEc  = false;
+    this.errorCertificado     = '';
+    this.errorFirmaEc         = '';
+    this.infoCertificado      = null;
+    this.certificadoValidado  = false;
   }
 
-  generarFormatoAutomaticoFirmaEc(): void {
-    this.errorFirmaEc = '';
-    this.exitoFirmaEc = '';
-    this.pasoFirmaEc = 'generando';
+  // =====================================================
+  // PASO 1: GENERAR SOLICITUD EN BD (sin PDF que descargar)
+  // =====================================================
+
+  generarSolicitudParaFirma(): void {
+    this.errorCertificado = '';
+    this.pasoFirma        = 'preparando';
+    this.preparandoFirmaEc = true;
 
     const payload = this.construirPayload();
-
-    this.preparandoFirmaEc = true;
 
     this.http.post<PrepararFirmaResponse>(this.API_PREPARAR_ELECTRONICO, payload)
       .subscribe({
@@ -602,136 +619,208 @@ export class SolicitudPublica implements OnInit {
           this.preparandoFirmaEc = false;
 
           if (response.estado !== 'ok') {
-            this.errorFirmaEc = response.mensaje || 'No se pudo generar el formato.';
+            this.errorCertificado = response.mensaje || 'No se pudo registrar la solicitud.';
             return;
           }
 
           this.codigoFirmaEc =
             response.codigo_solicitud ||
-            response.solicitud?.codigo_solicitud ||
-            '';
+            response.solicitud?.codigo_solicitud || '';
 
           if (!this.codigoFirmaEc) {
-            this.errorFirmaEc = 'El servidor no devolvió el código de solicitud.';
+            this.errorCertificado = 'El servidor no devolvió el código de solicitud.';
             return;
           }
 
-          const urlBackend =
-            response.url_descarga ||
-            `/api/public/electronico/${this.codigoFirmaEc}/pdf`;
-
-          this.urlDescargaFirmaEc = this.normalizarUrlBackend(urlBackend);
           this.codigoGenerado = this.codigoFirmaEc;
-          this.pasoFirmaEc = 'descarga';
-
-          this.exitoFirmaEc =
-            'ID y formato generados correctamente. Descargue el PDF, fírmelo externamente con FirmaEC y suba el PDF firmado.';
+          this.pasoFirma = 'cert';
         },
         error: (err) => {
           this.preparandoFirmaEc = false;
 
           if (err.status === 0) {
-            this.errorFirmaEc = 'No se pudo conectar con el servidor.';
+            this.errorCertificado = 'No se pudo conectar con el servidor.';
             return;
           }
 
-          this.errorFirmaEc =
-            err.error?.mensaje ||
-            err.error?.error ||
-            'No se pudo generar automáticamente el formato para FirmaEC.';
+          const errores = err.error?.errores;
+          if (errores && typeof errores === 'object') {
+            this.errorCertificado = Object.entries(errores).map(([k, v]) => `${k}: ${v}`).join(' | ');
+          } else {
+            this.errorCertificado = err.error?.mensaje || 'Error al registrar la solicitud.';
+          }
         }
       });
   }
 
-  descargarFormatoFirmaEc(): void {
-    this.errorFirmaEc = '';
+  // =====================================================
+  // SELECCIÓN DEL CERTIFICADO .p12/.pfx
+  // =====================================================
 
-    if (!this.codigoFirmaEc) {
-      this.errorFirmaEc = 'Espere a que el sistema genere el ID único de la solicitud.';
-      return;
-    }
-
-    const url = this.urlDescargaFirmaEc ||
-      `${this.API_BASE}/public/electronico/${this.codigoFirmaEc}/pdf`;
-
-    const enlace = document.createElement('a');
-    enlace.href = url;
-    enlace.target = '_blank';
-    enlace.rel = 'noopener noreferrer';
-    enlace.download = `${this.codigoFirmaEc}.pdf`;
-
-    document.body.appendChild(enlace);
-    enlace.click();
-    document.body.removeChild(enlace);
-
-    this.pasoFirmaEc = 'descarga';
-    this.exitoFirmaEc =
-      'Formato PDF descargado. Ahora abra FirmaEC externamente, firme el documento y suba aquí el PDF firmado.';
-  }
-
-  seleccionarArchivoFirmado(event: Event): void {
-    this.errorFirmaEc = '';
-    this.exitoFirmaEc = '';
-    this.archivoFirmado = null;
-    this.nombreArchivoFirmado = '';
-
-    this.liberarVistaPreviaFirmado();
+  seleccionarCertificadoPublico(event: Event): void {
+    this.errorCertificado    = '';
+    this.infoCertificado     = null;
+    this.certificadoValidado = false;
 
     const input = event.target as HTMLInputElement;
-
-    if (!input.files || input.files.length === 0) {
-      return;
-    }
+    if (!input.files || input.files.length === 0) { return; }
 
     const archivo = input.files[0];
+    const nombre  = archivo.name.toLowerCase();
 
-    const nombre = archivo.name.toLowerCase();
-    const extensionPdf = nombre.endsWith('.pdf');
-    const mimePdf = archivo.type === 'application/pdf' || archivo.type === '';
-
-    if (!extensionPdf || !mimePdf) {
-      this.errorFirmaEc = 'Solo se permite subir un archivo PDF firmado electrónicamente.';
+    if (!nombre.endsWith('.p12') && !nombre.endsWith('.pfx')) {
+      this.errorCertificado = 'Solo se aceptan archivos .p12 o .pfx.';
       input.value = '';
       return;
     }
 
-    const maxMb = 15;
-    const maxBytes = maxMb * 1024 * 1024;
-
-    if (archivo.size > maxBytes) {
-      this.errorFirmaEc = `El PDF firmado no puede superar ${maxMb} MB.`;
+    if (archivo.size > 5 * 1024 * 1024) {
+      this.errorCertificado = 'El certificado no puede superar 5 MB.';
       input.value = '';
       return;
     }
 
-    this.archivoFirmado = archivo;
-    this.nombreArchivoFirmado = archivo.name;
-    this.urlVistaPreviaFirmado = URL.createObjectURL(archivo);
-    this.pasoFirmaEc = 'subida';
-
-    this.exitoFirmaEc =
-      'PDF seleccionado correctamente. Revise el archivo antes de enviarlo al jefe inmediato.';
+    this.certificadoPublico        = archivo;
+    this.nombreCertificadoPublico  = archivo.name;
   }
 
-  verPdfSubido(): void {
-    this.errorFirmaEc = '';
+  toggleMostrarPassword(): void {
+    this.mostrarPassword = !this.mostrarPassword;
+  }
 
-    if (!this.urlVistaPreviaFirmado) {
-      this.errorFirmaEc = 'Primero debe seleccionar un PDF firmado para poder visualizarlo.';
+  // =====================================================
+  // VALIDAR CERTIFICADO (opcional, antes de firmar)
+  // =====================================================
+
+  validarCertificadoPublico(): void {
+    if (!this.certificadoPublico) {
+      this.errorCertificado = 'Seleccione un certificado .p12 o .pfx.';
+      return;
+    }
+    if (!this.passwordCertificado.trim()) {
+      this.errorCertificado = 'Ingrese la contraseña del certificado.';
+      return;
+    }
+    if (!this.codigoFirmaEc) {
+      this.errorCertificado = 'Espere a que se genere el código de solicitud.';
       return;
     }
 
-    window.open(this.urlVistaPreviaFirmado, '_blank', 'noopener,noreferrer');
+    this.validandoCertificado = true;
+    this.errorCertificado     = '';
+    this.infoCertificado      = null;
+    this.certificadoValidado  = false;
+
+    const formData = new FormData();
+    formData.append('certificado', this.certificadoPublico);
+    formData.append('password',    this.passwordCertificado);
+
+    this.http.post<any>(
+      `${this.API_BASE}/public/electronico/${this.codigoFirmaEc}/validar-certificado-publico`,
+      formData
+    ).subscribe({
+      next: (res) => {
+        this.validandoCertificado = false;
+        if (res.estado === 'ok' && res.info) {
+          this.infoCertificado    = res.info;
+          this.certificadoValidado = true;
+        } else {
+          this.errorCertificado = res.mensaje || 'Error al validar el certificado.';
+        }
+      },
+      error: (err) => {
+        this.validandoCertificado = false;
+        this.errorCertificado = err.error?.mensaje || 'No se pudo validar el certificado.';
+      }
+    });
   }
 
-  quitarPdfFirmado(): void {
-    this.archivoFirmado = null;
-    this.nombreArchivoFirmado = '';
-    this.liberarVistaPreviaFirmado();
-    this.pasoFirmaEc = 'descarga';
-    this.exitoFirmaEc = 'Archivo retirado. Puede seleccionar nuevamente el PDF firmado correcto.';
+  // =====================================================
+  // FIRMAR COMO SOLICITANTE — pyHanko
+  // =====================================================
+
+  firmarComoSolicitante(): void {
+    if (!this.certificadoPublico) {
+      this.errorCertificado = 'Seleccione un certificado .p12 o .pfx.';
+      return;
+    }
+    if (!this.passwordCertificado.trim()) {
+      this.errorCertificado = 'Ingrese la contraseña del certificado.';
+      return;
+    }
+    if (!this.codigoFirmaEc) {
+      this.errorCertificado = 'Espere a que se genere el código de solicitud.';
+      return;
+    }
+
+    this.firmandoDocumento = true;
+    this.pasoFirma         = 'firmando';
+    this.errorCertificado  = '';
+
+    const formData = new FormData();
+    formData.append('certificado',  this.certificadoPublico);
+    formData.append('password',     this.passwordCertificado);
+    if (this.observacionFirma.trim()) {
+      formData.append('observacion', this.observacionFirma.trim());
+    }
+
+    this.http.post<any>(
+      `${this.API_BASE}/public/electronico/${this.codigoFirmaEc}/firmar-pyhanko-solicitante`,
+      formData
+    ).subscribe({
+      next: (res) => {
+        this.firmandoDocumento = false;
+
+        if (res.estado !== 'ok') {
+          this.errorCertificado = res.mensaje || 'No se pudo firmar el documento.';
+          this.pasoFirma = 'cert';
+          return;
+        }
+
+        this.pasoFirma    = 'finalizado';
+        this.enviado      = true;
+
+        this.formulario.reset();
+        this.crearFormulario();
+        this.cargarDirecciones();
+        this.reiniciarCatalogosSeleccionados();
+        this.reiniciarFlujoFirma();
+
+        this.mostrarModalFirmaEc  = false;
+        this.mostrarToastEnviado  = true;
+        setTimeout(() => { this.mostrarToastEnviado = false; }, 4000);
+      },
+      error: (err) => {
+        this.firmandoDocumento = false;
+        this.pasoFirma = 'cert';
+
+        if (err.status === 0) {
+          this.errorCertificado = 'No se pudo conectar con el servidor.';
+          return;
+        }
+
+        this.errorCertificado =
+          err.error?.mensaje ||
+          err.error?.error ||
+          'Error al firmar el documento.';
+      }
+    });
   }
 
+  reiniciarFlujoFirma(): void {
+    this.certificadoPublico       = null;
+    this.nombreCertificadoPublico = '';
+    this.passwordCertificado      = '';
+    this.mostrarPassword          = false;
+    this.observacionFirma         = '';
+    this.infoCertificado          = null;
+    this.certificadoValidado      = false;
+    this.errorCertificado         = '';
+    this.pasoFirma                = 'preparando';
+  }
+
+  // Métodos de compat — ya no usados en el flujo principal
+  cancelarConfirmEnvio(): void { this.mostrarConfirmEnvio = false; }
   liberarVistaPreviaFirmado(): void {
     if (this.urlVistaPreviaFirmado) {
       URL.revokeObjectURL(this.urlVistaPreviaFirmado);
@@ -739,95 +828,24 @@ export class SolicitudPublica implements OnInit {
     }
   }
 
-  subirPdfFirmadoFirmaEc(): void {
-    this.errorFirmaEc = '';
-    this.exitoFirmaEc = '';
-
-    if (!this.codigoFirmaEc) {
-      this.errorFirmaEc = 'Espere a que el sistema genere el ID único de la solicitud.';
-      return;
-    }
-
-    if (!this.archivoFirmado) {
-      this.errorFirmaEc = 'Seleccione el PDF firmado electrónicamente con FirmaEC.';
-      return;
-    }
-
-    if (!this.jefeAsignado) {
-      this.errorFirmaEc = 'No existe jefe asignado para esta área. No se puede enviar la solicitud.';
-      return;
-    }
-
-    this.mostrarConfirmEnvio = true;
-  }
-
-  cancelarConfirmEnvio(): void {
-    this.mostrarConfirmEnvio = false;
-  }
-
   confirmarEnvioFirmaEc(): void {
     this.mostrarConfirmEnvio = false;
-
-    const formData = new FormData();
-    formData.append('archivo', this.archivoFirmado!);
-
-    this.subiendoFirmaEc = true;
-
-    this.http.post<SubidaFirmaResponse>(
-      `${this.API_BASE}/public/electronico/${this.codigoFirmaEc}/subir-firmado`,
-      formData
-    ).subscribe({
-      next: (response) => {
-        this.subiendoFirmaEc = false;
-
-        if (response.estado !== 'ok') {
-          this.errorFirmaEc = response.mensaje || 'No se pudo subir el PDF firmado.';
-          return;
-        }
-
-        this.pasoFirmaEc = 'finalizado';
-        this.enviado = true;
-        this.codigoGenerado = this.codigoFirmaEc;
-
-        this.formulario.reset();
-        this.crearFormulario();
-        this.cargarDirecciones();
-        this.reiniciarCatalogosSeleccionados();
-
-        this.archivoFirmado = null;
-        this.nombreArchivoFirmado = '';
-        this.liberarVistaPreviaFirmado();
-
-        this.mostrarModalFirmaEc = false;
-        this.mostrarToastEnviado = true;
-        setTimeout(() => { this.mostrarToastEnviado = false; }, 3500);
-      },
-      error: (err) => {
-        this.subiendoFirmaEc = false;
-
-        if (err.status === 0) {
-          this.errorFirmaEc = 'No se pudo conectar con el servidor.';
-          return;
-        }
-
-        this.errorFirmaEc =
-          err.error?.mensaje ||
-          err.error?.error ||
-          'No se pudo subir el PDF firmado con FirmaEC.';
-      }
-    });
+    /* no-op: el flujo ahora usa firmarComoSolicitante() */
   }
-
+  subirPdfFirmadoFirmaEc(): void { /* no-op */ }
+  descargarFormatoFirmaEc(): void {
+    if (!this.codigoFirmaEc) { return; }
+    const url = `${this.API_BASE}/public/electronico/${this.codigoFirmaEc}/pdf`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
   reiniciarFlujoFirmaEc(): void {
-    this.codigoFirmaEc = '';
-    this.urlDescargaFirmaEc = '';
-    this.archivoFirmado = null;
-    this.nombreArchivoFirmado = '';
-    this.errorFirmaEc = '';
-    this.exitoFirmaEc = '';
-    this.pasoFirmaEc = 'generando';
-    this.liberarVistaPreviaFirmado();
+    this.codigoFirmaEc         = '';
+    this.urlDescargaFirmaEc    = '';
+    this.errorFirmaEc          = '';
+    this.exitoFirmaEc          = '';
+    this.pasoFirmaEc           = 'generando';
     this.reiniciarCatalogosSeleccionados();
+    this.reiniciarFlujoFirma();
   }
 
   reiniciarCatalogosSeleccionados(): void {
@@ -907,10 +925,6 @@ export class SolicitudPublica implements OnInit {
 
     if (control.hasError('maxlength')) {
       return 'El texto ingresado supera el límite permitido.';
-    }
-
-    if (control.hasError('pattern')) {
-      return 'La URL debe iniciar con http:// o https://.';
     }
 
     return 'Campo inválido.';

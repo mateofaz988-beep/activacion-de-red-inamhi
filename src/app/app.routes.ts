@@ -19,6 +19,7 @@ import { AdminDashboard } from './admin/dashboard/dashboard';
 import { SolicitudDetalle } from './admin/solicitud-detalle/solicitud-detalle';
 import { Solicitudes } from './admin/solicitudes/solicitudes';
 import { Usuarios } from './admin/usuarios/usuarios';
+import { Funcionarios } from './admin/funcionarios/funcionarios';
 import { Reportes } from './admin/reportes/reportes';
 import { Auditoria } from './admin/auditoria/auditoria';
 
@@ -127,6 +128,14 @@ export const routes: Routes = [
   {
     path: 'admin/usuarios',
     component: Usuarios,
+    canActivate: [roleGuard],
+    data: {
+      roles: ['administrador']
+    }
+  },
+  {
+    path: 'admin/funcionarios',
+    component: Funcionarios,
     canActivate: [roleGuard],
     data: {
       roles: ['administrador']

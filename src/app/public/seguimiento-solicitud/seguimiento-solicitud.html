@@ -154,8 +154,14 @@
           <span>Solo PDF · máximo 10 MB</span>
         </label>
 
-        <div class="error-box upload-error" *ngIf="errorArchivoManual">
-          {{ errorArchivoManual }}
+        <div class="upload-alert upload-alert-error" *ngIf="errorArchivoManual">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <span>{{ errorArchivoManual }}</span>
+        </div>
+
+        <div class="upload-alert upload-alert-success" *ngIf="exitoManual">
+          <i class="bi bi-check-circle-fill"></i>
+          <span>{{ exitoManual }}</span>
         </div>
 
         <button
@@ -168,7 +174,10 @@
             <i class="bi bi-send-check-fill"></i>
             Subir y finalizar proceso
           </span>
-          <span *ngIf="subiendoManual">Subiendo documento...</span>
+          <span class="upload-loading" *ngIf="subiendoManual">
+            <span class="upload-spinner"></span>
+            Subiendo documento...
+          </span>
         </button>
       </section>
 
@@ -190,7 +199,7 @@
         </div>
 
         <div class="process-complete-actions">
-          <a routerLink="/public/solicitud" class="btn-nueva-sol">
+          <a routerLink="/seleccionar-proceso" class="btn-nueva-sol">
             <i class="bi bi-plus-circle-fill"></i>
             Nueva solicitud
           </a>
@@ -327,4 +336,44 @@
       </div>
     </section>
   </main>
+
+  <!-- =====================================================
+       MODAL DE CONFIRMACIÓN DE SUBIDA
+  ====================================================== -->
+  <div
+    class="confirm-overlay"
+    *ngIf="mostrarConfirmacion"
+    (click)="cancelarSubida()"
+  >
+    <div class="confirm-modal" (click)="$event.stopPropagation()">
+
+      <div class="confirm-icon">
+        <i class="bi bi-shield-check"></i>
+      </div>
+
+      <h3>¿Confirmar subida?</h3>
+
+      <p>Esta acción es <strong>irreversible</strong>. El proceso quedará <strong>FINALIZADO</strong>.</p>
+
+      <ul class="confirm-checks">
+        <li><i class="bi bi-check2"></i> PDF completamente firmado por el solicitante</li>
+        <li><i class="bi bi-check2"></i> Firmado por el jefe inmediato</li>
+        <li><i class="bi bi-check2"></i> Firmado por la máxima autoridad</li>
+        <li><i class="bi bi-check2"></i> Firmado por TICS</li>
+      </ul>
+
+      <div class="confirm-actions">
+        <button type="button" class="confirm-cancel-btn" (click)="cancelarSubida()">
+          <i class="bi bi-x-lg"></i>
+          Cancelar
+        </button>
+        <button type="button" class="confirm-ok-btn" (click)="confirmarSubida()">
+          <i class="bi bi-cloud-arrow-up-fill"></i>
+          Sí, subir documento
+        </button>
+      </div>
+
+    </div>
+  </div>
+
 </section>

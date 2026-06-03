@@ -192,12 +192,16 @@
               <th>Área / Unidad</th>
               <th>Estado</th>
               <th>Fecha y hora</th>
-              <th class="actions-col">Acciones</th>
             </tr>
           </thead>
 
           <tbody>
-            <tr *ngFor="let solicitud of solicitudes">
+            <tr
+              *ngFor="let solicitud of solicitudes"
+              (click)="verDetalle(solicitud.id)"
+              style="cursor:pointer;"
+              title="Ver detalle"
+            >
               <td>
                 <strong class="code">
                   {{ solicitud.codigo_solicitud }}
@@ -235,25 +239,6 @@
                     {{ formatearHora(solicitud.created_at) }}
                   </span>
                 </div>
-              </td>
-
-              <td class="actions-cell">
-                <a
-                  class="detail-btn"
-                  [routerLink]="['/tics/solicitudes', solicitud.id]"
-                >
-                  <i class="bi bi-eye-fill"></i>
-                  Revisar
-                </a>
-
-                <button
-                  type="button"
-                  class="pdf-btn"
-                  (click)="descargarPdf(solicitud)"
-                >
-                  <i class="bi bi-file-earmark-pdf-fill"></i>
-                  PDF
-                </button>
               </td>
             </tr>
           </tbody>

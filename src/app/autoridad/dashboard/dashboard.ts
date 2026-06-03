@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -37,6 +37,8 @@ interface RespuestaSolicitudesAutoridad {
   solicitudes?: SolicitudAutoridad[];
 }
 
+import { environment } from '../../../environments/environment';
+
 @Component({
   selector: 'app-autoridad-dashboard',
   standalone: true,
@@ -52,13 +54,10 @@ interface RespuestaSolicitudesAutoridad {
 export class AutoridadDashboard implements OnInit {
 
   /*
-    LOCAL:
-    http://localhost:5050/api
 
-    SERVIDOR CON NGINX:
     /api
   */
-  private readonly API_URL = 'http://localhost:5050/api';
+  private readonly API_URL = environment.apiUrl;
 
   solicitudes: SolicitudAutoridad[] = [];
   solicitudesFiltradas: SolicitudAutoridad[] = [];

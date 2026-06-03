@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -29,6 +29,8 @@ interface ManualSubidaResponse {
   mensaje: string;
 }
 
+import { environment } from '../../../environments/environment';
+
 @Component({
   selector: 'app-seguimiento-solicitud',
   standalone: true,
@@ -39,13 +41,10 @@ interface ManualSubidaResponse {
 export class SeguimientoSolicitud {
 
   /*
-    LOCAL:
-    http://localhost:5050/api
 
-    SERVIDOR CON NGINX:
     /api
   */
-  private readonly API_URL = 'http://localhost:5050/api';
+  private readonly API_URL = environment.apiUrl;
 
   codigo = '';
 
@@ -61,6 +60,7 @@ export class SeguimientoSolicitud {
   subiendoManual = false;
   errorArchivoManual = '';
   exitoManual = '';
+  mostrarConfirmacion = false;
 
   constructor(
     private solicitudService: SolicitudPublicaService,
@@ -222,21 +222,19 @@ export class SeguimientoSolicitud {
       return;
     }
 
-    const confirmar = window.confirm(
-      'Confirme que el documento PDF ya está completamente lleno y firmado físicamente por el solicitante, jefe inmediato, máxima autoridad y TICS. Al subirlo, el proceso manual quedará FINALIZADO.'
-    );
+    this.mostrarConfirmacion = true;
+  }
 
-    if (!confirmar) {
-      return;
-    }
+  confirmarSubida(): void {
+    this.mostrarConfirmacion = false;
 
     const formData = new FormData();
-    formData.append('archivo', this.archivoManual);
+    formData.append('archivo', this.archivoManual!);
 
     this.subiendoManual = true;
 
     this.http.post<ManualSubidaResponse>(
-      `${this.API_URL}/manual/${this.resultadoManual.uuid_solicitud}/subir`,
+      `${this.API_URL}/manual/${this.resultadoManual!.uuid_solicitud}/subir`,
       formData
     ).subscribe({
       next: (response) => {
@@ -247,26 +245,22 @@ export class SeguimientoSolicitud {
           return;
         }
 
-        this.exitoManual = 'Documento manual subido correctamente. El proceso quedó FINALIZADO.';
-        this.resultadoManual = {
-          ...this.resultadoManual!,
-          estado: 'FINALIZADO'
-        };
-
+        this.exitoManual = 'Documento subido correctamente. El proceso quedó FINALIZADO.';
+        this.resultadoManual = { ...this.resultadoManual!, estado: 'FINALIZADO' };
         this.archivoManual = null;
         this.nombreArchivoManual = '';
       },
       error: (err) => {
         this.subiendoManual = false;
-
-        if (err.status === 0) {
-          this.errorArchivoManual = 'No se pudo conectar con el servidor.';
-          return;
-        }
-
-        this.errorArchivoManual = err.error?.mensaje || 'No se pudo subir el documento manual.';
+        this.errorArchivoManual = err.status === 0
+          ? 'No se pudo conectar con el servidor.'
+          : (err.error?.mensaje || 'No se pudo subir el documento manual.');
       }
     });
+  }
+
+  cancelarSubida(): void {
+    this.mostrarConfirmacion = false;
   }
 
   getEstadoManualTexto(estado: string): string {

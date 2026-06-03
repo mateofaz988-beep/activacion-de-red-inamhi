@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -32,6 +32,8 @@ export interface CambioAuditoria {
   cambioReal: boolean;
 }
 
+import { environment } from '../../../environments/environment';
+
 @Component({
   selector: 'app-auditoria',
   standalone: true,
@@ -46,7 +48,7 @@ export interface CambioAuditoria {
 })
 export class Auditoria implements OnInit {
 
-  private readonly API_BASE = 'http://127.0.0.1:5050/api';
+  private readonly API_BASE = environment.apiUrl;
   private readonly API_URL = `${this.API_BASE}/admin/auditoria`;
 
   registros: AuditoriaRegistro[] = [];
@@ -260,7 +262,7 @@ export class Auditoria implements OnInit {
         title: 'Sin datos',
         text: 'No existen registros para exportar.',
         icon: 'warning',
-        confirmButtonText: 'Entendido',
+        confirmButtonText: 'OK',
         confirmButtonColor: '#d97706'
       });
       return;

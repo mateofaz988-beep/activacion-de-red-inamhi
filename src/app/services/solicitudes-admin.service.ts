@@ -1,8 +1,8 @@
-
+﻿
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 
 
@@ -153,7 +153,7 @@ export type RolFirmante = 'jefe_inmediato' | 'maxima_autoridad' | 'analista_tics
 })
 export class SolicitudesAdminService {
 
-  private readonly API_BASE = 'http://localhost:5050/api';
+  private readonly API_BASE = environment.apiUrl;
   private readonly API_URL = `${this.API_BASE}/admin/solicitudes`;
 
   constructor(private http: HttpClient) {}

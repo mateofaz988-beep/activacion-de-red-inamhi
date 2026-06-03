@@ -1,0 +1,425 @@
+ <section class="funcionarios-page">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo-box"><i class="bi bi-people-fill"></i></div>
+      <div><h2>INAMHI</h2><span>Panel administrador</span></div>
+    </div>
+    <nav class="menu">
+      <a routerLink="/admin/dashboard"    routerLinkActive="active"><i class="bi bi-speedometer2"></i> Dashboard</a>
+      <a routerLink="/admin/solicitudes"  routerLinkActive="active"><i class="bi bi-file-earmark-text-fill"></i> Solicitudes</a>
+      <a routerLink="/admin/usuarios"     routerLinkActive="active"><i class="bi bi-people"></i> Usuarios</a>
+      <a routerLink="/admin/funcionarios" routerLinkActive="active"><i class="bi bi-person-badge-fill"></i> Funcionarios</a>
+      <a routerLink="/admin/reportes"     routerLinkActive="active"><i class="bi bi-bar-chart-fill"></i> Reportes</a>
+      <a routerLink="/admin/auditoria"    routerLinkActive="active"><i class="bi bi-shield-lock-fill"></i> Auditoría</a>
+    </nav>
+    <button type="button" class="logout" (click)="logout()">
+      <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+    </button>
+  </aside>
+
+  <!-- CONTENIDO -->
+  <main class="content">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div>
+        <span class="eyebrow">Gestión institucional</span>
+        <h1>Estructura Organizacional</h1>
+        <p>Administre el personal, direcciones, áreas y cargos del INAMHI.</p>
+      </div>
+      <div class="topbar-actions">
+        <button type="button" class="logout-top-btn" (click)="logout()">
+          <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+        </button>
+      </div>
+    </header>
+
+    <!-- TABS DE NAVEGACIÓN -->
+    <nav class="tabs-nav">
+      <button type="button" class="tab-btn" [class.active]="vistaActiva==='funcionarios'" (click)="cambiarVista('funcionarios')">
+        <i class="bi bi-person-lines-fill"></i>
+        <span>Personal</span>
+      </button>
+      <button type="button" class="tab-btn" [class.active]="vistaActiva==='direcciones'" (click)="cambiarVista('direcciones')">
+        <i class="bi bi-building"></i>
+        <span>Direcciones</span>
+      </button>
+      <button type="button" class="tab-btn" [class.active]="vistaActiva==='areas'" (click)="cambiarVista('areas')">
+        <i class="bi bi-diagram-3-fill"></i>
+        <span>Áreas</span>
+      </button>
+      <button type="button" class="tab-btn" [class.active]="vistaActiva==='cargos'" (click)="cambiarVista('cargos')">
+        <i class="bi bi-briefcase-fill"></i>
+        <span>Cargos</span>
+      </button>
+    </nav>
+
+    <!-- ══════════════ TAB PERSONAL ══════════════ -->
+    <ng-container *ngIf="vistaActiva==='funcionarios'">
+      <section class="stats-grid">
+        <article class="stat-card s-total"><span>Total</span><strong>{{ totalFunc }}</strong><p>Registros de personal.</p></article>
+        <article class="stat-card s-act">  <span>Activos</span><strong>{{ totalFuncAct }}</strong><p>Personal habilitado.</p></article>
+        <article class="stat-card s-inact"><span>Inactivos</span><strong>{{ totalFuncInact }}</strong><p>Personal dado de baja.</p></article>
+        <article class="stat-card s-jefe"> <span>Jefes de área</span><strong>{{ totalJefes }}</strong><p>Responsables de área.</p></article>
+      </section>
+
+      <section class="panel-card">
+        <div class="panel-header">
+          <div>
+            <h2><i class="bi bi-person-lines-fill"></i> Personal registrado</h2>
+            <p>Mostrando {{ funcionariosFiltrados.length }} de {{ funcionarios.length }} registros.</p>
+          </div>
+          <div class="panel-actions">
+            <input class="search-inline" type="text" [(ngModel)]="busqFunc" (input)="filtrarFuncionarios()" placeholder="Buscar..." />
+            <select class="select-inline" [(ngModel)]="filtroTipoFunc" (change)="filtrarFuncionarios()">
+              <option value="">Todos los tipos</option>
+              <option value="jefe_area">Jefe de Área</option>
+              <option value="analista_tics">Analista TICS</option>
+              <option value="funcionario">Funcionario</option>
+              <option value="responsable_tecnico">Resp. Técnico</option>
+            </select>
+            <select class="select-inline" [(ngModel)]="filtroEstFunc" (change)="filtrarFuncionarios()">
+              <option value="">Todos</option>
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+            </select>
+            <button type="button" class="refresh-btn" (click)="cargarFuncionarios()" [disabled]="cargandoFunc">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <button type="button" class="new-btn" (click)="abrirNuevoFunc()">
+              <i class="bi bi-person-plus-fill"></i> Nuevo
+            </button>
+          </div>
+        </div>
+        <div class="loading" *ngIf="cargandoFunc">Cargando personal...</div>
+        <div class="error-box" *ngIf="errorFunc">{{ errorFunc }}</div>
+        <div class="empty-box" *ngIf="!cargandoFunc && !errorFunc && funcionariosFiltrados.length===0">Sin registros.</div>
+        <div class="table-wrapper" *ngIf="!cargandoFunc && !errorFunc && funcionariosFiltrados.length>0">
+          <table>
+            <thead><tr>
+              <th>Funcionario</th><th>Cédula / Correo</th><th>Dirección</th><th>Área</th><th>Cargo</th><th>Tipo</th><th>Estado</th><th>Acciones</th>
+            </tr></thead>
+            <tbody>
+              <tr *ngFor="let f of funcionariosFiltrados">
+                <td><strong>{{ f.nombres }} {{ f.apellidos }}</strong><span *ngIf="f.usuario_sistema">@{{ f.usuario_sistema }}</span></td>
+                <td><strong *ngIf="f.cedula">{{ f.cedula }}</strong><strong *ngIf="!f.cedula" class="muted">—</strong><span *ngIf="f.correo">{{ f.correo }}</span></td>
+                <td>{{ f.direccion_nombre || '—' }}</td>
+                <td>{{ f.area_nombre || '—' }}</td>
+                <td>{{ f.cargo }}</td>
+                <td><span class="tipo-badge" [ngClass]="getTipoClase(f.tipo_responsable)">{{ getTipoTexto(f.tipo_responsable) }}</span></td>
+                <td><span class="status" [ngClass]="f.estado">{{ f.estado }}</span></td>
+                <td class="actions-cell">
+                  <button type="button" class="edit-btn"   (click)="abrirEditarFunc(f)"><i class="bi bi-pencil-fill"></i></button>
+                  <button type="button" class="delete-btn" (click)="confirmarElimFunc(f)"><i class="bi bi-trash-fill"></i></button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+
+    <!-- ══════════════ TAB DIRECCIONES ══════════════ -->
+    <ng-container *ngIf="vistaActiva==='direcciones'">
+      <section class="stats-grid stats-2">
+        <article class="stat-card s-total"><span>Total</span><strong>{{ totalDir }}</strong><p>Direcciones registradas.</p></article>
+        <article class="stat-card s-act">  <span>Activas</span><strong>{{ totalDirAct }}</strong><p>Direcciones habilitadas.</p></article>
+      </section>
+
+      <section class="panel-card">
+        <div class="panel-header">
+          <div>
+            <h2><i class="bi bi-building"></i> Direcciones</h2>
+            <p>Mostrando {{ direccionesFiltradas.length }} de {{ direcciones.length }} registros.</p>
+          </div>
+          <div class="panel-actions">
+            <input class="search-inline" type="text" [(ngModel)]="busqDir" (input)="filtrarDir()" placeholder="Buscar dirección..." />
+            <select class="select-inline" [(ngModel)]="filtroEstDir" (change)="filtrarDir()">
+              <option value="">Todos</option><option value="activo">Activo</option><option value="inactivo">Inactivo</option>
+            </select>
+            <button type="button" class="refresh-btn" (click)="cargarDirecciones()" [disabled]="cargandoDir"><i class="bi bi-arrow-clockwise"></i></button>
+            <button type="button" class="new-btn" (click)="abrirNuevoDir()"><i class="bi bi-plus-lg"></i> Nueva</button>
+          </div>
+        </div>
+        <div class="loading" *ngIf="cargandoDir">Cargando...</div>
+        <div class="error-box" *ngIf="errorDir">{{ errorDir }}</div>
+        <div class="empty-box" *ngIf="!cargandoDir && !errorDir && direccionesFiltradas.length===0">Sin registros.</div>
+        <div class="table-wrapper" *ngIf="!cargandoDir && !errorDir && direccionesFiltradas.length>0">
+          <table>
+            <thead><tr><th>Nombre</th><th>Estado</th><th>Actualización</th><th>Acciones</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let d of direccionesFiltradas">
+                <td><strong>{{ d.nombre }}</strong></td>
+                <td><span class="status" [ngClass]="d.estado">{{ d.estado }}</span></td>
+                <td><span>{{ d.updated_at }}</span></td>
+                <td class="actions-cell">
+                  <button type="button" class="edit-btn"   (click)="abrirEditarDir(d)"><i class="bi bi-pencil-fill"></i></button>
+                  <button type="button" class="delete-btn" (click)="confirmarElimDir(d)"><i class="bi bi-trash-fill"></i></button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+
+    <!-- ══════════════ TAB ÁREAS ══════════════ -->
+    <ng-container *ngIf="vistaActiva==='areas'">
+      <section class="stats-grid stats-2">
+        <article class="stat-card s-total"><span>Total</span><strong>{{ totalArea }}</strong><p>Áreas registradas.</p></article>
+        <article class="stat-card s-act">  <span>Activas</span><strong>{{ totalAreaAct }}</strong><p>Áreas habilitadas.</p></article>
+      </section>
+
+      <section class="panel-card">
+        <div class="panel-header">
+          <div>
+            <h2><i class="bi bi-diagram-3-fill"></i> Áreas</h2>
+            <p>Mostrando {{ areasFiltradas.length }} de {{ areas.length }} registros.</p>
+          </div>
+          <div class="panel-actions">
+            <input class="search-inline" type="text" [(ngModel)]="busqArea" (input)="filtrarAreas()" placeholder="Buscar área..." />
+            <select class="select-inline" [(ngModel)]="filtroDirArea" (change)="filtrarAreas()">
+              <option value="">Todas las direcciones</option>
+              <option *ngFor="let d of catDirecciones" [value]="d.id">{{ d.nombre }}</option>
+            </select>
+            <select class="select-inline" [(ngModel)]="filtroEstArea" (change)="filtrarAreas()">
+              <option value="">Todos</option><option value="activo">Activo</option><option value="inactivo">Inactivo</option>
+            </select>
+            <button type="button" class="refresh-btn" (click)="cargarAreas()" [disabled]="cargandoArea"><i class="bi bi-arrow-clockwise"></i></button>
+            <button type="button" class="warn-btn" (click)="limpiarDuplicados()" title="Elimina áreas y cargos duplicados"><i class="bi bi-scissors"></i> Limpiar duplicados</button>
+            <button type="button" class="new-btn" (click)="abrirNuevoArea()"><i class="bi bi-plus-lg"></i> Nueva</button>
+          </div>
+        </div>
+        <div class="loading" *ngIf="cargandoArea">Cargando...</div>
+        <div class="error-box" *ngIf="errorArea">{{ errorArea }}</div>
+        <div class="empty-box" *ngIf="!cargandoArea && !errorArea && areasFiltradas.length===0">Sin registros.</div>
+        <div class="table-wrapper" *ngIf="!cargandoArea && !errorArea && areasFiltradas.length>0">
+          <table>
+            <thead><tr><th>Área</th><th>Dirección</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let a of areasFiltradas">
+                <td><strong>{{ a.nombre }}</strong></td>
+                <td>{{ a.direccion_nombre }}</td>
+                <td><span class="status" [ngClass]="a.estado">{{ a.estado }}</span></td>
+                <td class="actions-cell">
+                  <button type="button" class="edit-btn"   (click)="abrirEditarArea(a)"><i class="bi bi-pencil-fill"></i></button>
+                  <button type="button" class="delete-btn" (click)="confirmarElimArea(a)"><i class="bi bi-trash-fill"></i></button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+
+    <!-- ══════════════ TAB CARGOS ══════════════ -->
+    <ng-container *ngIf="vistaActiva==='cargos'">
+      <section class="stats-grid stats-2">
+        <article class="stat-card s-total"><span>Total</span><strong>{{ totalCargo }}</strong><p>Cargos registrados.</p></article>
+        <article class="stat-card s-act">  <span>Activos</span><strong>{{ totalCargoAct }}</strong><p>Cargos habilitados.</p></article>
+      </section>
+
+      <section class="panel-card">
+        <div class="panel-header">
+          <div>
+            <h2><i class="bi bi-briefcase-fill"></i> Cargos</h2>
+            <p>Mostrando {{ cargosFiltrados.length }} de {{ cargos.length }} registros.</p>
+          </div>
+          <div class="panel-actions">
+            <input class="search-inline" type="text" [(ngModel)]="busqCargo" (input)="filtrarCargos()" placeholder="Buscar cargo..." />
+            <select class="select-inline" [(ngModel)]="filtroAreaCargo" (change)="filtrarCargos()">
+              <option value="">Todas las áreas</option>
+              <option *ngFor="let a of catAreas" [value]="a.id">{{ a.nombre }}</option>
+            </select>
+            <select class="select-inline" [(ngModel)]="filtroEstCargo" (change)="filtrarCargos()">
+              <option value="">Todos</option><option value="activo">Activo</option><option value="inactivo">Inactivo</option>
+            </select>
+            <button type="button" class="refresh-btn" (click)="cargarCargos()" [disabled]="cargandoCargo"><i class="bi bi-arrow-clockwise"></i></button>
+            <button type="button" class="new-btn" (click)="abrirNuevoCargo()"><i class="bi bi-plus-lg"></i> Nuevo</button>
+          </div>
+        </div>
+        <div class="loading" *ngIf="cargandoCargo">Cargando...</div>
+        <div class="error-box" *ngIf="errorCargo">{{ errorCargo }}</div>
+        <div class="empty-box" *ngIf="!cargandoCargo && !errorCargo && cargosFiltrados.length===0">Sin registros.</div>
+        <div class="table-wrapper" *ngIf="!cargandoCargo && !errorCargo && cargosFiltrados.length>0">
+          <table>
+            <thead><tr><th>Cargo</th><th>Área</th><th>Dirección</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let c of cargosFiltrados">
+                <td><strong>{{ c.nombre }}</strong></td>
+                <td>{{ c.area_nombre }}</td>
+                <td>{{ c.direccion_nombre }}</td>
+                <td><span class="status" [ngClass]="c.estado">{{ c.estado }}</span></td>
+                <td class="actions-cell">
+                  <button type="button" class="edit-btn"   (click)="abrirEditarCargo(c)"><i class="bi bi-pencil-fill"></i></button>
+                  <button type="button" class="delete-btn" (click)="confirmarElimCargo(c)"><i class="bi bi-trash-fill"></i></button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+
+  </main>
+</section>
+
+<!-- ══════════════ MODAL PERSONAL ══════════════ -->
+<div class="modal-backdrop" *ngIf="mostrarModalFunc" (click)="cerrarModalFunc()">
+  <section class="modal-card" (click)="$event.stopPropagation()">
+    <button type="button" class="modal-close" (click)="cerrarModalFunc()"><i class="bi bi-x-lg"></i></button>
+    <div class="modal-header">
+      <div class="modal-icon" [class.edit-mode]="modoEdFunc">
+        <i class="bi" [class.bi-person-plus-fill]="!modoEdFunc" [class.bi-pencil-fill]="modoEdFunc"></i>
+      </div>
+      <div>
+        <span class="modal-eyebrow">{{ modoEdFunc ? 'Editar' : 'Nuevo' }}</span>
+        <h2>{{ modoEdFunc ? 'Editar funcionario' : 'Registrar funcionario' }}</h2>
+      </div>
+    </div>
+    <form (ngSubmit)="guardarFunc()" novalidate>
+      <div class="form-grid">
+        <label>Nombres *<input type="text" [(ngModel)]="formFunc.nombres" name="fn" placeholder="JUAN CARLOS" maxlength="120" /><small class="field-error" *ngIf="erroresFunc['nombres']">{{ erroresFunc['nombres'] }}</small></label>
+        <label>Apellidos *<input type="text" [(ngModel)]="formFunc.apellidos" name="fa" placeholder="PÉREZ LÓPEZ" maxlength="120" /><small class="field-error" *ngIf="erroresFunc['apellidos']">{{ erroresFunc['apellidos'] }}</small></label>
+        <label>Cédula<input type="text" [(ngModel)]="formFunc.cedula" name="fc" placeholder="10 dígitos (opcional)" maxlength="10" inputmode="numeric" (keydown)="soloNumeros($event)" (input)="limpiarNumeros('cedula',10)" /><small class="field-error" *ngIf="erroresFunc['cedula']">{{ erroresFunc['cedula'] }}</small></label>
+        <label>Correo<input type="email" [(ngModel)]="formFunc.correo" name="fco" placeholder="usuario@inamhi.gob.ec" maxlength="150" /><small class="field-error" *ngIf="erroresFunc['correo']">{{ erroresFunc['correo'] }}</small></label>
+        <label>Dirección
+          <select [(ngModel)]="formFunc.direccion_id" name="fdir" (change)="onDirFuncChange()">
+            <option [ngValue]="null">Seleccione dirección</option>
+            <option *ngFor="let d of catDirecciones" [ngValue]="d.id">{{ d.nombre }}</option>
+          </select>
+        </label>
+        <label>Área *
+          <select [(ngModel)]="formFunc.area_id" name="fare">
+            <option [ngValue]="null">{{ formFunc.direccion_id ? 'Seleccione área' : 'Primero elija dirección' }}</option>
+            <option *ngFor="let a of areasFormArea" [ngValue]="a.id">{{ a.nombre }}</option>
+          </select>
+          <small class="field-error" *ngIf="erroresFunc['area_id']">{{ erroresFunc['area_id'] }}</small>
+        </label>
+        <label>Cargo *<input type="text" [(ngModel)]="formFunc.cargo" name="fcar" placeholder="ANALISTA DE TICS" maxlength="150" /><small class="field-error" *ngIf="erroresFunc['cargo']">{{ erroresFunc['cargo'] }}</small></label>
+        <label>Tipo *
+          <select [(ngModel)]="formFunc.tipo_responsable" name="ftipo">
+            <option value="funcionario">Funcionario</option>
+            <option value="jefe_area">Jefe de Área</option>
+            <option value="analista_tics">Analista TICS</option>
+            <option value="responsable_tecnico">Resp. Técnico</option>
+          </select>
+        </label>
+        <label>Estado *<select [(ngModel)]="formFunc.estado" name="fest"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></label>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="cancel-btn" (click)="cerrarModalFunc()" [disabled]="guardandoFunc">Cancelar</button>
+        <button type="submit" class="save-btn" [disabled]="guardandoFunc">
+          <span *ngIf="!guardandoFunc"><i class="bi bi-check-circle-fill"></i> {{ modoEdFunc ? 'Actualizar' : 'Registrar' }}</span>
+          <span *ngIf="guardandoFunc">Guardando...</span>
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<!-- ══════════════ MODAL DIRECCIÓN ══════════════ -->
+<div class="modal-backdrop" *ngIf="mostrarModalDir" (click)="cerrarModalDir()">
+  <section class="modal-card modal-sm" (click)="$event.stopPropagation()">
+    <button type="button" class="modal-close" (click)="cerrarModalDir()"><i class="bi bi-x-lg"></i></button>
+    <div class="modal-header">
+      <div class="modal-icon" [class.edit-mode]="modoEdDir"><i class="bi bi-building"></i></div>
+      <div><span class="modal-eyebrow">{{ modoEdDir ? 'Editar' : 'Nueva' }}</span><h2>{{ modoEdDir ? 'Editar dirección' : 'Nueva dirección' }}</h2></div>
+    </div>
+    <form (ngSubmit)="guardarDir()" novalidate>
+      <div class="form-grid form-grid-1">
+        <label>Nombre *<input type="text" [(ngModel)]="formDir.nombre" name="dn" placeholder="Ej. DIRECCIÓN DE PLANIFICACIÓN" maxlength="200" /><small class="field-error" *ngIf="erroresDir['nombre']">{{ erroresDir['nombre'] }}</small></label>
+        <label>Estado<select [(ngModel)]="formDir.estado" name="de"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></label>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="cancel-btn" (click)="cerrarModalDir()" [disabled]="guardandoDir">Cancelar</button>
+        <button type="submit" class="save-btn" [disabled]="guardandoDir"><span *ngIf="!guardandoDir"><i class="bi bi-check-circle-fill"></i> {{ modoEdDir ? 'Actualizar' : 'Crear' }}</span><span *ngIf="guardandoDir">Guardando...</span></button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<!-- ══════════════ MODAL ÁREA ══════════════ -->
+<div class="modal-backdrop" *ngIf="mostrarModalArea" (click)="cerrarModalArea()">
+  <section class="modal-card modal-sm" (click)="$event.stopPropagation()">
+    <button type="button" class="modal-close" (click)="cerrarModalArea()"><i class="bi bi-x-lg"></i></button>
+    <div class="modal-header">
+      <div class="modal-icon" [class.edit-mode]="modoEdArea"><i class="bi bi-diagram-3-fill"></i></div>
+      <div><span class="modal-eyebrow">{{ modoEdArea ? 'Editar' : 'Nueva' }}</span><h2>{{ modoEdArea ? 'Editar área' : 'Nueva área' }}</h2></div>
+    </div>
+    <form (ngSubmit)="guardarArea()" novalidate>
+      <div class="form-grid form-grid-1">
+        <label>Nombre *<input type="text" [(ngModel)]="formArea.nombre" name="an" placeholder="Ej. TECNOLOGÍAS DE LA INFORMACIÓN" maxlength="200" /><small class="field-error" *ngIf="erroresArea['nombre']">{{ erroresArea['nombre'] }}</small></label>
+        <label>Dirección *
+          <select [(ngModel)]="formArea.direccion_id" name="adir">
+            <option [ngValue]="null">Seleccione dirección</option>
+            <option *ngFor="let d of catDirecciones" [ngValue]="d.id">{{ d.nombre }}</option>
+          </select>
+          <small class="field-error" *ngIf="erroresArea['direccion_id']">{{ erroresArea['direccion_id'] }}</small>
+        </label>
+        <label>Estado<select [(ngModel)]="formArea.estado" name="ae"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></label>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="cancel-btn" (click)="cerrarModalArea()" [disabled]="guardandoArea">Cancelar</button>
+        <button type="submit" class="save-btn" [disabled]="guardandoArea"><span *ngIf="!guardandoArea"><i class="bi bi-check-circle-fill"></i> {{ modoEdArea ? 'Actualizar' : 'Crear' }}</span><span *ngIf="guardandoArea">Guardando...</span></button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<!-- ══════════════ MODAL CARGO ══════════════ -->
+<div class="modal-backdrop" *ngIf="mostrarModalCargo" (click)="cerrarModalCargo()">
+  <section class="modal-card modal-sm" (click)="$event.stopPropagation()">
+    <button type="button" class="modal-close" (click)="cerrarModalCargo()"><i class="bi bi-x-lg"></i></button>
+    <div class="modal-header">
+      <div class="modal-icon" [class.edit-mode]="modoEdCargo"><i class="bi bi-briefcase-fill"></i></div>
+      <div><span class="modal-eyebrow">{{ modoEdCargo ? 'Editar' : 'Nuevo' }}</span><h2>{{ modoEdCargo ? 'Editar cargo' : 'Nuevo cargo' }}</h2></div>
+    </div>
+    <form (ngSubmit)="guardarCargo()" novalidate>
+      <div class="form-grid form-grid-1">
+        <label>Nombre *<input type="text" [(ngModel)]="formCargo.nombre" name="cn" placeholder="Ej. ANALISTA DE CONTABILIDAD 1" maxlength="200" /><small class="field-error" *ngIf="erroresCargo['nombre']">{{ erroresCargo['nombre'] }}</small></label>
+        <label>Dirección (para filtrar área)
+          <select [(ngModel)]="formCargo.direccion_id" name="cdir" (change)="onDirCargoChange()">
+            <option [ngValue]="null">Todas las direcciones</option>
+            <option *ngFor="let d of catDirecciones" [ngValue]="d.id">{{ d.nombre }}</option>
+          </select>
+        </label>
+        <label>Área *
+          <select [(ngModel)]="formCargo.area_id" name="carea">
+            <option [ngValue]="null">Seleccione área</option>
+            <option *ngFor="let a of areasFormCargo" [ngValue]="a.id">{{ a.nombre }}</option>
+          </select>
+          <small class="field-error" *ngIf="erroresCargo['area_id']">{{ erroresCargo['area_id'] }}</small>
+        </label>
+        <label>Estado<select [(ngModel)]="formCargo.estado" name="ce"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></label>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="cancel-btn" (click)="cerrarModalCargo()" [disabled]="guardandoCargo">Cancelar</button>
+        <button type="submit" class="save-btn" [disabled]="guardandoCargo"><span *ngIf="!guardandoCargo"><i class="bi bi-check-circle-fill"></i> {{ modoEdCargo ? 'Actualizar' : 'Crear' }}</span><span *ngIf="guardandoCargo">Guardando...</span></button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<!-- ══════════════ MODALES CONFIRMACIÓN ELIMINAR ══════════════ -->
+<div class="modal-backdrop" *ngIf="mostrarConfFunc||mostrarConfDir||mostrarConfArea||mostrarConfCargo" (click)="cancelarElimFunc();cancelarElimDir();cancelarElimArea();cancelarElimCargo()">
+  <section class="modal-card modal-confirm" (click)="$event.stopPropagation()">
+    <div class="confirm-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+    <h2>¿Eliminar registro?</h2>
+    <p>
+      <strong *ngIf="mostrarConfFunc  && itemElimFunc">{{ itemElimFunc!.nombres }} {{ itemElimFunc!.apellidos }}</strong>
+      <strong *ngIf="mostrarConfDir   && itemElimDir">{{ itemElimDir!.nombre }}</strong>
+      <strong *ngIf="mostrarConfArea  && itemElimArea">{{ itemElimArea!.nombre }}</strong>
+      <strong *ngIf="mostrarConfCargo && itemElimCargo">{{ itemElimCargo!.nombre }}</strong>
+      <br>Esta acción no se puede deshacer.
+    </p>
+    <div class="confirm-actions">
+      <button type="button" class="cancel-btn" (click)="cancelarElimFunc();cancelarElimDir();cancelarElimArea();cancelarElimCargo()">Cancelar</button>
+      <button type="button" class="delete-confirm-btn" (click)="ejecutarElimFunc();ejecutarElimDir();ejecutarElimArea();ejecutarElimCargo()">
+        <i class="bi bi-trash-fill"></i> Eliminar
+      </button>
+    </div>
+  </section>
+</div>

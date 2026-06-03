@@ -1,6 +1,7 @@
-import { HttpClient } from '@angular/common/http';
+﻿import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface PaginaWebSolicitud {
   url_pagina: string;
@@ -66,7 +67,7 @@ export interface SeguimientoResponse {
 })
 export class SolicitudPublicaService {
 
-  private readonly API_URL = 'http://localhost:5050/api/public/solicitudes';
+  private readonly API_URL = `${environment.apiUrl}/public/solicitudes`;
 
   constructor(private http: HttpClient) {}
 

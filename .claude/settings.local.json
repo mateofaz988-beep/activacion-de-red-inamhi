@@ -21,7 +21,23 @@
       "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -uroot -proot inamhi_liberacion_web -e \"SELECT a.id, a.nombre as area, c.nombre as cargo FROM areas a LEFT JOIN cargos c ON c.area_id = a.id WHERE a.direccion_id = 3 ORDER BY a.id, c.nombre;\")",
       "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -uroot -proot inamhi_liberacion_web -e \"SELECT id, nombres, apellidos, usuario, cedula, correo, estado FROM usuarios WHERE usuario = 'myriam.quinchimba';\")",
       "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -uroot -proot inamhi_liberacion_web -e \"SELECT u.nombres, u.apellidos, u.usuario, u.cedula as contrasena, u.estado FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE r.nombre = 'jefe_inmediato' ORDER BY u.apellidos;\")",
-      "Bash(/c/Users/Sistemas/Documents/sistema-liberacion-web-inamhi/sistema-liberacion-web/backend/venv/Scripts/python.exe -c ' *)"
+      "Bash(/c/Users/Sistemas/Documents/sistema-liberacion-web-inamhi/sistema-liberacion-web/backend/venv/Scripts/python.exe -c ' *)",
+      "Bash(\"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -uroot -proot inamhi_liberacion_web -e \"SELECT id, nombres, apellidos, usuario, cedula FROM usuarios WHERE apellidos LIKE '%CORNEJO%' OR cedula = '0912599362';\")",
+      "Bash(grep -n '\"\"\"$\\\\|^\"\"\"' \"c:\\\\Users\\\\Sistemas\\\\Documents\\\\sistema-liberacion-web-inamhi\\\\sistema-liberacion-web\\\\backend\\\\app.py\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Sistemas\\\\Documents\\\\sistema-liberacion-web-inamhi\\\\sistema-liberacion-web\\\\src\\\\app\" -Directory)",
+      "Bash(taskkill /F /IM python.exe)",
+      "Bash(/c/Users/Sistemas/Documents/sistema-liberacion-web-inamhi/sistema-liberacion-web/backend/venv/Scripts/python.exe app.py)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:5050/api/admin/estructura/direcciones\" -H \"Authorization: Bearer test\")",
+      "Bash(curl -s \"http://localhost:5050/api/admin/estructura/direcciones\" -H \"Authorization: Bearer $\\(cat /c/Users/Sistemas/Documents/sistema-liberacion-web-inamhi/sistema-liberacion-web/backend/.env)",
+      "Bash(curl -s \"http://localhost:5050/api/admin/estructura/direcciones\")",
+      "PowerShell($content = Get-Content \"C:\\\\Users\\\\Sistemas\\\\Desktop\\\\logo xd.txt\" -Raw; Write-Host \"Length: $\\($content.Length\\)\")",
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\Sistemas\\\\Documents\\\\sistema-liberacion-web-inamhi\\\\sistema-liberacion-web\\\\src\\\\environments\")",
+      "Bash(npx ng *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Sistemas\\\\Documents\\\\sistema-liberacion-web-inamhi\\\\sistema-liberacion-web\" -Recurse -Depth 2)",
+      "Bash(grep -E \"\\\\.ts$|^src\")",
+      "Bash(venv\\\\Scripts\\\\pip install *)",
+      "PowerShell(cd \"c:\\\\Users\\\\Sistemas\\\\Documents\\\\sistema-liberacion-web-inamhi\\\\sistema-liberacion-web\"; npx ng build --configuration=development 2>&1 | Where-Object { $_ -match 'ERROR|error TS' } | Select-Object -First 20)",
+      "PowerShell(cd \"c:\\\\Users\\\\Sistemas\\\\Documents\\\\sistema-liberacion-web-inamhi\\\\sistema-liberacion-web\"; npx ng build --configuration=development 2>&1 | Where-Object { $_ -match 'ERROR|error TS|✔' } | Select-Object -First 15)"
     ]
   }
 }

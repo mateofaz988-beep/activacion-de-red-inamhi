@@ -128,9 +128,8 @@ export class TicsDashboard implements OnInit {
 
         Swal.fire({
           title: 'PDF descargado',
-          text: 'El documento PDF se descargó correctamente.',
           icon: 'success',
-          confirmButtonText: 'Entendido',
+          confirmButtonText: 'OK',
           confirmButtonColor: '#0284c7',
           background: '#ffffff',
           color: '#0f172a'
@@ -144,10 +143,10 @@ export class TicsDashboard implements OnInit {
         }
 
         Swal.fire({
-          title: 'No se pudo descargar',
-          text: err.error?.mensaje || 'No se pudo generar o descargar el PDF de la solicitud.',
+          title: 'Error al descargar',
+          text: err.error?.mensaje || 'No se pudo generar el PDF.',
           icon: 'error',
-          confirmButtonText: 'Entendido',
+          confirmButtonText: 'OK',
           confirmButtonColor: '#dc2626',
           background: '#ffffff',
           color: '#0f172a'

@@ -1,6 +1,7 @@
-import { HttpClient } from '@angular/common/http';
+﻿import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, tap } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface LoginRequest {
   usuario: string;
@@ -33,7 +34,7 @@ export interface LoginResponse {
 })
 export class AuthService {
 
-  private readonly API_URL = 'http://localhost:5050/api';
+  private readonly API_URL = environment.apiUrl;
 
   private readonly TOKEN_KEY = 'auth_token_liberacion_web';
   private readonly USUARIO_KEY = 'usuario_liberacion_web';

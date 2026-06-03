@@ -39,6 +39,14 @@
       </a>
 
       <a
+        routerLink="/admin/funcionarios"
+        routerLinkActive="active"
+      >
+        <i class="bi bi-person-badge-fill"></i>
+        Funcionarios
+      </a>
+
+      <a
         routerLink="/admin/reportes"
         routerLinkActive="active"
       >
@@ -496,15 +504,7 @@
 
               <td class="actions-cell">
                 <div class="action-buttons">
-                  <button
-                    type="button"
-                    class="download-btn"
-                    (click)="descargarManualVacio(item)"
-                    [disabled]="descargando"
-                  >
-                    Formato vacío
-                  </button>
-
+               
                   <button
                     type="button"
                     class="download-btn"

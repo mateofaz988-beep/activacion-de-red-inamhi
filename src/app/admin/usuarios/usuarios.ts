@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -41,6 +41,8 @@ export interface UsuarioFormulario {
   estado: 'activo' | 'inactivo';
 }
 
+import { environment } from '../../../environments/environment';
+
 @Component({
   selector: 'app-usuarios',
   standalone: true,
@@ -55,7 +57,7 @@ export interface UsuarioFormulario {
 })
 export class Usuarios implements OnInit {
 
-  private readonly API_BASE = 'http://10.0.153.69/api';
+  private readonly API_BASE = environment.apiUrl;
   private readonly API_URL = `${this.API_BASE}/admin/usuarios`;
 
   usuarios: UsuarioSistema[] = [];
@@ -280,14 +282,13 @@ export class Usuarios implements OnInit {
         headers: this.getHeaders()
       }
     ).subscribe({
-      next: (response) => {
+      next: (_response) => {
         this.guardando = false;
 
         Swal.fire({
           title: 'Usuario registrado',
-          text: response.mensaje || 'El usuario fue registrado correctamente.',
           icon: 'success',
-          confirmButtonText: 'Entendido',
+          confirmButtonText: 'OK',
           confirmButtonColor: '#1d4ed8'
         });
 
@@ -319,14 +320,13 @@ export class Usuarios implements OnInit {
         headers: this.getHeaders()
       }
     ).subscribe({
-      next: (response) => {
+      next: (_response) => {
         this.guardando = false;
 
         Swal.fire({
           title: 'Usuario actualizado',
-          text: response.mensaje || 'El usuario fue actualizado correctamente.',
           icon: 'success',
-          confirmButtonText: 'Entendido',
+          confirmButtonText: 'OK',
           confirmButtonColor: '#1d4ed8'
         });
 
@@ -355,29 +355,19 @@ export class Usuarios implements OnInit {
     const accion = nuevoEstado === 'activo' ? 'activar' : 'desactivar';
 
     const resultado = await Swal.fire({
-      title: `¿Desea ${accion} este usuario?`,
-      html: `
-        <div style="text-align:center">
-          <p style="margin:0 0 10px;color:#475569;">
-            Usuario seleccionado:
-          </p>
-
-          <strong style="color:#1d4ed8;font-size:17px;">
-            ${usuario.nombres} ${usuario.apellidos}
-          </strong>
-
-          <p style="margin:10px 0 0;color:#64748b;">
-            Cuenta: ${usuario.usuario}
-          </p>
-        </div>
-      `,
-      icon: 'question',
+      title: `¿${accion.charAt(0).toUpperCase() + accion.slice(1)} usuario?`,
+      html: `<div style="text-align:center;font-size:14px;color:#475569;">
+        <strong style="color:#0f172a;">${usuario.nombres} ${usuario.apellidos}</strong><br>
+        <span style="font-size:13px;color:#64748b;">${usuario.usuario}</span>
+      </div>`,
       showCancelButton: true,
-      confirmButtonText: `Sí, ${accion}`,
+      confirmButtonText: accion.charAt(0).toUpperCase() + accion.slice(1),
       cancelButtonText: 'Cancelar',
       confirmButtonColor: nuevoEstado === 'activo' ? '#15803d' : '#dc2626',
       cancelButtonColor: '#64748b',
-      reverseButtons: true
+      reverseButtons: true,
+      background: '#ffffff',
+      color: '#0f172a'
     });
 
     if (!resultado.isConfirmed) {
@@ -393,13 +383,14 @@ export class Usuarios implements OnInit {
         headers: this.getHeaders()
       }
     ).subscribe({
-      next: (response) => {
+      next: (_response) => {
         Swal.fire({
-          title: 'Estado actualizado',
-          text: response.mensaje || `El usuario fue ${nuevoEstado === 'activo' ? 'activado' : 'desactivado'} correctamente.`,
+          title: nuevoEstado === 'activo' ? 'Usuario activado' : 'Usuario desactivado',
           icon: 'success',
-          confirmButtonText: 'Entendido',
-          confirmButtonColor: '#1d4ed8'
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#1d4ed8',
+          background: '#ffffff',
+          color: '#0f172a'
         });
 
         this.cargarUsuarios();
@@ -738,7 +729,7 @@ export class Usuarios implements OnInit {
       title: titulo,
       text: mensaje,
       icon: 'error',
-      confirmButtonText: 'Entendido',
+      confirmButtonText: 'OK',
       confirmButtonColor: '#dc2626'
     });
   }

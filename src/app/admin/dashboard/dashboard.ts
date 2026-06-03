@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -63,6 +63,8 @@ interface ProcesoElectronicoAdmin {
   ultimo_documento?: string | null;
 }
 
+import { environment } from '../../../environments/environment';
+
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
@@ -78,13 +80,10 @@ interface ProcesoElectronicoAdmin {
 export class AdminDashboard implements OnInit {
 
   /*
-    LOCAL:
-    http://localhost:5050/api
 
-    SERVIDOR CON NGINX:
     /api
   */
-  private readonly API_URL = 'http://localhost:5050/api';
+  private readonly API_URL = environment.apiUrl;
 
   usuario: UsuarioLogin | null = null;
 

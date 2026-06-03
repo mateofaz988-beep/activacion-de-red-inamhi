@@ -12,7 +12,11 @@
     </div>
 
     <nav class="menu">
-      <a routerLink="/admin/dashboard" routerLinkActive="active">
+      <a
+        routerLink="/admin/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
         Dashboard
       </a>
 
@@ -22,6 +26,10 @@
 
       <a routerLink="/admin/usuarios" routerLinkActive="active">
         Usuarios
+      </a>
+
+      <a routerLink="/admin/funcionarios" routerLinkActive="active">
+        Funcionarios
       </a>
 
       <a routerLink="/admin/reportes" routerLinkActive="active">
